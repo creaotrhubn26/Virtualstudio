@@ -23,7 +23,6 @@ import { Person, Delete, Refresh, Add, Search, Male, Female, ChildCare, Face, Bu
 import { logger } from '../core/services/logger';
 import { ALL_POSES } from '../core/animation/PoseLibrary';
 import type { PosePreset } from '../core/animation/PoseLibrary';
-import { CHARACTER_VARIANTS } from '../core/data/characterVariants';
 import type { MaterialTints } from '../core/data/characterVariants';
 
 const log = logger.module('CharacterLoader');
@@ -87,84 +86,24 @@ const CHARACTER_MODELS: CharacterModel[] = [
     poses: 1,
   },
   {
-    id: 'sam3d_child',
-    name: 'Barn',
-    gender: 'neutral',
-    category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_child.glb',
-    thumbnail: createAvatarSVG('child'),
-    description: 'SAM 3D Body - Barn 8 år',
-    poses: 1,
-  },
-  {
-    id: 'sam3d_teenager',
-    name: 'Tenåring',
-    gender: 'female',
-    category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_teenager.glb',
-    thumbnail: createAvatarSVG('teenager'),
-    description: 'SAM 3D Body - Tenåring 14 år',
-    poses: 1,
-  },
-  {
     id: 'sam3d_woman',
-    name: 'Voksen Kvinne',
+    name: 'Studiomodell · Kvinne',
     gender: 'female',
     category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_woman.glb',
+    modelUrl: '/models/avatars/studio/studio-woman.glb',
     thumbnail: createAvatarSVG('woman'),
-    description: 'SAM 3D Body - Profesjonell kvinne',
-    poses: 1,
+    description: 'Anatomisk modell med hud, hår, klær og 53 ledd. Tre studioposeringer.',
+    poses: 3,
   },
   {
     id: 'sam3d_man',
-    name: 'Voksen Mann',
+    name: 'Studiomodell · Mann',
     gender: 'male',
     category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_man.glb',
+    modelUrl: '/models/avatars/studio/studio-man.glb',
     thumbnail: createAvatarSVG('man'),
-    description: 'SAM 3D Body - Casual mann',
-    poses: 1,
-  },
-  {
-    id: 'sam3d_elderly',
-    name: 'Eldre Kvinne',
-    gender: 'female',
-    category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_elderly.glb',
-    thumbnail: createAvatarSVG('elderly'),
-    description: 'SAM 3D Body - Bestemor 70+',
-    poses: 1,
-  },
-  {
-    id: 'sam3d_athlete',
-    name: 'Atlet',
-    gender: 'male',
-    category: 'mote' as any,
-    modelUrl: '/models/avatars/avatar_athlete.glb',
-    thumbnail: createAvatarSVG('athlete'),
-    description: 'SAM 3D Body - Atletisk mann',
-    poses: 1,
-  },
-  {
-    id: 'sam3d_pregnant',
-    name: 'Gravid',
-    gender: 'female',
-    category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_pregnant.glb',
-    thumbnail: createAvatarSVG('pregnant'),
-    description: 'SAM 3D Body - Gravid kvinne',
-    poses: 1,
-  },
-  {
-    id: 'sam3d_dancer',
-    name: 'Balettdanser',
-    gender: 'female',
-    category: 'mote' as any,
-    modelUrl: '/models/avatars/avatar_dancer.glb',
-    thumbnail: createAvatarSVG('dancer'),
-    description: 'SAM 3D Body - Grasiøs danser',
-    poses: 1,
+    description: 'Anatomisk modell med hud, hår, klær og 53 ledd. Tre studioposeringer.',
+    poses: 3,
   },
   {
     id: 'human_realistic_male',
@@ -196,28 +135,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     description: 'Rigget Mixamo-dame — dans + T-pose, alle poser støttet',
     poses: ALL_POSES.length,
   },
-  // ── 50 pre-configured poseable character variants ──────────────
-  ...CHARACTER_VARIANTS.map((v) => ({
-    id: v.id,
-    name: v.name,
-    gender: v.gender,
-    category: 'portrett' as any,
-    modelUrl: v.baseModelUrl,
-    thumbnail: `data:image/svg+xml,${encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150">` +
-      `<circle cx="50" cy="18" r="14" fill="${v.tints.skin}"/>` +
-      `<rect x="30" y="36" width="40" height="44" rx="5" fill="${v.tints.top}"/>` +
-      `<rect x="14" y="40" width="17" height="9" rx="3" fill="${v.tints.top}"/>` +
-      `<rect x="69" y="40" width="17" height="9" rx="3" fill="${v.tints.top}"/>` +
-      `<rect x="33" y="80" width="14" height="46" rx="3" fill="${v.tints.bottom}"/>` +
-      `<rect x="53" y="80" width="14" height="46" rx="3" fill="${v.tints.bottom}"/>` +
-      `<circle cx="50" cy="15" r="4" fill="${v.tints.accent}" opacity="0.7"/>` +
-      `</svg>`
-    )}`,
-    description: v.description,
-    poses: ALL_POSES.length,
-    tints: v.tints,
-  })),
+
 ];
 
 const createPoseSVG = (pose: string, color = '#666') => {

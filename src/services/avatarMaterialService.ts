@@ -33,7 +33,7 @@ export interface EmbeddedTextureInfo {
 export class AvatarMaterialService {
   /**
    * Apply enhanced PBR materials to avatar meshes
-   * Priority: Definition-based materials > Embedded textures > Fallback
+   * Authored GLB materials take precedence over generic material definitions.
    * 
    * @param meshes - Array of meshes from avatar model
    * @param avatarId - Avatar identifier (e.g., 'avatar_woman')
@@ -68,6 +68,12 @@ export class AvatarMaterialService {
       }
       
       mesh.receiveShadows = true;
+      // A single skinned mesh can contain an atlas covering skin, hair AND clothes.
+      // Replacing that material with a guessed skin colour destroys the character.
+      if (this.preserveAuthoredMaterial(mesh.material)) {
+        appliedCount++;
+        return;
+      }
       
       // Determine body part type
       const bodyPartType = this.detectBodyPartType(mesh);
@@ -173,6 +179,8 @@ export class AvatarMaterialService {
   ): void {
     meshes.forEach(m => {
       if (!m.getTotalVertices || m.getTotalVertices() === 0) return;
+      m.receiveShadows = true;
+      if (this.preserveAuthoredMaterial(m.material)) return;
       
       const mat = new BABYLON.PBRMaterial(`fallback_${m.name}`, scene);
       mat.albedoColor = new BABYLON.Color3(0.6, 0.6, 0.6);
@@ -185,6 +193,27 @@ export class AvatarMaterialService {
       
       m.material = mat;
     });
+  }
+
+  /** Retain UV maps, normal/ORM maps, alpha-cutout hair, and sub-materials. */
+  private static preserveAuthoredMaterial(material: BABYLON.Nullable<BABYLON.Material>): boolean {
+    if (!material) return false;
+    if (material instanceof BABYLON.MultiMaterial) {
+      material.subMaterials.forEach(part => this.preserveAuthoredMaterial(part));
+      return true;
+    }
+    material.wireframe = false;
+    if (material instanceof BABYLON.PBRMaterial) {
+      material.unlit = false;
+      material.maxSimultaneousLights = 8;
+      return true;
+    }
+    if (material instanceof BABYLON.StandardMaterial) {
+      material.disableLighting = false;
+      material.maxSimultaneousLights = 8;
+      return true;
+    }
+    return false;
   }
   
   /**

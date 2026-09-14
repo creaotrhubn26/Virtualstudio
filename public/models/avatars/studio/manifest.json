@@ -1,0 +1,186 @@
+{
+  "revision": "437dd513888a92399d1d3200d2e80859fae55abc",
+  "license": "CC0-1.0",
+  "sources": {
+    "system-assets.zip": {
+      "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "b542127a8e25547c7c29c19f2d1d2adb9a664c80396ecd694095dbc8028a0107"
+    },
+    "3dobjs/base.obj": {
+      "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/437dd513888a92399d1d3200d2e80859fae55abc/src/mpfb/data/3dobjs/base.obj",
+      "sha256": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c"
+    },
+    "rigs/standard/rig.game_engine.json": {
+      "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/437dd513888a92399d1d3200d2e80859fae55abc/src/mpfb/data/rigs/standard/rig.game_engine.json",
+      "sha256": "b324ddb4b707721c19630bfadb87c3e3b38eed3b6e4590bb3cead43ea918f799"
+    },
+    "rigs/standard/weights.game_engine.json": {
+      "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/437dd513888a92399d1d3200d2e80859fae55abc/src/mpfb/data/rigs/standard/weights.game_engine.json",
+      "sha256": "9f4a773e74ce5ba08415b4f30070338e9f75bae5971b5075b10cd6b9caa58473"
+    },
+    "targets/macrodetails/caucasian-female-young.target.gz": {
+      "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/437dd513888a92399d1d3200d2e80859fae55abc/src/mpfb/data/targets/macrodetails/caucasian-female-young.target.gz",
+      "sha256": "e9d6212373ac5f1e2c596fa145e363385f4d169c3c6c88ede3bab93b681af041"
+    },
+    "targets/macrodetails/universal-female-young-averagemuscle-averageweight.target.gz": {
+      "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/437dd513888a92399d1d3200d2e80859fae55abc/src/mpfb/data/targets/macrodetails/universal-female-young-averagemuscle-averageweight.target.gz",
+      "sha256": "30046c85a461249824548d5319d74c16392842a1ee00ca9a4485ea3eeb06e2e8"
+    },
+    "targets/head/head-oval.target.gz": {
+      "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/437dd513888a92399d1d3200d2e80859fae55abc/src/mpfb/data/targets/head/head-oval.target.gz",
+      "sha256": "057eea7c5535c325493b9107228052b03c78fac1bcb24905313fae6351179cb8"
+    },
+    "system/clothes/female_casualsuit01/female_casualsuit01.obj": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "b6cfaf08b291fe10ea312d37e98d5e328eced5828bdb6f96ecac6bf4ababe652"
+    },
+    "system/clothes/female_casualsuit01/female_casualsuit01.mhclo": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "8a17e4edceeb22ef30ce102ed05fb3463ca0eeb61addc7811f4867fde5963fa4"
+    },
+    "system/clothes/shoes01/shoes01.obj": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "eac355a842a8eb8ae2f09fac8dd18a877a24ef2521ed2d6bf38559b42ce4b49a"
+    },
+    "system/clothes/shoes01/shoes01.mhclo": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "7994e38f7cdcee0bd5f55101660badcce0162fcdfc7f432218dd1eb301626252"
+    },
+    "system/skins/young_caucasian_female2/young_lightskinned_female_diffuse2.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "8d1fb3ceedf142fad32a3504eca1feb4539aecca6de66acde1514b9a61fc7ba0"
+    },
+    "system/clothes/female_casualsuit01/female_casualsuit01.mhmat": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "7bef35aade88daf9f4597f3b3c9a45be51cc51caf44012d12ac4e005c8087689"
+    },
+    "system/clothes/female_casualsuit01/female_casualsuit01_diffuse.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "414d46afa55fba09ad0913484d57df2ba6b597dc8193595a13a12436137dc21b"
+    },
+    "system/clothes/female_casualsuit01/female_casualsuit01_normal.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "7bff7afbbc3f068e06f69abcddc8c2c9ce667ec181e0f2a918f8af78eba12610"
+    },
+    "system/clothes/female_casualsuit01/female_casualsuit01_ao.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "f97a31fb02b5f36802a08bfe22bffb1961240d4ecb20059540eec6516d753424"
+    },
+    "system/clothes/shoes01/shoes01.mhmat": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "db1711e2dfea4dd8c24459643603a190d9a9da603fd26da5542002a73d740be8"
+    },
+    "system/clothes/shoes01/shoes01_diffuse.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "50c9a406a7f1cb6aa7b42912348e78f09d0252aa3963c8229cf18dfe8353cdbf"
+    },
+    "system/clothes/shoes01/shoes01_normal.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "a9bfd7223e98b8f93100e89596135e3a94e6044f9db11b4d23cec625c37a4599"
+    },
+    "system/eyes/low-poly/low-poly.obj": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "783fe1e6331162c876520b4c2bed7a8ca06354ca15497e8ebd68bb1b59f4d3de"
+    },
+    "system/eyes/low-poly/low-poly.mhclo": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "68582e28e9176cba7cfcf35208f671b6201b8d1bc95c32decff61a3160ec34d8"
+    },
+    "system/eyes/materials/brown_eye.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "4659691c7295ad6206c78b003e5fd0e5f91dcd53032fa914a229bb48cabe424b"
+    },
+    "system/hair/ponytail01/ponytail01.obj": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "d9f5fe96fbedbc8006220d87aad0e4a33d15286eb6b21f5929661cdc490ebf5a"
+    },
+    "system/hair/ponytail01/ponytail01.mhclo": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "97fc50b12bcb3b1c7b33edddd8d427a2604ffb06fe79b31132bf47f82d7afbac"
+    },
+    "system/hair/ponytail01/ponytail01_diffuse.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "dcb364300cac06ce8bef91b2f7c0970baf310898bbdd06b0c6b884ee9306eb97"
+    },
+    "targets/macrodetails/caucasian-male-young.target.gz": {
+      "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/437dd513888a92399d1d3200d2e80859fae55abc/src/mpfb/data/targets/macrodetails/caucasian-male-young.target.gz",
+      "sha256": "ffe69537e53148edff2776204ba48cf3bf1f3cbc72966592c8a562ab80b07333"
+    },
+    "targets/macrodetails/universal-male-young-averagemuscle-averageweight.target.gz": {
+      "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/437dd513888a92399d1d3200d2e80859fae55abc/src/mpfb/data/targets/macrodetails/universal-male-young-averagemuscle-averageweight.target.gz",
+      "sha256": "e814651195c53971503d9823d6841216718a561951ef064f81d132297f4fa494"
+    },
+    "system/clothes/male_casualsuit02/male_casualsuit02.obj": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "e07cbd1a43d21bd700e6598f01f74341a9dd66eac4e035c8be8de2650eac380f"
+    },
+    "system/clothes/male_casualsuit02/male_casualsuit02.mhclo": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "f9e6821704a1508a02d5e416b2360785b705cfe5a130c359021a4b4570dcc43a"
+    },
+    "system/skins/young_caucasian_male/young_lightskinned_male_diffuse.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "862a26e335e958b70534cb5f0d7c47ef30ab148a56c42b3e9da969cf76f12963"
+    },
+    "system/clothes/male_casualsuit02/male_casualsuit02.mhmat": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "20ab695fd8f6986e243427e03f8f9ec5a1c394ce8736eb6359f135a129ffb36a"
+    },
+    "system/clothes/male_casualsuit02/male_casualsuit02_diffuse.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "8e1e63c471a8eb6ea8be48f2d540c15c81d2e7744ff80c8fdac86a6e6fde3179"
+    },
+    "system/clothes/male_casualsuit02/male_casualsuit02_normal.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "1c31a7a5fbbef1ee40176114295038703f370d163a3cf040f55b60c85369d12c"
+    },
+    "system/clothes/male_casualsuit02/male_casualsuit02_ao.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "ef7f75de0868fdbe01c05e3c8ac3ec2a59a35247b501473b3aba79e7901dfbd9"
+    },
+    "system/hair/short02/short02.obj": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "48f979114adfa712165a69cc55c45a70831af1fb3cba8e2a89120f0c87407b64"
+    },
+    "system/hair/short02/short02.mhclo": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "625736cdb73e6d094df6e5a2df18f371781f1d2cd37b0ae15795c5d7051c3ec2"
+    },
+    "system/hair/short02/short02_diffuse.png": {
+      "archive": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+      "sha256": "47fe33831a3929567c733356dd66243116e05df2ace1f884ddca0080b728229f"
+    }
+  },
+  "models": [
+    {
+      "file": "studio-woman.glb",
+      "heightMeters": 1.72,
+      "joints": 53,
+      "surfaces": 5,
+      "triangles": 29928,
+      "textures": 8,
+      "poses": [
+        "StudioStand",
+        "StudioPortrait",
+        "StudioSeated"
+      ],
+      "bytes": 22779340,
+      "sha256": "1a53f960256a0834da493aa01fb445ae675f28a6c64b9a47a2912c21f7c5866e"
+    },
+    {
+      "file": "studio-man.glb",
+      "heightMeters": 1.82,
+      "joints": 53,
+      "surfaces": 5,
+      "triangles": 26448,
+      "textures": 8,
+      "poses": [
+        "StudioStand",
+        "StudioPortrait",
+        "StudioSeated"
+      ],
+      "bytes": 21132672,
+      "sha256": "92b14d2b9e8032d33abe3c505357e00f2976f2fd42c1eb240486fd5873c62197"
+    }
+  ]
+}

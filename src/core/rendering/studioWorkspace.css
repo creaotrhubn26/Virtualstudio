@@ -1,0 +1,106 @@
+.studio-workspace .studio-view-toolbar {
+  position: absolute;
+  z-index: 110;
+  inset: 58px auto auto 16px;
+  max-width: calc(100% - 190px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--bg-panel);
+  box-shadow: 0 4px 16px #0003;
+}
+.studio-view-tabs, .studio-view-actions { display: flex; gap: 3px; flex-wrap: wrap; }
+.studio-view-toolbar button, .studio-preview-header button {
+  min-height: 34px;
+  padding: 0 11px;
+  font: 500 12px Inter, sans-serif;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.studio-view-toolbar button:hover, .studio-preview-header button:hover { background: var(--bg-hover); color: var(--text-primary); }
+.studio-view-toolbar button[aria-pressed="true"] { color: var(--accent-cyan); background: #2ee8ff18; border-color: #2ee8ff38; }
+.studio-view-toolbar button:disabled { opacity: .4; cursor: default; }
+.studio-view-actions { border-left: 1px solid var(--border-color); padding-left: 9px; }
+.studio-view-toolbar button:focus-visible, .studio-preview-header button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.studio-camera-preview {
+  position: absolute;
+  z-index: 90;
+  bottom: 20px;
+  right: 18px;
+  width: clamp(230px, 25%, 384px);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px #0006;
+}
+.studio-camera-preview[hidden] { display: none; }
+.studio-preview-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; color: var(--text-primary); font: 600 12px Inter, sans-serif; }
+.studio-preview-header i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); margin-right: 7px; }
+.studio-camera-preview canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: var(--bg-dark); }
+.studio-preview-settings { padding: 10px 12px 4px; color: var(--text-primary); font: 11px Inter, sans-serif; font-variant-numeric: tabular-nums; }
+.studio-camera-preview p { padding: 0 12px 10px; color: var(--text-muted); font: 10px Inter, sans-serif; }
+.studio-model-panel { position: absolute; z-index: 90; left: 16px; bottom: 20px; width: 220px; padding: 16px; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 8px 24px #0003; }
+.studio-model-heading { font: 600 10px Inter, sans-serif; color: var(--accent-cyan); letter-spacing: .1em; margin-bottom: 14px; }
+.studio-model-panel label { display: block; font: 11px Inter, sans-serif; color: var(--text-secondary); margin-bottom: 6px; }
+.studio-model-panel select { width: 100%; min-height: 38px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-input); color: var(--text-primary); padding: 7px; margin-bottom: 12px; font: 12px Inter, sans-serif; }
+.studio-model-framing { display: flex; gap: 6px; }
+.studio-model-framing button { flex: 1; min-height: 36px; border: 1px solid var(--border-color); border-radius: 5px; color: var(--text-primary); background: var(--bg-section); cursor: pointer; }
+.studio-model-panel p { font: 10px/1.5 Inter, sans-serif; color: var(--text-muted); margin-top: 12px; }
+.studio-model-panel :is(button, select):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.studio-workspace:not([data-studio-view="camera"]) > .viewport-overlay,
+.studio-workspace:not([data-studio-view="camera"]) #viewfinderOverlay,
+.studio-workspace:not([data-studio-view="camera"]) > .light-indicator { display: none; }
+@media (max-width: 1050px) {
+  .studio-workspace .studio-view-toolbar { max-width: calc(100% - 32px); top: 54px; }
+  .studio-view-toolbar button { min-height: 40px; }
+  .studio-camera-preview { width: 240px; }
+}
+@media (max-width: 600px) {
+  .studio-workspace .studio-view-toolbar { left: 8px; max-width: calc(100% - 16px); gap: 3px; }
+  .studio-view-toolbar button { padding: 0 8px; min-height: 44px; font-size: 11px; }
+  .studio-view-actions { padding-left: 0; border-left: 0; }
+  .studio-camera-preview { bottom: 12px; right: 8px; width: 200px; }
+  .studio-model-panel { width: 180px; left: 8px; bottom: 12px; padding: 10px; }
+  .studio-model-panel :is(button, select) { min-height: 44px; }
+  .studio-workspace[data-studio-view="camera"] .studio-model-panel { opacity: .94; }
+}
+
+.studio-workspace-layout:not(.studio-map-open) > .viewport-2d { display: none; }
+.studio-workspace-layout.studio-map-open > .viewport-2d:not(.fullscreen) { height: 320px; min-height: 240px; max-height: 40vh; }
+.studio-workspace[data-studio-view="camera"] #renderCanvas {
+  position: absolute;
+  flex: none;
+  width: var(--studio-shot-width) !important;
+  height: var(--studio-shot-height) !important;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+}
+@media (max-width: 480px) {
+  .studio-camera-preview { width: 160px; }
+  .studio-model-panel { width: 160px; }
+  .studio-model-panel p { display: none; }
+}
+
+.studio-environment-panel { left: auto; right: 18px; top: 122px; bottom: auto; width: 240px; }
+.studio-environment-panel .studio-room-toggle { display: flex; align-items: center; gap: 8px; min-height: 32px; margin: 0; cursor: pointer; }
+.studio-room-toggle input { accent-color: var(--accent-cyan); width: 16px; height: 16px; }
+@media (max-width: 1050px) { .studio-environment-panel { top: 160px; right: 8px; width: 210px; } }
+@media (max-width: 600px) {
+  .studio-environment-panel { width: 180px; top: 190px; }
+  .studio-environment-panel .studio-room-toggle { min-height: 44px; }
+}
+
+@media (max-height: 820px) {
+  .studio-environment-panel { top: 112px; padding: 12px; }
+  .studio-environment-panel .studio-model-heading { margin-bottom: 8px; }
+  .studio-environment-panel select { margin-bottom: 6px; }
+  .studio-environment-panel .studio-document-status { display: none; }
+  .studio-camera-preview { width: 210px; }
+  .studio-camera-preview p { display: none; }
+}

@@ -187,7 +187,7 @@ export const useAutoFocusStore = create<AutoFocusState>((set, get) => ({
   focusLocked: false,
   smoothTransitionSpeed: 0.15,
   showEyeIndicators: true,
-  dofEnabled: true, // DOF enabled by default
+  dofEnabled: false, // Opt in for the taking camera; start with a sharp lighting reference
   focusTargetType: 'eye', // Default to eye detection
   
   setMode: (mode) => set({ mode, isActive: mode !== 'MF', isTracking: mode === 'AF-C' }),

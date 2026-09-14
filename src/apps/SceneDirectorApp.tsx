@@ -107,7 +107,7 @@ const SceneDirectorApp: React.FC = () => {
 
   // Expose a window event-based toggle so anyone can open the panel from
   // anywhere (e.g. a toolbar button in ScreenplayEditor's parent).
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
   useEffect(() => {
     const handleToggle = () => setVisible((prev) => !prev);
     window.addEventListener('toggle-scene-director', handleToggle);

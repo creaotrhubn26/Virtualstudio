@@ -26,6 +26,10 @@ import { marketplaceService } from './services/marketplaceService';
 import { getLightById, LIGHT_DATABASE, LightSpec } from './data/lightFixtures';
 import { zipSync, strToU8 } from 'fflate';
 import MP4Box from 'mp4box';
+import { StudioRoom } from './core/rendering/StudioRoom';
+import { StudioSeat } from './core/rendering/StudioSeat';
+import { StudioWorkspace } from './core/rendering/StudioWorkspace';
+import { createStudioBackdrop, createStudioGrid, studioExposure, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
 import { LightingPhysics } from './core/LightingPhysics';
 import type { SceneComposition } from './core/models/sceneComposer';
 import type { ShotList, CastingShot } from './core/models/production';
@@ -709,6 +713,9 @@ const stripBoneNamespace = (value: string): string => {
 };
 
 class VirtualStudio {
+  public workspace: StudioWorkspace | null = null;
+  public studioRoom: StudioRoom | null = null;
+  private studioSeats = new Map<number, StudioSeat>();
   private engine: BABYLON.Engine;
   public scene: BABYLON.Scene;
   public camera: BABYLON.ArcRotateCamera;
@@ -720,8 +727,6 @@ class VirtualStudio {
   private renderingPipeline: BABYLON.DefaultRenderingPipeline | null = null;
   private ssrPipeline: BABYLON.SSRRenderingPipeline | null = null;
   private renderMode: 'work' | 'final' = 'work';
-  private finalRenderSamples: number = 0;
-  private finalRenderMaxSamples: number = 128;
   private selectedRotAxes: Set<string> = new Set(['x', 'y', 'z']);
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
@@ -819,7 +824,7 @@ class VirtualStudio {
     aperture: 2.8,
     shutter: '1/125',
     iso: 100,
-    focalLength: 35,
+    focalLength: 50,
     nd: 0,
     whiteBalance: 5600
   };
@@ -1003,18 +1008,18 @@ class VirtualStudio {
     this.camera = new BABYLON.ArcRotateCamera(
       'mainCamera',
       -Math.PI / 2,         // alpha: camera sits at negative Z, looking toward positive Z
-      Math.PI / 3.5,        // beta: ~51° from vertical — shows subject + backdrop comfortably
-      7,                    // radius: wider frame shows the full studio context
-      new BABYLON.Vector3(0, 1.2, 0),  // target: chest/face height
+      Math.PI / 2 - 0.025,  // level taking camera at human eye height
+      4.8,                  // full-body portrait distance
+      new BABYLON.Vector3(0, 1.1, 0),  // portrait composition
       this.scene
     );
     this.camera.attachControl(canvas, true);
     this.camera.lowerRadiusLimit = 2;
     this.camera.upperRadiusLimit = 50;
     this.camera.wheelDeltaPercentage = 0.01;
-    this.camera.minZ = 0.3;
+    this.camera.minZ = 0.05;
     this.camera.maxZ = 200;
-    this.camera.fov = (this.cameraSettings.focalLength / 50) * 0.8;
+    this.camera.fov = focalLengthToVerticalFov(this.cameraSettings.focalLength);
 
     // Smooth camera movement to reduce visual artifacts during motion
     this.camera.inertia = 0.9;
@@ -1447,10 +1452,10 @@ class VirtualStudio {
 
   public resetCamera(): void {
     this.camera.alpha = -Math.PI / 2;
-    this.camera.beta = Math.PI / 3.5;
-    this.camera.radius = 7;
-    this.camera.target = new BABYLON.Vector3(0, 1.2, 0);
-    this.camera.fov = (this.cameraSettings?.focalLength ?? 50) / 50 * 0.8;
+    this.camera.beta = Math.PI / 2 - 0.025;
+    this.camera.radius = 4.8;
+    this.camera.target = new BABYLON.Vector3(0, 1.1, 0);
+    this.camera.fov = focalLengthToVerticalFov(this.cameraSettings.focalLength);
   }
 
   public toggleWalls(visible?: boolean): boolean {
@@ -1684,7 +1689,11 @@ class VirtualStudio {
         }
       }
 
-      // Keep SSR aligned with preset intent.
+      // Allocate screen-space reflections only when an operator requests them.
+      if (preset.ssrEnabled === true && !this.ssrPipeline) {
+        this.ssrPipeline = new BABYLON.SSRRenderingPipeline('ssrPipeline', this.scene,
+          [this.camera, ...(this.workspace ? [this.workspace.navigationCamera] : [])]);
+      }
       if (this.ssrPipeline) {
         if (preset.ssrEnabled === false) {
           this.ssrPipeline.strength = 0;
@@ -1953,15 +1962,22 @@ class VirtualStudio {
         updatedAt: new Date().toISOString(),
 
         // Serialize lights
-        lights: Array.from(this.lights.values()).map(light => ({
-          id: light.name,
+        lights: Array.from(this.lights.entries()).map(([id, light]) => ({
+          id,
+          fixtureId: light.type,
+          aimTarget: (light.mesh as any)._aimTarget?.asArray() as [number, number, number] | undefined,
+          baseIntensity: light.baseIntensity,
+          powerMultiplier: light.powerMultiplier,
+          enabled: light.light.isEnabled(),
+          beamAngle: light.light instanceof BABYLON.SpotLight ? light.light.angle : undefined,
+          exponent: light.light instanceof BABYLON.SpotLight ? light.light.exponent : undefined,
           name: light.name,
           type: light.light.getTypeID() === BABYLON.Light.LIGHTTYPEID_SPOTLIGHT ? 'spot' : 'directional',
-          position: [light.mesh.position.x, light.mesh.position.y, light.mesh.position.z] as [number, number, number],
+          position: [light.mesh.position.x, (light.mesh as any)._lightHeadHeight ?? light.mesh.position.y, light.mesh.position.z] as [number, number, number],
           rotation: [light.mesh.rotation.x, light.mesh.rotation.y, light.mesh.rotation.z] as [number, number, number],
           scale: [light.mesh.scaling.x, light.mesh.scaling.y, light.mesh.scaling.z] as [number, number, number],
           cct: light.cct || 5600,
-          intensity: light.intensity,
+          intensity: light.light.intensity,
           modifier: light.modifier || 'none',
           visible: light.mesh.isVisible,
           specs: light.specs
@@ -1981,19 +1997,18 @@ class VirtualStudio {
           locked: false
         } as SceneNode)),
 
-        // Serialize characters/actors
-        actors: Array.from(this.sceneState.characters.values()).map(char => ({
-          id: char.id,
-          type: 'model' as const,
-          name: char.name,
-          transform: {
-            position: [char.mesh.position.x, char.mesh.position.y, char.mesh.position.z] as [number, number, number],
-            rotation: [char.mesh.rotation.x, char.mesh.rotation.y, char.mesh.rotation.z] as [number, number, number],
-            scale: [char.mesh.scaling.x, char.mesh.scaling.y, char.mesh.scaling.z] as [number, number, number]
-          },
-          visible: char.mesh.isVisible,
-          locked: false
-        } as SceneNode)),
+        // Modern characters live in the hierarchy store; include their source and pose.
+        actors: useAppStore.getState().scene.filter(node => node.type === 'model').flatMap(node => {
+          const mesh = this.scene.getMeshByName(node.id);
+          if (!mesh?.metadata?.sourceModelUrl) return [];
+          return [{ ...node, transform: {
+            position: mesh.position.asArray() as [number, number, number],
+            rotation: mesh.rotation.asArray() as [number, number, number],
+            scale: mesh.scaling.asArray() as [number, number, number],
+          }, userData: { ...node.userData, modelUrl: mesh.metadata.sourceModelUrl,
+            heightMeters: mesh.metadata.heightMeters, studioPose: mesh.metadata.studioPose },
+          visible: mesh.isEnabled() }];
+        }),
 
         // Serialize camera
         cameras: [{
@@ -2006,16 +2021,11 @@ class VirtualStudio {
         }],
 
         // Camera settings
-        cameraSettings: {
-          aperture: 2.8,
-          shutter: '1/50',
-          iso: 800,
-          focalLength: 50,
-          nd: 0
-        },
+        cameraSettings: { ...this.cameraSettings },
 
         // Environment state
         environment: {
+          room: envState.room,
           walls: Object.entries(envState.walls).map(([key, wall]) => ({
             id: key,
             assetId: wall.materialId,
@@ -2074,15 +2084,27 @@ class VirtualStudio {
               lightData.position[1],
               lightData.position[2]
             );
-            await this.addLight(lightData.name, position);
+            const loadedId = await this.addLight(lightData.fixtureId || lightData.name, position);
 
-            // Apply light properties
-            const light = this.lights.get(lightData.id);
+            // Runtime IDs are newly allocated on load.
+            const light = this.lights.get(loadedId);
             if (light) {
               light.mesh.rotation.set(lightData.rotation[0], lightData.rotation[1], lightData.rotation[2]);
-              light.mesh.scaling.set(lightData.scale[0], lightData.scale[1], lightData.scale[2]);
+              light.mesh.scaling.set(lightData.scale?.[0] ?? 1, lightData.scale?.[1] ?? 1, lightData.scale?.[2] ?? 1);
+              light.name = lightData.name;
               light.intensity = lightData.intensity;
+              light.baseIntensity = lightData.baseIntensity ?? lightData.intensity;
+              light.powerMultiplier = lightData.powerMultiplier ?? 1;
+              light.light.intensity = lightData.intensity;
+              if (light.light instanceof BABYLON.SpotLight) {
+                light.light.angle = lightData.beamAngle ?? light.light.angle;
+                light.light.exponent = lightData.exponent ?? light.light.exponent;
+              }
+              light.light.setEnabled(lightData.enabled ?? true);
               light.cct = lightData.cct;
+              light.light.diffuse = this.cctToColor(lightData.cct);
+              light.light.specular = light.light.diffuse.clone();
+              if (lightData.aimTarget) this.aimLightAt(loadedId, BABYLON.Vector3.FromArray(lightData.aimTarget));
               if (lightData.modifier) light.modifier = lightData.modifier;
               light.mesh.isVisible = lightData.visible;
               // Note: Light color is set during creation based on CCT
@@ -2133,6 +2155,25 @@ class VirtualStudio {
         for (const actorData of preset.actors) {
           try {
             const actorNode = actorData as any; // Type assertion for legacy data
+            if (actorData.userData?.modelUrl) {
+              const data = actorData.userData;
+              await this.loadCharacterModel(String(data.modelUrl), actorData.name, '', Number(data.heightMeters || 1.7) / 1.7, { additive: true });
+              const mesh = this.characterMesh;
+              if (mesh) {
+                if (data.studioPose) this.applyStudioPose(data.studioPose as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
+                const restore = () => {
+                  mesh.position.copyFromFloats(...actorData.transform.position);
+                  mesh.rotation.copyFromFloats(...actorData.transform.rotation);
+                  mesh.scaling.copyFromFloats(...actorData.transform.scale);
+                  mesh.setEnabled(actorData.visible !== false);
+                  mesh.computeWorldMatrix(true);
+                  this.syncCharacterNodeTransform(mesh, true);
+                };
+                restore();
+                this.scene.onAfterRenderObservable.addOnce(restore);
+              }
+              continue;
+            }
             if (actorNode.assetId) {
               await this.loadAvatarModel(actorNode.assetId, { name: actorNode.name });
 
@@ -2151,6 +2192,11 @@ class VirtualStudio {
         }
       }
 
+      if (preset.cameraSettings) {
+        Object.assign(this.cameraSettings, preset.cameraSettings);
+        this.setFocalLength(this.cameraSettings.focalLength);
+        this.updateSceneBrightness();
+      }
       // Apply camera
       if (preset.cameras && preset.cameras.length > 0) {
         const camData = preset.cameras[0];
@@ -2163,6 +2209,7 @@ class VirtualStudio {
 
       // Apply environment
       if (preset.environment) {
+        environmentService.setStudioRoom(preset.environment.room || { type: 'none', furnishings: true, practicals: true });
         // Apply walls
         if (preset.environment.walls && preset.environment.walls.length > 0) {
           const wall = preset.environment.walls[0];
@@ -2181,7 +2228,7 @@ class VirtualStudio {
           if (this.ambientLight) {
             this.ambientLight.intensity = atm.ambientIntensity;
           }
-          this.scene.clearColor = BABYLON.Color4.FromHexString(atm.clearColor + 'FF');
+          this.scene.clearColor = BABYLON.Color4.FromHexString(atm.clearColor.length === 7 ? atm.clearColor + 'FF' : atm.clearColor);
         }
       }
 
@@ -2211,9 +2258,7 @@ class VirtualStudio {
         if (settings.focalLength) {
           // Convert focal length to FOV approximation
           // FOV (radians) ≈ 2 * atan(sensor_width / (2 * focal_length))
-          // Assuming 35mm sensor width
-          const sensorWidth = 36; // mm
-          const fov = 2 * Math.atan(sensorWidth / (2 * settings.focalLength));
+          const fov = focalLengthToVerticalFov(settings.focalLength);
           this.camera.fov = fov;
         }
       }
@@ -2240,8 +2285,7 @@ class VirtualStudio {
       // Set focal length from shot
       const shotExt = shot as CastingShot & { focalLength?: number };
       if (shotExt.focalLength) {
-        const sensorWidth = 36; // mm
-        const fov = 2 * Math.atan(sensorWidth / (2 * shotExt.focalLength));
+        const fov = focalLengthToVerticalFov(shotExt.focalLength);
         this.camera.fov = fov;
       }
 
@@ -2312,7 +2356,14 @@ class VirtualStudio {
         this.removePropNodeById(id, false);
       });
 
-      // Remove all characters
+      // Remove imported characters, including those registered through the hierarchy.
+      for (const node of [...useAppStore.getState().scene]) {
+        const mesh = this.scene.getMeshByName(node.id);
+        if (!mesh?.metadata?.sourceModelUrl) continue;
+        this.characterMesh = mesh;
+        this.characterModelId = node.id;
+        this.removeCharacterModel();
+      }
       this.sceneState.characters.forEach((char, _id) => {
         char.mesh.dispose();
       });
@@ -2706,7 +2757,7 @@ class VirtualStudio {
     const category = options.category || 'bakgrunn';
 
     // Create backdrop based on category/type
-    if (category === 'bakgrunn' || backdropId.includes('seamless') || backdropId.includes('background')) {
+    if (!backdropId.includes('cove') && !backdropId.includes('cyclorama') && (category === 'bakgrunn' || backdropId.includes('seamless') || backdropId.includes('background'))) {
       // Create a cyclorama/seamless paper backdrop
       this.createSeamlessBackdrop(backdropId, scale, options.receiveShadow !== false);
     } else if (backdropId.includes('cove') || backdropId.includes('cyclorama')) {
@@ -2724,135 +2775,11 @@ class VirtualStudio {
   }
 
   private createSeamlessBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
-    const W = 9 * scale;       // total width — wide for colored gel gradients
-    const H = 5.5 * scale;     // wall height
-    const R = 2.2 * scale;     // curve radius (floor-to-wall transition)
-    const D = 6 * scale;       // floor depth in front of curve
-    const Z = 8;               // back wall at POSITIVE Z (behind the subject, in front of rearWall at Z=10)
-
-    const backdropMat = new BABYLON.PBRMaterial('backdropMat_' + backdropId, this.scene);
-    backdropMat.albedoColor = new BABYLON.Color3(0.82, 0.82, 0.84);   // neutral cool-grey
-    backdropMat.roughness = 0.55;   // semi-gloss so coloured gels show specular hotspots
-    backdropMat.metallic = 0.02;    // hint of metallic keeps the specular physically correct
-    backdropMat.backFaceCulling = false;
-    backdropMat.maxSimultaneousLights = 8;  // receive all studio lights, not just 4
-
-    // Root node at origin — all children keep their own world-space positions
-    const rootNode = new BABYLON.Mesh('backdropRoot_' + backdropId, this.scene);
-    rootNode.isVisible = false;
-    rootNode.position.set(0, 0, 0);
-
-    // 1. Back wall — vertical flat plane at Z, bottom edge at y=R, top at y=R+H
-    const backWall = BABYLON.MeshBuilder.CreatePlane('backdropWall_' + backdropId, {
-      width: W, height: H,
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, this.scene);
-    backWall.position.set(0, R + H / 2, Z);
-    backWall.material = backdropMat;
-    backWall.receiveShadows = receiveShadow;
-    backWall.parent = rootNode;
-
-    // 2. Smooth quarter-circle cove: rises from floor (y=0, z=Z-R) to wall base (y=R, z=Z)
-    //    Parameterisation: t ∈ [0, π/2]
-    //      t=0  → floor tangent point  (y=0,   z=Z-R)
-    //      t=π/2 → wall tangent point  (y=R,   z=Z)
-    const segs = 32;
-    const leftPath: BABYLON.Vector3[] = [];
-    const rightPath: BABYLON.Vector3[] = [];
-    for (let i = 0; i <= segs; i++) {
-      const t = (i / segs) * (Math.PI / 2);
-      const y = R * Math.sin(t);        // 0 → R (rising from floor to wall base)
-      const z = Z - R * Math.cos(t);   // Z-R → Z (approaching back wall)
-      leftPath.push(new BABYLON.Vector3(-W / 2, y, z));
-      rightPath.push(new BABYLON.Vector3( W / 2, y, z));
-    }
-    const cove = BABYLON.MeshBuilder.CreateRibbon('backdropCove_' + backdropId, {
-      pathArray: [leftPath, rightPath],
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, this.scene);
-    cove.material = backdropMat;
-    cove.receiveShadows = receiveShadow;
-    cove.parent = rootNode;
-
-    // 3. Floor extension — from the cove front (Z-R) toward the camera (-Z direction)
-    const floorExt = BABYLON.MeshBuilder.CreateGround('backdropFloorExt_' + backdropId, {
-      width: W, height: D, subdivisions: 4
-    }, this.scene);
-    floorExt.position.set(0, 0.002, Z - R - D / 2);   // slightly above main ground to prevent z-fight
-    floorExt.material = backdropMat;
-    floorExt.receiveShadows = receiveShadow;
-    floorExt.parent = rootNode;
-
-    this.currentBackdropMesh = rootNode;
-    console.log(`Infinity-cove backdrop created: ${backdropId}  (Z=${Z}, W=${W}, R=${R}, D=${D})`);
+    this.currentBackdropMesh = createStudioBackdrop(this.scene, backdropId, scale, receiveShadow);
   }
 
   private createCycloramaBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
-    // Create a professional cyclorama (infinity cove)
-    const width = 10 * scale;
-    const height = 5 * scale;
-    const curveRadius = 2 * scale;
-
-    // Create back wall — at positive Z (behind subject, visible to camera at negative Z)
-    const backWall = BABYLON.MeshBuilder.CreatePlane('cycloBackWall', {
-      width: width,
-      height: height - curveRadius,
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, this.scene);
-    backWall.position.set(0, (height - curveRadius) / 2 + curveRadius, 8);
-
-    // Create curved transition: rises from floor (y=0, z=8-R) to wall base (y=R, z=8)
-    const pathPoints: BABYLON.Vector3[][] = [];
-    const segments = 16;
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * (Math.PI / 2);
-      const y = curveRadius * Math.sin(angle);
-      const z = 8 - curveRadius * Math.cos(angle);
-      pathPoints.push([
-        new BABYLON.Vector3(-width / 2, y, z),
-        new BABYLON.Vector3(width / 2, y, z)
-      ]);
-    }
-
-    const paths: BABYLON.Vector3[][] = [];
-    for (let i = 0; i < pathPoints.length; i++) {
-      paths.push(pathPoints[i]);
-    }
-
-    const curve = BABYLON.MeshBuilder.CreateRibbon('cycloCurve', {
-      pathArray: paths,
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, this.scene);
-
-    // Create floor
-    const floorDepth = 8 + curveRadius;
-    const floor = BABYLON.MeshBuilder.CreateGround('cycloFloor', {
-      width: width,
-      height: floorDepth
-    }, this.scene);
-    // Floor center: between cove front (8-R) and camera-side edge (8-R-floorDepth)
-    floor.position.set(0, 0.002, (8 - curveRadius) - floorDepth / 2);
-
-    // Create material
-    const cycloMat = new BABYLON.StandardMaterial('cycloMat', this.scene);
-    cycloMat.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95); // White cove
-    cycloMat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-    cycloMat.backFaceCulling = false;
-
-    backWall.material = cycloMat;
-    curve.material = cycloMat;
-    floor.material = cycloMat.clone('cycloFloorMat');
-
-    backWall.receiveShadows = receiveShadow;
-    curve.receiveShadows = receiveShadow;
-    floor.receiveShadows = receiveShadow;
-
-    // Parent all parts to backWall for easy removal
-    curve.parent = backWall;
-    floor.parent = backWall;
-
-    this.currentBackdropMesh = backWall;
-    console.log('Cyclorama backdrop created:', backdropId);
+    this.currentBackdropMesh = createStudioBackdrop(this.scene, backdropId, scale, receiveShadow, true);
   }
 
   public removeBackdrop(): void {
@@ -2861,7 +2788,7 @@ class VirtualStudio {
       this.currentBackdropMesh.getChildMeshes().forEach(child => {
         child.dispose();
       });
-      this.currentBackdropMesh.dispose();
+      this.currentBackdropMesh.dispose(false, true);
       this.currentBackdropMesh = null;
       console.log('Backdrop removed');
     }
@@ -2964,23 +2891,23 @@ class VirtualStudio {
     this.renderingPipeline.imageProcessing.toneMappingEnabled = true;
     this.renderingPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
 
-    // Exposure / contrast — slight lift for cleaner highlights; more punch in mid-tones
-    this.renderingPipeline.imageProcessing.exposure = 1.08;
-    this.renderingPipeline.imageProcessing.contrast = 1.28;
+    // Neutral exposure and contrast for judging the lighting setup
+    this.renderingPipeline.imageProcessing.exposure = 0.8;
+    this.renderingPipeline.imageProcessing.contrast = 1.0;
 
-    // Vignette — moderate oval that draws the eye to the subject without crushing edges
-    this.renderingPipeline.imageProcessing.vignetteEnabled = true;
+    // Artistic effects are opt-in; retain their settings for rendering presets
+    this.renderingPipeline.imageProcessing.vignetteEnabled = false;
     this.renderingPipeline.imageProcessing.vignetteWeight = 2.2;
     this.renderingPipeline.imageProcessing.vignetteStretch = 0.5;
     this.renderingPipeline.imageProcessing.vignetteColor = new BABYLON.Color4(0, 0, 0, 0);
     this.renderingPipeline.imageProcessing.vignetteBlendMode = BABYLON.ImageProcessingConfiguration.VIGNETTEMODE_MULTIPLY;
 
-    // High-quality anti-aliasing (FXAA + MSAA 8x)
+    // FXAA plus 4x MSAA for interactive work
     this.renderingPipeline.fxaaEnabled = true;
-    this.renderingPipeline.samples = 8;
+    this.renderingPipeline.samples = 4;
 
-    // Bloom — wide, soft halo so gel colours spill across the backdrop naturally
-    this.renderingPipeline.bloomEnabled = true;
+    // Optional image effect
+    this.renderingPipeline.bloomEnabled = false;
     this.renderingPipeline.bloomThreshold = 0.38;   // lower = more gel areas bloom
     this.renderingPipeline.bloomWeight = 0.65;       // stronger bloom for vivid gels
     this.renderingPipeline.bloomKernel = 192;        // wider kernel = softer halo
@@ -2989,46 +2916,20 @@ class VirtualStudio {
     // Depth of Field - DISABLED: Using custom PhysicsBasedDOF instead
     this.renderingPipeline.depthOfFieldEnabled = false;
 
-    // Film grain — very subtle, animated for photorealistic film texture
-    this.renderingPipeline.grainEnabled = true;
+    // Optional image effect
+    this.renderingPipeline.grainEnabled = false;
     this.renderingPipeline.grain.intensity = 1.5;   // reduced from 3 — cleaner, more controlled
     this.renderingPipeline.grain.animated = true;
 
-    // Chromatic aberration — enabled at a gentle amount for lens realism
-    this.renderingPipeline.chromaticAberrationEnabled = true;
+    // Optional image effect
+    this.renderingPipeline.chromaticAberrationEnabled = false;
     this.renderingPipeline.chromaticAberration.aberrationAmount = 6;  // subtle
 
-    // Sharpen — strong enough for crisp hair and fabric detail without ringing
-    this.renderingPipeline.sharpenEnabled = true;
+    // Optional image effect
+    this.renderingPipeline.sharpenEnabled = false;
     this.renderingPipeline.sharpen.edgeAmount = 0.45;
 
-    // Setup SSR (Screen-Space Reflections) for realistic reflections
-    try {
-      this.ssrPipeline = new BABYLON.SSRRenderingPipeline(
-        'ssrPipeline',
-        this.scene,
-        [this.camera],
-        false, // forceGeometryBuffer
-        BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE
-      );
-
-      // SSR settings — higher quality for polished floor/backdrop reflections
-      this.ssrPipeline.strength = 1.0;
-      this.ssrPipeline.reflectionSpecularFalloffExponent = 2;
-      this.ssrPipeline.step = 0.5;              // finer steps → less stair-stepping
-      this.ssrPipeline.maxSteps = 128;          // more steps → longer reflections
-      this.ssrPipeline.maxDistance = 50;
-      this.ssrPipeline.thickness = 0.35;        // tighter → crisper contact reflections
-      this.ssrPipeline.roughnessFactor = 0.08;  // tighter roughness gate
-      this.ssrPipeline.selfCollisionNumSkip = 2;
-      this.ssrPipeline.enableSmoothReflections = true;
-      this.ssrPipeline.blurDispersionStrength = 0.02; // less blur = cleaner floor mirror
-      this.ssrPipeline.enableAutomaticThicknessComputation = false;
-
-      console.log('SSR pipeline enabled');
-    } catch (e) {
-      console.warn('SSR not available:', e);
-    }
+    // Reflections and artistic effects remain opt-in through rendering presets.
 
     // Dispatch event to notify UI about rendering pipeline
     window.dispatchEvent(new CustomEvent('vs-rendering-pipeline-ready', {
@@ -3061,14 +2962,13 @@ class VirtualStudio {
     this.renderMode = mode;
 
     if (mode === 'final') {
-      // Final Mode: Higher quality, progressive rendering
+      // Final Mode: Higher antialiasing quality
       if (this.renderingPipeline) {
         this.renderingPipeline.samples = 8;
-        this.renderingPipeline.bloomEnabled = true;
-        this.renderingPipeline.grainEnabled = true;
+        this.renderingPipeline.bloomEnabled = false;
+        this.renderingPipeline.grainEnabled = false;
       }
-      this.finalRenderSamples = 0;
-      console.log('Switched to Final Mode - Progressive rendering enabled');
+      console.log('Switched to Final Mode - higher MSAA quality');
     } else {
       // Work Mode: Balanced quality/performance
       if (this.renderingPipeline) {
@@ -3079,7 +2979,7 @@ class VirtualStudio {
     }
 
     window.dispatchEvent(new CustomEvent('vs-render-mode-changed', {
-      detail: { mode, samples: this.finalRenderSamples }
+      detail: { mode, samples: this.renderingPipeline?.samples ?? 1 }
     }));
   }
 
@@ -5433,14 +5333,7 @@ class VirtualStudio {
     ground.material = groundMat;
     ground.receiveShadows = true;
 
-    this.gridMesh = BABYLON.MeshBuilder.CreateGround('grid', { width: 20, height: 20, subdivisions: 20 }, this.scene);
-    const gridMat = new BABYLON.StandardMaterial('gridMat', this.scene);
-    gridMat.wireframe = true;
-    gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.25, 0.35);
-    gridMat.alpha = 0.5;
-    gridMat.zOffset = -1; // Prevent z-fighting with ground
-    this.gridMesh.material = gridMat;
-    this.gridMesh.position.y = 0.01;
+    this.gridMesh = createStudioGrid(this.scene);
 
     const wallMat = new BABYLON.StandardMaterial('wallMat', this.scene);
     wallMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
@@ -5481,6 +5374,8 @@ class VirtualStudio {
     console.log('[VirtualStudio] Default lighting setup complete. Lights loaded:', this.lights.size);
 
       // Initialize and subscribe to environment service for wall/floor/ambient lighting sync
+      this.studioRoom = new StudioRoom(this.scene, () => [...this.lights.values()].flatMap(data => data.shadowGenerator ? [data.shadowGenerator] : []));
+      this.scene.onDisposeObservable.addOnce(() => this.studioRoom?.clear());
       environmentService.initializeDefaults();
       environmentService.subscribe((state) => {
         // Update scene walls, floors, and lighting when environment changes
@@ -5490,6 +5385,30 @@ class VirtualStudio {
       console.log('[VirtualStudio] Environment service initialized and subscribed');
 
     this.setupPhysicalCameraProps();
+    const renderCanvas = this.engine.getRenderingCanvas();
+    if (renderCanvas) this.workspace = new StudioWorkspace(this.scene, this.camera, renderCanvas, this.renderingPipeline, () => this.cameraSettings, {
+      load: model => this.loadStudioCharacter(model),
+      pose: pose => this.applyStudioPose(pose),
+      frame: portrait => {
+        const mesh = this.getPrimaryCharacterMesh();
+        const position = mesh?.getAbsolutePosition() || BABYLON.Vector3.Zero();
+        const eyes = mesh?.getChildMeshes().find(child => child.name === 'Eyes');
+        const seated = mesh?.metadata?.studioPose === 'StudioSeated';
+        const eyeHeight = eyes?.getBoundingInfo().boundingBox.centerWorld.y || 1.6;
+        this.setFocalLength(portrait ? 85 : 50);
+        this.camera.setTarget(new BABYLON.Vector3(position.x, portrait ? eyeHeight - .12 : seated ? .77 : 1.0, position.z));
+        this.camera.alpha = -Math.PI / 2;
+        this.camera.beta = Math.PI / 2;
+        this.camera.radius = portrait ? 2.8 : seated ? 3.8 : 4.8;
+      },
+    }, {
+      save: () => this.getCurrentSceneAsPreset(),
+      load: async preset => {
+        await this.applyScenePreset(preset);
+        useAppStore.getState().selectNode(null);
+        this.gizmoManager?.attachToMesh(null);
+      },
+    });
   }
 
   private setupPhysicalCameraProps(): void {
@@ -5765,7 +5684,12 @@ class VirtualStudio {
         }
       }
 
+      if (state?.floor) {
+        this.toggleFloor(state.floor.visible !== false);
+        this.toggleGrid(state.floor.gridVisible === true);
+      }
       this.recalculateAmbientLighting();
+      this.studioRoom?.apply(state.room || { type: 'none', furnishings: true, practicals: true });
       this.publishEnvironmentDiagnostics('scene-environment-updated');
       window.dispatchEvent(new CustomEvent('vs-environment-changed', {
         detail: (window as any).__virtualStudioDiagnostics?.environment,
@@ -5779,6 +5703,7 @@ class VirtualStudio {
   private applyWallTexture(wallId: string, materialId: string): void {
     const wall = this.scene.getMeshByName(wallId);
     if (!wall) return;
+    if (wall.material?.name === `${wallId}_${materialId}`) return;
 
     const wallMaterial = getWallById(materialId);
     if (!wallMaterial) {
@@ -5850,6 +5775,7 @@ class VirtualStudio {
   private updateFloorProperties(materialId: string): void {
     const floor = this.scene.getMeshByName('ground');
     if (!floor) return;
+    if (floor.material?.name === `floor_${materialId}`) return;
 
     const floorMaterial = getFloorById(materialId);
     if (!floorMaterial) {
@@ -6780,11 +6706,12 @@ class VirtualStudio {
     // Load the infinity cove backdrop immediately so colored lights have a surface to illuminate
     this.loadBackdrop('seamless-default', { receiveShadow: true });
 
-    // === KEY LIGHT (warm golden, right 45°) ===
+    // Neutral daylight key, fill and rim for judging materials and light placement.
     const keyLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(3.5, 3.2, -2));
     const keyLight = this.lights.get(keyLightId);
     if (keyLight) {
-      keyLight.name = 'Key Light (Softbox)';
+      keyLight.name = 'Hovedlys · Softbox';
+      keyLight.baseIntensity = 520;
       keyLight.powerMultiplier = 1.0;
       this.aimLightAt(keyLightId, new BABYLON.Vector3(0, 1.3, 0));
       if (keyLight.light instanceof BABYLON.SpotLight) {
@@ -6792,25 +6719,26 @@ class VirtualStudio {
         keyLight.light.exponent = 2.0;
         keyLight.light.intensity = 520;          // stronger key → 2.9:1 key:fill ratio
         keyLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        // Warm tungsten/HMI colour — 3200K approximation
-        keyLight.light.diffuse  = new BABYLON.Color3(1.0, 0.96, 0.86);
-        keyLight.light.specular = new BABYLON.Color3(1.0, 0.96, 0.86);
+        // 5600 K daylight
+        keyLight.light.diffuse  = this.cctToColor(5600);
+        keyLight.light.specular = this.cctToColor(5600);
       }
       if (keyLight.shadowGenerator) {
         keyLight.shadowGenerator.useBlurExponentialShadowMap = true;
         keyLight.shadowGenerator.blurKernel = 64;
         keyLight.shadowGenerator.depthScale = 50;
         keyLight.shadowGenerator.bias = 0.00004;
-        keyLight.shadowGenerator.normalBias = 0.06;
+        keyLight.shadowGenerator.normalBias = 0.003;
         keyLight.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
       }
     }
 
-    // === FILL LIGHT (cool blue, left 45°) ===
+    // Fill
     const fillLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(-3.2, 2.2, -3));
     const fillLight = this.lights.get(fillLightId);
     if (fillLight) {
-      fillLight.name = 'Fill Light (Octabox)';
+      fillLight.name = 'Utfylling · Softbox';
+      fillLight.baseIntensity = 178 / 0.45;
       fillLight.powerMultiplier = 0.45;
       this.aimLightAt(fillLightId, subjectCenter);
       if (fillLight.light instanceof BABYLON.SpotLight) {
@@ -6818,24 +6746,25 @@ class VirtualStudio {
         fillLight.light.exponent = 1.5;
         fillLight.light.intensity = 178;         // 520:178 ≈ 2.9:1 — professional portrait ratio
         fillLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        // Distinctly cool daylight bias — strong temperature contrast with warm key
-        fillLight.light.diffuse  = new BABYLON.Color3(0.78, 0.86, 1.0);
-        fillLight.light.specular = new BABYLON.Color3(0.78, 0.86, 1.0);
+        // Match the key colour temperature
+        fillLight.light.diffuse  = this.cctToColor(5600);
+        fillLight.light.specular = this.cctToColor(5600);
       }
       if (fillLight.shadowGenerator) {
         fillLight.shadowGenerator.useBlurExponentialShadowMap = true;
         fillLight.shadowGenerator.blurKernel = 80;
         fillLight.shadowGenerator.bias = 0.00006;
-        fillLight.shadowGenerator.normalBias = 0.08;
+        fillLight.shadowGenerator.normalBias = 0.003;
         fillLight.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM;
       }
     }
 
-    // === RIM LIGHT (warm separation) ===
+    // Rim
     const rimLightId = await this.addLight('aputure-300d-strip', new BABYLON.Vector3(-2.5, 4, 3.5));
     const rimLight = this.lights.get(rimLightId);
     if (rimLight) {
-      rimLight.name = 'Rim Light (Stripbox)';
+      rimLight.name = 'Kantlys · Stripbox';
+      rimLight.baseIntensity = 500 / 0.6;
       rimLight.powerMultiplier = 0.6;
       this.aimLightAt(rimLightId, new BABYLON.Vector3(0, 1.5, 0));
       if (rimLight.light instanceof BABYLON.SpotLight) {
@@ -6843,8 +6772,8 @@ class VirtualStudio {
         rimLight.light.exponent = 4.0;          // tighter centre hotspot → crisper edge light
         rimLight.light.intensity = 500;          // stronger separation
         rimLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        rimLight.light.diffuse = new BABYLON.Color3(1.0, 0.90, 0.72);  // richer warm amber
-        rimLight.light.specular = new BABYLON.Color3(1.0, 0.90, 0.72);
+        rimLight.light.diffuse = this.cctToColor(5600);
+        rimLight.light.specular = this.cctToColor(5600);
       }
       if (rimLight.shadowGenerator) {
         rimLight.shadowGenerator.blurKernel = 32;
@@ -7256,144 +7185,28 @@ class VirtualStudio {
     this.setupRenderModeToggle();
   }
 
-  private finalRenderInterval: ReturnType<typeof setInterval> | null = null;
-
-  /**
-   * Setup render mode toggle (Work Mode / Final Mode)
-   */
+  /** Final mode increases antialiasing; the current renderer is real-time rasterization. */
   private setupRenderModeToggle(): void {
-    const workModeBtn = document.getElementById('workModeBtn');
-    const finalModeBtn = document.getElementById('finalModeBtn');
-    const renderProgress = document.getElementById('renderProgress');
-    const renderProgressBar = document.getElementById('renderProgressBar');
-    const renderProgressText = document.getElementById('renderProgressText');
-    const cancelFinalRender = document.getElementById('cancelFinalRender');
-
-    // Initialize progress elements
-    if (renderProgressBar) renderProgressBar.style.width = '0%';
-    if (renderProgressText) renderProgressText.textContent = '0%';
-
-    // Store original progress HTML for reset
-    const originalProgressHTML = renderProgress?.innerHTML || '';
-
-    const resetProgressUI = () => {
-      if (renderProgress) {
-        renderProgress.innerHTML = originalProgressHTML;
-      }
-      const newProgressBar = document.getElementById('renderProgressBar');
-      const newProgressText = document.getElementById('renderProgressText');
-      if (newProgressBar) newProgressBar.style.width = '0%';
-      if (newProgressText) newProgressText.textContent = '0%';
+    const work = document.getElementById('workModeBtn');
+    const final = document.getElementById('finalModeBtn');
+    const progress = document.getElementById('renderProgress');
+    const update = (mode: 'work' | 'final') => {
+      work?.classList.toggle('active', mode === 'work');
+      final?.classList.toggle('active', mode === 'final');
+      if (progress) progress.style.display = mode === 'final' ? 'block' : 'none';
     };
-
-    const stopFinalRender = () => {
-      if (this.finalRenderInterval) {
-        clearInterval(this.finalRenderInterval);
-        this.finalRenderInterval = null;
-      }
-    };
-
-    const updateModeUI = (mode: 'work' | 'final') => {
-      if (mode === 'work') {
-        stopFinalRender();
-        workModeBtn?.classList.add('active');
-        finalModeBtn?.classList.remove('active');
-        if (workModeBtn) {
-          workModeBtn.style.background = 'rgba(0,212,255,0.3)';
-          workModeBtn.style.color = '#00d4ff';
-        }
-        if (finalModeBtn) {
-          finalModeBtn.style.background = 'transparent';
-          finalModeBtn.style.color = 'rgba(255,255,255,0.6)';
-        }
-        if (renderProgress) renderProgress.style.display = 'none';
-        resetProgressUI();
-      } else {
-        finalModeBtn?.classList.add('active');
-        workModeBtn?.classList.remove('active');
-        if (finalModeBtn) {
-          finalModeBtn.style.background = 'rgba(16,185,129,0.3)';
-          finalModeBtn.style.color = '#10b981';
-        }
-        if (workModeBtn) {
-          workModeBtn.style.background = 'transparent';
-          workModeBtn.style.color = 'rgba(255,255,255,0.6)';
-        }
-        if (renderProgress) renderProgress.style.display = 'block';
-      }
-    };
-
-    const startFinalRender = () => {
-      stopFinalRender();
-      resetProgressUI();
-
-      let progress = 0;
-      const progressBar = document.getElementById('renderProgressBar');
-      const progressText = document.getElementById('renderProgressText');
-      const progressStep = Math.max(1, Math.round(100 / this.finalRenderMaxSamples));
-
-      this.finalRenderInterval = setInterval(() => {
-        progress += progressStep;
-        if (progressBar) progressBar.style.width = `${Math.min(progress, 100)}%`;
-        if (progressText) progressText.textContent = `${Math.min(progress, 100)}%`;
-
-        if (progress >= 100) {
-          stopFinalRender();
-          setTimeout(() => {
-            const rp = document.getElementById('renderProgress');
-            if (rp && this.renderMode === 'final') {
-              rp.innerHTML = `
-                <div style="font-size:11px;color:#10b981;margin-bottom:4px;">Rendering fullført</div>
-                <div style="display:flex;gap:8px;justify-content:center;">
-                  <button id="exportFinalRender" style="padding:6px 16px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">Eksporter Bilde</button>
-                  <button id="rerunFinalRender" style="padding:6px 12px;border:none;background:rgba(255,255,255,0.1);color:#fff;border-radius:6px;cursor:pointer;font-size:11px;">Kjør igjen</button>
-                </div>
-              `;
-              document.getElementById('exportFinalRender')?.addEventListener('click', () => {
-                this.exportScreenshot();
-              });
-              document.getElementById('rerunFinalRender')?.addEventListener('click', () => {
-                resetProgressUI();
-                startFinalRender();
-              });
-            }
-          }, 500);
-        }
-      }, 100);
-    };
-
-    workModeBtn?.addEventListener('click', () => {
-      this.setRenderMode('work');
-      updateModeUI('work');
-    });
-
-    finalModeBtn?.addEventListener('click', () => {
-      this.setRenderMode('final');
-      updateModeUI('final');
-      startFinalRender();
-    });
-
-    cancelFinalRender?.addEventListener('click', () => {
-      this.setRenderMode('work');
-      updateModeUI('work');
-    });
-
-    // Listen for render mode changes from code
-    window.addEventListener('vs-render-mode-changed', ((e: CustomEvent) => {
-      updateModeUI(e.detail.mode);
-    }) as EventListener);
+    if (progress) {
+      progress.innerHTML = '<div style="font-size:11px;margin-bottom:8px">Høy kvalitet · sanntid</div><button type="button" id="exportFinalRender">Eksporter kamerabilde</button>';
+      progress.querySelector('button')?.addEventListener('click', () => this.exportScreenshot());
+    }
+    work?.addEventListener('click', () => this.setRenderMode('work'));
+    final?.addEventListener('click', () => this.setRenderMode('final'));
+    window.addEventListener('vs-render-mode-changed', ((event: CustomEvent) => update(event.detail.mode)) as EventListener);
+    update(this.renderMode);
   }
 
-  /**
-   * Export screenshot of the current viewport
-   */
   private exportScreenshot(): void {
-    BABYLON.Tools.CreateScreenshot(this.engine, this.camera, { width: 1920, height: 1080 }, (data) => {
-      const link = document.createElement('a');
-      link.download = `virtual-studio-render-${Date.now()}.png`;
-      link.href = data;
-      link.click();
-    });
+    this.takeScreenshot();
   }
 
   private currentScopeMode: 'histogram' | 'waveform' | 'vectorscope' | 'skin' | 'zebra' | 'falsecolor' = 'histogram';
@@ -7851,41 +7664,18 @@ class VirtualStudio {
   }
 
   public updateSceneBrightness(): void {
-    // Parse shutter speed to get exposure time
-    const shutterMatch = this.cameraSettings.shutter.match(/1\/(\d+)/);
-    const shutterSeconds = shutterMatch ? 1 / parseInt(shutterMatch[1]) : 1/125;
-
-    // Calculate exposure value (EV)
-    const isoFactor = this.cameraSettings.iso / 100;
-    const apertureFactor = 1 / (this.cameraSettings.aperture * this.cameraSettings.aperture);
-    const shutterFactor = shutterSeconds * 125; // Normalize to 1/125s baseline
-    const ndFactor = 1 / Math.pow(2, this.cameraSettings.nd);
-
-    const brightness = isoFactor * apertureFactor * shutterFactor * ndFactor * 2;
-
-    // Update all studio lights - preserve user's intensity settings
-    for (const [, data] of this.lights) {
-      // Initialize baseIntensity if not set
-      if (!data.baseIntensity) {
-        data.baseIntensity = data.type.includes('softbox') || data.type.includes('umbrella') ? 8 : 12;
-      }
-      // Initialize powerMultiplier if not set (default to 100% = 1.0)
-      if (data.powerMultiplier === undefined) {
-        data.powerMultiplier = 1.0;
-      }
-      // Apply: baseIntensity * powerMultiplier * brightness
-      data.light.intensity = data.baseIntensity * data.powerMultiplier * brightness;
+    // Exposure belongs to the camera. Keep scene illumination stable when ISO,
+    // aperture, shutter or ND changes, including the live taking-camera preview.
+    const settings = this.cameraSettings;
+    const exposure = studioExposure(settings.iso, settings.aperture, settings.shutter, settings.nd);
+    if (this.renderingPipeline) this.renderingPipeline.imageProcessing.exposure = 0.8 * exposure;
+    for (const data of this.lights.values()) {
+      data.baseIntensity ??= data.light.intensity;
+      data.powerMultiplier ??= 1;
+      data.light.intensity = data.baseIntensity * data.powerMultiplier;
       data.intensity = data.light.intensity;
-      // Sync visual glow on the softbox/octabox head to the power level
       this.updateLightHeadGlow(data);
     }
-
-    // Update ambient/hemisphere light if exists
-    this.scene.lights.forEach(light => {
-      if (light instanceof BABYLON.HemisphericLight) {
-        light.intensity = 0.3 * brightness;
-      }
-    });
   }
 
   private setupModalListeners(): void {
@@ -11534,7 +11324,7 @@ class VirtualStudio {
   }
 
   private async exportPdf(): Promise<void> {
-    BABYLON.Tools.CreateScreenshot(
+    BABYLON.Tools.CreateScreenshotUsingRenderTarget(
       this.engine,
       this.camera,
       { width: 1920, height: 1080 },
@@ -12399,7 +12189,7 @@ class VirtualStudio {
 
       // Update camera FOV based on focal length (35mm full-frame equivalent)
       const focalLength = s.focalLength ?? 50;
-      this.camera.fov = Math.atan2(24, 2 * focalLength) * 2; // vertical FoV in radians
+      this.camera.fov = focalLengthToVerticalFov(focalLength); // vertical FoV in radians
 
       // Apply white balance as scene image processing tint
       const wb = s.whiteBalance ?? 5500;
@@ -12459,7 +12249,7 @@ class VirtualStudio {
     window.addEventListener('ch-load-character', ((e: CustomEvent) => {
       const { modelUrl, name, skinTone, height, position, rotation, storyRigId, additive, tints } = e.detail;
       console.log('Loading character:', name, storyRigId ? `(story: ${storyRigId})` : '');
-      this.loadCharacterModel(modelUrl, name, skinTone, height, { position, rotation, storyRigId, additive, tints });
+      void this.loadCharacterModel(modelUrl, name, skinTone, height, { position, rotation, storyRigId, additive, tints }).catch(() => {});
     }) as EventListener);
 
     window.addEventListener('ch-remove-character', (() => {
@@ -15216,6 +15006,10 @@ class VirtualStudio {
   private resolveControllableCharacterMesh(mesh: BABYLON.AbstractMesh | null): BABYLON.AbstractMesh | null {
     if (!mesh || mesh.isDisposed()) return null;
 
+    // Manipulate the common model root, never an individual skin/clothing surface.
+    const modelRoot = this.resolveRootMesh(mesh);
+    if (modelRoot?.metadata?.isModelRoot || modelRoot?.metadata?.sourceModelUrl) return modelRoot;
+
     if (mesh.skeleton) {
       return mesh;
     }
@@ -15824,7 +15618,7 @@ class VirtualStudio {
       this.scene.pointerX,
       this.scene.pointerY,
       BABYLON.Matrix.Identity(),
-      this.camera
+      this.scene.activeCamera || this.camera
     );
     const groundPlane = BABYLON.Plane.FromPositionAndNormal(BABYLON.Vector3.Zero(), BABYLON.Axis.Y);
     const distance = ray.intersectsPlane(groundPlane);
@@ -15845,7 +15639,7 @@ class VirtualStudio {
 
   private getMeshHierarchyUniqueIds(rootMesh: BABYLON.AbstractMesh): number[] {
     const ids = new Set<number>([rootMesh.uniqueId]);
-    rootMesh.getChildMeshes(true).forEach((mesh) => ids.add(mesh.uniqueId));
+    rootMesh.getChildMeshes().forEach((mesh) => ids.add(mesh.uniqueId));
     return Array.from(ids);
   }
 
@@ -15898,8 +15692,8 @@ class VirtualStudio {
     if (!this.scene.animationGroups || this.scene.animationGroups.length === 0) return [];
 
     const hierarchyIds = new Set<number>([rootMesh.uniqueId]);
-    rootMesh.getChildTransformNodes(true).forEach((node) => hierarchyIds.add(node.uniqueId));
-    rootMesh.getChildMeshes(true).forEach((mesh) => hierarchyIds.add(mesh.uniqueId));
+    rootMesh.getChildTransformNodes().forEach((node) => hierarchyIds.add(node.uniqueId));
+    rootMesh.getChildMeshes().forEach((mesh) => hierarchyIds.add(mesh.uniqueId));
 
     const skeletonCarrier = this.findSkeletonCarrierMesh(rootMesh);
     const skeletonBones = skeletonCarrier?.skeleton
@@ -16060,7 +15854,7 @@ class VirtualStudio {
       return rootMesh;
     }
 
-    for (const child of rootMesh.getChildMeshes(true)) {
+    for (const child of rootMesh.getChildMeshes()) {
       if (child.skeleton) {
         return child;
       }
@@ -16188,8 +15982,8 @@ class VirtualStudio {
     );
 
     const hierarchyIds = new Set<number>([rootMesh.uniqueId]);
-    rootMesh.getChildTransformNodes(true).forEach((node) => hierarchyIds.add(node.uniqueId));
-    rootMesh.getChildMeshes(true).forEach((mesh) => hierarchyIds.add(mesh.uniqueId));
+    rootMesh.getChildTransformNodes().forEach((node) => hierarchyIds.add(node.uniqueId));
+    rootMesh.getChildMeshes().forEach((mesh) => hierarchyIds.add(mesh.uniqueId));
 
     const skeletonCarrier = this.findSkeletonCarrierMesh(rootMesh);
     const skeletonBones = skeletonCarrier?.skeleton
@@ -16332,8 +16126,8 @@ class VirtualStudio {
     }
 
     this.scene.stopAnimation(rootMesh);
-    rootMesh.getChildTransformNodes(true).forEach((node) => this.scene.stopAnimation(node));
-    rootMesh.getChildMeshes(true).forEach((mesh) => this.scene.stopAnimation(mesh));
+    rootMesh.getChildTransformNodes().forEach((node) => this.scene.stopAnimation(node));
+    rootMesh.getChildMeshes().forEach((mesh) => this.scene.stopAnimation(mesh));
 
     const skeletonCarrier = this.findSkeletonCarrierMesh(rootMesh);
     if (skeletonCarrier?.skeleton) {
@@ -18399,89 +18193,57 @@ class VirtualStudio {
    * Load a default avatar from the library
    */
   private async loadDefaultAvatar(): Promise<void> {
-    const avatarId = 'default_avatar';
-    const avatarCandidates: Array<{
-      url: string;
-      name: string;
-      pbrKey: string;
-      baseRotation: BABYLON.Vector3;
-    }> = [
-      {
-        // Rigged + animated fallback so limbs can move.
-        url: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb',
-        name: 'Avatar (Rigged)',
-        pbrKey: 'cesium_man',
-        baseRotation: new BABYLON.Vector3(0, 0, 0),
-      },
-      {
-        url: resolveModelPath('/models/avatars/avatar_woman.glb'),
-        name: 'Avatar (Woman)',
-        pbrKey: 'avatar_woman',
-        baseRotation: new BABYLON.Vector3(Math.PI, Math.PI, 0),
-      },
-    ];
+    await this.loadStudioCharacter('woman').catch(() => { /* Loader reports an actionable error. */ });
+  }
 
-    let lastError: unknown = null;
+  public async loadStudioCharacter(model: 'woman' | 'man'): Promise<void> {
+    const height = model === 'woman' ? 1.72 : 1.82;
+    await this.loadCharacterModel(`/models/avatars/studio/studio-${model}.glb`,
+      model === 'woman' ? 'Studiomodell · Kvinne' : 'Studiomodell · Mann', '', height / 1.7);
+    this.applyStudioPose('StudioStand');
+    useAppStore.getState().selectNode(null);
+    this.gizmoManager?.attachToMesh(null);
+  }
 
-    for (const candidate of avatarCandidates) {
-      try {
-        const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', candidate.url, this.scene);
-        if (result.meshes.length === 0) {
-          throw new Error('No meshes returned from avatar import');
-        }
-
-        const rootMesh = result.meshes[0] as BABYLON.Mesh;
-        rootMesh.name = avatarId;
-        rootMesh.position = new BABYLON.Vector3(0, 0, 0);
-        rootMesh.rotation = candidate.baseRotation.clone();
-        rootMesh.scaling = new BABYLON.Vector3(1, 1, 1);
-        rootMesh.metadata = rootMesh.metadata || {};
-        (rootMesh.metadata as Record<string, unknown>).avatarSourceUrl = candidate.url;
-        (rootMesh.metadata as Record<string, unknown>).pbrKey = candidate.pbrKey;
-
-        // Keep default avatar grounded and facing camera, independent of source model.
-        const groundedPosition = this.positionMeshOnGround(rootMesh, rootMesh.position.clone());
-        rootMesh.position = groundedPosition;
-        const rotationX = rootMesh.rotation.x;
-        this.rotateMeshTowardCamera(rootMesh);
-        rootMesh.rotation.x = rotationX;
-
-        this.applyPBRShadingToMeshes(result.meshes, candidate.pbrKey);
-        this.registerModelMeshesInScene(rootMesh, avatarId, candidate.name);
-        this.trackAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
-        this.stopAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
-
-        this.castingCandidates.set(avatarId, {
-          mesh: rootMesh,
-          name: candidate.name,
-          avatarUrl: candidate.url
-        });
-
-        await this.ensureRigRegisteredForMesh(rootMesh, candidate.name, result.animationGroups || []);
-
-        rootMesh.computeWorldMatrix(true);
-        rootMesh.refreshBoundingInfo(true);
-
-        setTimeout(() => {
-          if (this.autoFocusSystem) {
-            this.autoFocusSystem.addEyeMarkersToModel(rootMesh, 'Avatar');
-          }
-        }, 100);
-
-        setTimeout(() => {
-          this.updateFocusObjectsList();
-        }, 200);
-
-        console.log(`[DefaultAvatar] Loaded ${candidate.name}: ${candidate.url}`);
-        return;
-      } catch (error) {
-        lastError = error;
-        console.warn(`[DefaultAvatar] Failed candidate ${candidate.url}`, error);
+  public applyStudioPose(name: 'StudioStand' | 'StudioPortrait' | 'StudioSeated'): boolean {
+    const mesh = this.getPrimaryCharacterMesh();
+    if (!mesh) return false;
+    const groups = this.getAnimationGroupsForMesh(mesh) || [];
+    const pose = groups.find(group => group.name === name);
+    if (!pose) return false;
+    this.stopCharacterWalk(false);
+    this.clearCharacterKeyboardInput();
+    this.stopCharacterKeyboardControl(false);
+    groups.forEach(group => group.stop());
+    pose.start(false, 1, pose.from, pose.to);
+    pose.goToFrame(pose.from);
+    pose.pause();
+    this.characterKeyboardState.poseLocked = true;
+    this.characterKeyboardState.locomotionMode = 'pose';
+    mesh.metadata = { ...mesh.metadata, studioPose: name };
+    // Linked glTF joints reach the skin matrices during the next render. Ground
+    // the posed surfaces afterwards; rest-pose bounds would leave seated feet in the air.
+    this.scene.onAfterRenderObservable.addOnce(() => {
+      if (mesh.isDisposed() || mesh.metadata?.studioPose !== name) return;
+      const surfaces = [mesh, ...mesh.getChildMeshes()].filter(child => child.getTotalVertices() > 0);
+      surfaces.forEach(child => {
+        child.computeWorldMatrix(true);
+        if (child instanceof BABYLON.Mesh) child.refreshBoundingInfo(true);
+      });
+      const bottom = Math.min(...surfaces.map(child => child.getBoundingInfo().boundingBox.minimumWorld.y));
+      if (Number.isFinite(bottom)) mesh.position.y += 0.016 - bottom;
+      mesh.computeWorldMatrix(true);
+      this.studioSeats.get(mesh.uniqueId)?.dispose();
+      this.studioSeats.delete(mesh.uniqueId);
+      if (name === 'StudioSeated') {
+        const chair = new StudioSeat(this.scene, mesh, () => [...this.lights.values()].flatMap(light => light.shadowGenerator ? [light.shadowGenerator] : []));
+        this.studioSeats.set(mesh.uniqueId, chair);
+        mesh.onDisposeObservable.addOnce(() => this.studioSeats.delete(mesh.uniqueId));
       }
-    }
-
-    console.error('Failed to load default avatar candidates, using placeholder:', lastError);
-    this.createSimpleMannequin(avatarId);
+      this.syncCharacterNodeTransform(mesh, true);
+      window.dispatchEvent(new CustomEvent('ch-character-pose-applied', { detail: { poseId: name } }));
+    });
+    return true;
   }
 
   /**
@@ -18918,7 +18680,6 @@ class VirtualStudio {
       tints?: { skin: string; top: string; bottom: string; accent: string } | null;
     },
   ): Promise<void> {
-    if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
 
     let meshPosition = new BABYLON.Vector3(0, 0, 0);
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
@@ -18926,7 +18687,12 @@ class VirtualStudio {
     try {
       const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
       importedAnimationGroups = result.animationGroups || [];
-      this.characterMesh = result.meshes[0];
+      if (!result.meshes.some(mesh => mesh.getTotalVertices() > 0)) throw new Error('Modellfilen inneholder ingen geometri');
+      if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
+      // Keep glTF's handedness conversion and skeleton transforms under an editable wrapper.
+      const importedRoot = result.meshes[0];
+      this.characterMesh = new BABYLON.Mesh(name, this.scene);
+      importedRoot.parent = this.characterMesh;
       this.characterMesh.name = name;
       this.characterMesh.metadata = this.characterMesh.metadata || {};
       (this.characterMesh.metadata as Record<string, unknown>).sourceModelUrl = modelUrl;
@@ -18943,6 +18709,7 @@ class VirtualStudio {
 
       // Target human height (1.7m default, can be adjusted by height parameter)
       const targetHeight = 1.7 * (height || 1.0);
+      this.characterMesh.metadata.heightMeters = targetHeight;
 
       // Scale model to target height if it's too small or too large
       if (modelHeight > 0.001) {
@@ -18953,7 +18720,7 @@ class VirtualStudio {
 
       // SAM 3D Body exports are upside-down → need Math.PI X-flip.
       // Ready Player Me, Tripo, Cesium and other Y-up models are already correct.
-      const isSamModel = /\/avatar_\w+\.glb(\?.*)?$/.test(modelUrl);
+      const isSamModel = /\/avatar_\w+\.glb(\?.*)?$/.test(modelUrl) && !result.meshes.some(mesh => mesh.material?.getActiveTextures().length);
       const isRpmModel = /models\.readyplayer\.me|api\.readyplayer\.me|readyplayer\.me.*\.glb/i.test(modelUrl);
       const preserveOriginalMaterials = !isSamModel;
       this.characterMesh.rotation = new BABYLON.Vector3(isSamModel ? Math.PI : 0, 0, 0);
@@ -18985,13 +18752,13 @@ class VirtualStudio {
       this.characterMesh.computeWorldMatrix(true);
 
       // Get all meshes including root
-      const allMeshes = this.characterMesh.getChildMeshes(true);
+      const allMeshes = this.characterMesh.getChildMeshes();
       allMeshes.push(this.characterMesh);
       let meshCount = 0;
 
       if (preserveOriginalMaterials) {
         const tints = options?.tints;
-        if (tints) {
+        if (tints && !allMeshes.some(mesh => mesh.material?.getActiveTextures().length)) {
           // Variant character: apply tint colors using Y-position heuristic (same logic as SAM).
           console.log(`[loadCharacterModel] variant tints — applying procedural tint materials`);
           const skinMat  = this.createProceduralCharacterMaterial(`${name}_skin_mat`,  BABYLON.Color3.FromHexString(tints.skin),   'skin');
@@ -19075,7 +18842,9 @@ class VirtualStudio {
       }
 
       // Add eyes to the character model
-      this.addEyesToMesh(this.characterMesh, name);
+      if (!allMeshes.some(mesh => mesh.material?.getActiveTextures().length)) {
+        this.addEyesToMesh(this.characterMesh, name);
+      }
 
       // Reposition mesh on ground after adding eyes (eyes change the bounding box)
       // Use positionMeshOnGround to ensure correct positioning
@@ -19096,35 +18865,10 @@ class VirtualStudio {
 
       console.log(`Loaded character: ${name} at position (${meshPosition.x}, ${meshPosition.y}, ${meshPosition.z})`);
     } catch (error) {
-      console.warn(`Character model not found: ${modelUrl}, creating placeholder`, error);
-      const capsule = BABYLON.MeshBuilder.CreateCapsule(name, { height: 1.75, radius: 0.22 }, this.scene);
-
-      // Position capsule on ground
-      meshPosition = this.positionMeshOnGround(capsule, new BABYLON.Vector3(0, 0, 0));
-      capsule.position = meshPosition;
-
-      // Rotate capsule toward camera
-      this.rotateMeshTowardCamera(capsule);
-
-      const skinColor = BABYLON.Color3.FromHexString(skinTone || '#EAC086');
-      const pbrMaterial = this.createProceduralCharacterMaterial(`${name}_pbr_mat`, skinColor, 'skin');
-      capsule.material = pbrMaterial;
-
-      // Enable shadows
-      capsule.receiveShadows = true;
-      capsule.castShadows = true;
-
-      // Add to shadow generators
-      this.lights.forEach((lightData) => {
-        if (lightData.shadowGenerator) {
-          lightData.shadowGenerator.addShadowCaster(capsule);
-        }
-      });
-
-      // Add eyes to placeholder capsule
-      this.addEyesToActor(capsule, 1.75, skinTone || '#EAC086');
-
-      this.characterMesh = capsule;
+      console.error(`Kunne ikke laste 3D-modellen: ${modelUrl}`, error);
+      this.showNotification('Kunne ikke laste 3D-modellen. Prøv igjen eller velg en annen GLB-fil.', 'error');
+      window.dispatchEvent(new CustomEvent('ch-character-load-error', { detail: { modelUrl } }));
+      throw error;
     }
 
     // Add to scene hierarchy store
@@ -19148,8 +18892,8 @@ class VirtualStudio {
       locked: false,
       transform: {
         position: [meshPosition.x, meshPosition.y, meshPosition.z],
-        rotation: [0, 0, 0],
-        scale: [1, 1, 1]
+        rotation: this.characterMesh?.rotation.asArray() as [number, number, number] || [0, 0, 0],
+        scale: this.characterMesh?.scaling.asArray() as [number, number, number] || [1, 1, 1]
       },
       userData: {
         meshNames: this.characterMesh ? this.getChildMeshNames(this.characterMesh) : []
@@ -19202,11 +18946,11 @@ class VirtualStudio {
       this.gizmoManager.attachToMesh(this.characterMesh as BABYLON.Mesh);
     }
 
-    this.applyCurrentActorParams();
+    // Authored anatomy and texture atlases must not be rescaled/recoloured by generic actor sliders.
 
     if (this.characterMesh) {
-      const meshesToTune: BABYLON.AbstractMesh[] = [this.characterMesh, ...this.characterMesh.getChildMeshes(true)];
-      this.applyPortraitMaterialTuning(meshesToTune);
+      const meshesToTune: BABYLON.AbstractMesh[] = [this.characterMesh, ...this.characterMesh.getChildMeshes()];
+      AvatarMaterialService.applyEnhancedPBR(meshesToTune, 'studio-import', this.scene);
     }
 
     console.log(`Added model "${name}" to scene hierarchy`);
@@ -19226,7 +18970,7 @@ class VirtualStudio {
    * This ensures geometry_0, geometry_1, etc. are properly registered
    */
   private registerModelMeshesInScene(rootMesh: BABYLON.AbstractMesh, modelId: string, modelName: string): void {
-    const childMeshes = rootMesh.getChildMeshes(true);
+    const childMeshes = rootMesh.getChildMeshes();
     const registeredMeshes: string[] = [];
 
     childMeshes.forEach((mesh, _index) => {
@@ -19274,7 +19018,7 @@ class VirtualStudio {
    * Get all child mesh names from a model
    */
   private getChildMeshNames(rootMesh: BABYLON.AbstractMesh): string[] {
-    return rootMesh.getChildMeshes(true).map(m => m.name);
+    return rootMesh.getChildMeshes().map(m => m.name);
   }
 
   /**
@@ -19346,9 +19090,13 @@ class VirtualStudio {
     this.characterKeyboardState.rigResolvePending = false;
     this.characterKeyboardState.cachedGroundY = null;
     if (this.characterMesh) {
+      const groups = this.getAnimationGroupsForMesh(this.characterMesh) || [];
+      const skeletons = new Set(this.characterMesh.getChildMeshes().map(mesh => mesh.skeleton).filter(Boolean));
       this.clearTrackedAnimationGroupsForMesh(this.characterMesh);
       this.unloadRigForMesh(this.characterMesh);
-      this.characterMesh.dispose();
+      groups.forEach(group => group.dispose());
+      this.characterMesh.dispose(false, true);
+      skeletons.forEach(skeleton => skeleton?.dispose());
       this.characterMesh = null;
     }
     if (this.characterModelId) {
@@ -26036,7 +25784,7 @@ class VirtualStudio {
       this.camera.setTarget(target);
 
       if (camConfig.focalLength) {
-        const fov = 2 * Math.atan(18 / camConfig.focalLength);
+        const fov = focalLengthToVerticalFov(camConfig.focalLength);
         this.camera.fov = fov;
       }
     }
@@ -28783,9 +28531,10 @@ class VirtualStudio {
     }
   }
 
-  private setFocalLength(mm: number): void {
+  public setFocalLength(mm: number): void {
+    if (!Number.isFinite(mm) || mm <= 0) return;
     this.cameraSettings.focalLength = mm;
-    this.camera.fov = (50 / mm) * 0.8;
+    this.camera.fov = focalLengthToVerticalFov(mm);
 
     const quickFocal = document.getElementById('quickFocal');
     if (quickFocal) quickFocal.textContent = `${mm} mm`;
@@ -31313,15 +31062,21 @@ class VirtualStudio {
   }
 
   private takeScreenshot(): void {
-    BABYLON.Tools.CreateScreenshot(
+    BABYLON.Tools.CreateScreenshotUsingRenderTarget(
       this.engine, 
       this.camera, 
       { width: 1920, height: 1080 }, 
       (data: string) => {
+        // Blob URLs also handle detailed room renders exceeding Chromium's data-URL download limit.
+        const bytes = Uint8Array.from(atob(data.split(',')[1]), character => character.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
         const link = document.createElement('a');
         link.download = `studio-${Date.now()}.png`;
-        link.href = data;
+        link.href = url;
+        document.body.append(link);
         link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
       }
     );
   }
@@ -32393,7 +32148,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ghostMesh.setEnabled(true);
       } else {
         // Fallback: place at camera target with raycast to ground plane
-        const ray = studio.scene.createPickingRay(x, y, BABYLON.Matrix.Identity(), studio.camera);
+        const ray = studio.scene.createPickingRay(x, y, BABYLON.Matrix.Identity(), studio.scene.activeCamera || studio.camera);
         const groundPlane = BABYLON.Plane.FromPositionAndNormal(BABYLON.Vector3.Zero(), BABYLON.Vector3.Up());
         const distance = ray.intersectsPlane(groundPlane);
 
@@ -33137,7 +32892,7 @@ window.addEventListener('DOMContentLoaded', () => {
           const focal = parseFloat(focalLengthSlider.value);
           const camera = studioInstance.getCamera();
           if (camera) {
-            camera.fov = (50 / focal) * 0.8;
+            studioInstance.setFocalLength(focal);
           }
           if (focalLengthValue) focalLengthValue.textContent = `${Math.round(focal)}mm`;
         });

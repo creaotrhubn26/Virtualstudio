@@ -1,3 +1,4 @@
+import type { StudioRoomOptions } from '../rendering/StudioRoom';
 import { SceneNode } from '../../state/store';
 
 // Camera preset data structure
@@ -12,6 +13,13 @@ export interface CameraPreset {
 
 // Light state for serialization
 export interface LightState {
+  fixtureId?: string;
+  beamAngle?: number;
+  exponent?: number;
+  aimTarget?: [number, number, number];
+  baseIntensity?: number;
+  powerMultiplier?: number;
+  enabled?: boolean;
   id: string;
   name: string;
   type: string;
@@ -157,6 +165,7 @@ export interface GoboState {
 }
 
 export interface EnvironmentState {
+  room?: StudioRoomOptions;
   walls: WallState[];
   floors: FloorState[];
   atmosphere?: AtmosphereSettings;

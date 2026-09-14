@@ -84,3 +84,7 @@ tmp-e2e-probe/
 
 # Large binary asset packs — too big for git, keep alongside the repo
 contexts/*.pak
+
+# Local browser verification artifacts
+playwright-report/
+test-results/
