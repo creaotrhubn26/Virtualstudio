@@ -29,8 +29,8 @@ import MP4Box from 'mp4box';
 import { StudioRoom } from './core/rendering/StudioRoom';
 import { StudioSeat } from './core/rendering/StudioSeat';
 import { StudioWorkspace } from './core/rendering/StudioWorkspace';
-import { createStudioBackdrop, createStudioGrid, studioExposure, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
-import { contactHardeningRatio, fixtureCandela, modifierSizeMetres, sceneIntensityFromCandela } from './core/rendering/photometry';
+import { createStudioBackdrop, createStudioGrid, studioExposure, shutterSeconds, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
+import { contactHardeningRatio, distanceForIlluminance, fixtureCandela, flashShutterCompensation, isFlashFixture, modifierSizeMetres, sceneIntensityFromCandela } from './core/rendering/photometry';
 import { LightingPhysics } from './core/LightingPhysics';
 import type { SceneComposition } from './core/models/sceneComposer';
 import type { ShotList, CastingShot } from './core/models/production';
@@ -326,6 +326,8 @@ interface LightData {
   shadowGenerator?: BABYLON.ShadowGenerator;
   /** Emitting size of the fixture or modifier, metres. Drives penumbra width. */
   sourceSizeMetres?: number;
+  /** True for strobes and speedlights, whose exposure ignores shutter speed. */
+  isFlash?: boolean;
   beamVisualization?: BABYLON.Mesh;
   useCustomColor?: boolean;
   customColor?: string;
@@ -6267,6 +6269,8 @@ class VirtualStudio {
         : lightConfig.beamAngle;
 
       const candela = fixtureCandela({
+        type: specFromDB.type,
+        guideNumber: specFromDB.guideNumber,
         lux1m: specFromDB.lux1m,
         lumens: specFromDB.lumens,
         beamAngleDeg: (realBeamAngleRad * 180) / Math.PI,
@@ -6547,7 +6551,8 @@ class VirtualStudio {
         },
         intensity: lightConfig.intensity,
         baseIntensity: lightConfig.intensity,  // physical candela — glow reference
-        powerMultiplier: 1.0
+        powerMultiplier: 1.0,
+        isFlash: isFlashFixture(specFromDB?.type)
       };
 
       // Store light in lights map
@@ -6721,24 +6726,87 @@ class VirtualStudio {
     lightData.elevation = undefined;
   }
 
+  /**
+   * The key's illuminance at the subject, in scene units (candela per m²).
+   *
+   * A rig is specified the way it is metered — a reading at the subject and
+   * the ratios around it — not by typing an intensity into each fixture. These
+   * three numbers reproduce the previous hand-tuned 520 / 178 / 500 exactly,
+   * but now the fixtures carry their catalogue output and the rig is built
+   * from placement and output percentage, as it would be on the floor.
+   */
+  private static readonly RIG_KEY_ILLUMINANCE = 520 / 19.86;
+  /** Classic portrait key-to-fill ratio, close to 3:1. */
+  private static readonly RIG_KEY_TO_FILL = (520 / 19.86) / (178 / 20.24);
+  /** Rim slightly under the key, enough to separate without reading as a second key. */
+  private static readonly RIG_RIM_TO_KEY = (500 / 24.75) / (520 / 19.86);
+
+  /**
+   * Stand a fixture so it delivers `targetIlluminance` at the subject.
+   *
+   * A fixture cannot exceed its own output, so if the wanted reading is beyond
+   * what it gives from the preferred spot, it moves closer along the same line
+   * — direction, and therefore the modelling and shadow angle, is unchanged.
+   * If it has light to spare, it stays put and its output is dialled back.
+   */
+  private placeFixtureForIlluminance(
+    modelId: string,
+    preferredPosition: BABYLON.Vector3,
+    aim: BABYLON.Vector3,
+    targetIlluminance: number,
+  ): { position: BABYLON.Vector3; powerMultiplier: number } {
+    const spec = getLightById(modelId);
+    const candela = spec
+      ? fixtureCandela({
+          type: spec.type,
+          guideNumber: spec.guideNumber,
+          lux1m: spec.lux1m,
+          lumens: spec.lumens,
+          beamAngleDeg: spec.beamAngle,
+        })
+      : null;
+
+    if (candela === null) {
+      return { position: preferredPosition.clone(), powerMultiplier: 1 };
+    }
+
+    const output = sceneIntensityFromCandela(candela);
+    const offset = preferredPosition.subtract(aim);
+    const preferredDistance = offset.length();
+    const neededAtPreferred = targetIlluminance * preferredDistance * preferredDistance;
+
+    if (neededAtPreferred <= output) {
+      return { position: preferredPosition.clone(), powerMultiplier: neededAtPreferred / output };
+    }
+
+    const distance = distanceForIlluminance(output, targetIlluminance);
+    return {
+      position: aim.add(offset.normalize().scale(distance)),
+      powerMultiplier: 1,
+    };
+  }
+
   public async setupDefaultLighting(): Promise<void> {
     const subjectCenter = new BABYLON.Vector3(0, 1.2, 0);
 
     // Load the infinity cove backdrop immediately so colored lights have a surface to illuminate
     this.loadBackdrop('seamless-default', { receiveShadow: true });
 
-    // Neutral daylight key, fill and rim for judging materials and light placement.
-    const keyLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(3.5, 3.2, -2));
+    // Neutral daylight key, fill and rim for judging materials and light
+    // placement. Each fixture keeps its catalogue output; the rig comes from
+    // where it stands and how far its output is dialled back.
+    const keyAim = new BABYLON.Vector3(0, 1.3, 0);
+    const keyPlacement = this.placeFixtureForIlluminance(
+      'aputure-300d', new BABYLON.Vector3(3.5, 3.2, -2), keyAim, VirtualStudio.RIG_KEY_ILLUMINANCE);
+    const keyLightId = await this.addLight('aputure-300d', keyPlacement.position);
     const keyLight = this.lights.get(keyLightId);
     if (keyLight) {
       keyLight.name = 'Hovedlys · Softbox';
-      keyLight.baseIntensity = 520;
-      keyLight.powerMultiplier = 1.0;
-      this.aimLightAt(keyLightId, new BABYLON.Vector3(0, 1.3, 0));
+      keyLight.powerMultiplier = keyPlacement.powerMultiplier;
+      this.aimLightAt(keyLightId, keyAim);
       if (keyLight.light instanceof BABYLON.SpotLight) {
         keyLight.light.angle = Math.PI / 3;
         keyLight.light.exponent = 2.0;
-        keyLight.light.intensity = 520;          // stronger key → 2.9:1 key:fill ratio
         keyLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
         // 5600 K daylight
         keyLight.light.diffuse  = this.cctToColor(5600);
@@ -6751,18 +6819,19 @@ class VirtualStudio {
       }
     }
 
-    // Fill
-    const fillLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(-3.2, 2.2, -3));
+    // Fill, one stop and a half under the key
+    const fillPlacement = this.placeFixtureForIlluminance(
+      'aputure-300d', new BABYLON.Vector3(-3.2, 2.2, -3), subjectCenter,
+      VirtualStudio.RIG_KEY_ILLUMINANCE / VirtualStudio.RIG_KEY_TO_FILL);
+    const fillLightId = await this.addLight('aputure-300d', fillPlacement.position);
     const fillLight = this.lights.get(fillLightId);
     if (fillLight) {
       fillLight.name = 'Utfylling · Softbox';
-      fillLight.baseIntensity = 178 / 0.45;
-      fillLight.powerMultiplier = 0.45;
+      fillLight.powerMultiplier = fillPlacement.powerMultiplier;
       this.aimLightAt(fillLightId, subjectCenter);
       if (fillLight.light instanceof BABYLON.SpotLight) {
         fillLight.light.angle = Math.PI / 2.5;
         fillLight.light.exponent = 1.5;
-        fillLight.light.intensity = 178;         // 520:178 ≈ 2.9:1 — professional portrait ratio
         fillLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
         // Match the key colour temperature
         fillLight.light.diffuse  = this.cctToColor(5600);
@@ -6775,18 +6844,20 @@ class VirtualStudio {
       }
     }
 
-    // Rim
-    const rimLightId = await this.addLight('aputure-300d-strip', new BABYLON.Vector3(-2.5, 4, 3.5));
+    // Rim, just under the key so it separates without reading as a second key
+    const rimAim = new BABYLON.Vector3(0, 1.5, 0);
+    const rimPlacement = this.placeFixtureForIlluminance(
+      'aputure-300d-strip', new BABYLON.Vector3(-2.5, 4, 3.5), rimAim,
+      VirtualStudio.RIG_KEY_ILLUMINANCE * VirtualStudio.RIG_RIM_TO_KEY);
+    const rimLightId = await this.addLight('aputure-300d-strip', rimPlacement.position);
     const rimLight = this.lights.get(rimLightId);
     if (rimLight) {
       rimLight.name = 'Kantlys · Stripbox';
-      rimLight.baseIntensity = 500 / 0.6;
-      rimLight.powerMultiplier = 0.6;
-      this.aimLightAt(rimLightId, new BABYLON.Vector3(0, 1.5, 0));
+      rimLight.powerMultiplier = rimPlacement.powerMultiplier;
+      this.aimLightAt(rimLightId, rimAim);
       if (rimLight.light instanceof BABYLON.SpotLight) {
         rimLight.light.angle = Math.PI / 5;
         rimLight.light.exponent = 4.0;          // tighter centre hotspot → crisper edge light
-        rimLight.light.intensity = 500;          // stronger separation
         rimLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
         rimLight.light.diffuse = this.cctToColor(5600);
         rimLight.light.specular = this.cctToColor(5600);
@@ -6802,6 +6873,10 @@ class VirtualStudio {
         mat.maxSimultaneousLights = 8;
       }
     });
+
+    // Apply each fixture's output percentage — the rig sets power, not the
+    // fixture's physical intensity, so the rendered levels come from here.
+    this.updateSceneBrightness();
 
     // Update scene list to show all lights
     this.updateSceneList();
@@ -7228,45 +7303,45 @@ class VirtualStudio {
   private currentScopeMode: 'histogram' | 'waveform' | 'vectorscope' | 'skin' | 'zebra' | 'falsecolor' = 'histogram';
   private scopeExpanded: boolean = false;
 
+  /** Switch the scope and keep both selects and the toolbar label in step. */
+  public setScopeMode(mode: typeof this.currentScopeMode): void {
+    this.currentScopeMode = mode;
+
+    const btnText = document.getElementById('scopeToggleBtn')?.querySelector('.toolbar-btn-text');
+    if (btnText) {
+      const modeLabels: Record<string, string> = {
+        'histogram': 'Histogram',
+        'waveform': 'Waveform',
+        'vectorscope': 'Vectorscope',
+        'skin': 'Hudtone',
+        'zebra': 'Zebra',
+        'falsecolor': 'False Color'
+      };
+      btnText.textContent = modeLabels[mode] || 'Histogram';
+    }
+
+    const scopeModeSelect = document.getElementById('scopeModeSelect') as HTMLSelectElement | null;
+    const scopeModeSelectDropdown = document.getElementById('scopeModeSelectDropdown') as HTMLSelectElement | null;
+    if (scopeModeSelect) scopeModeSelect.value = mode;
+    if (scopeModeSelectDropdown) scopeModeSelectDropdown.value = mode;
+
+    const histogramStylePanel = document.getElementById('histogramStylePanel') as HTMLDivElement | null;
+    if (histogramStylePanel) {
+      histogramStylePanel.style.display = mode === 'histogram' ? 'flex' : 'none';
+    }
+  }
+
   private setupScopeControls(): void {
     // Right panel scope controls
     const scopeModeSelect = document.getElementById('scopeModeSelect') as HTMLSelectElement;
     const scopeModeSelectDropdown = document.getElementById('scopeModeSelectDropdown') as HTMLSelectElement;
-    const histogramStylePanel = document.getElementById('histogramStylePanel') as HTMLDivElement;
-
-    // Sync both selects
-    const setScopeMode = (mode: typeof this.currentScopeMode) => {
-      this.currentScopeMode = mode;
-      // Update button text
-      const scopeToggleBtn = document.getElementById('scopeToggleBtn');
-      const btnText = scopeToggleBtn?.querySelector('.toolbar-btn-text');
-      if (btnText) {
-        const modeLabels: Record<string, string> = {
-          'histogram': 'Histogram',
-          'waveform': 'Waveform',
-          'vectorscope': 'Vectorscope',
-          'skin': 'Hudtone',
-          'zebra': 'Zebra',
-          'falsecolor': 'False Color'
-        };
-        btnText.textContent = modeLabels[mode] || 'Histogram';
-      }
-      // Sync both selects
-      if (scopeModeSelect) scopeModeSelect.value = mode;
-      if (scopeModeSelectDropdown) scopeModeSelectDropdown.value = mode;
-
-      // Show/hide histogram style panel
-      if (histogramStylePanel) {
-        histogramStylePanel.style.display = mode === 'histogram' ? 'flex' : 'none';
-      }
-    };
 
     scopeModeSelect?.addEventListener('change', () => {
-      setScopeMode(scopeModeSelect.value as typeof this.currentScopeMode);
+      this.setScopeMode(scopeModeSelect.value as typeof this.currentScopeMode);
     });
 
     scopeModeSelectDropdown?.addEventListener('change', () => {
-      setScopeMode(scopeModeSelectDropdown.value as typeof this.currentScopeMode);
+      this.setScopeMode(scopeModeSelectDropdown.value as typeof this.currentScopeMode);
     });
 
     // Histogram style controls
@@ -7680,15 +7755,25 @@ class VirtualStudio {
   }
 
   public updateSceneBrightness(): void {
-    // Exposure belongs to the camera. Keep scene illumination stable when ISO,
-    // aperture, shutter or ND changes, including the live taking-camera preview.
+    // Exposure belongs to the camera. A fixture's physical output — the
+    // candela in baseIntensity, scaled by its own power setting — never moves
+    // when ISO, aperture, shutter or ND changes.
+    //
+    // A flash is the one exception, and it is a real one: the burst is over
+    // before the shutter closes, so shutter speed does not change how a strobe
+    // exposes. The frame has a single image-processing exposure that carries
+    // the shutter term for continuous light, so strobes cancel it again here.
+    // Their rendered contribution then depends on aperture and ISO alone,
+    // exactly as on set.
     const settings = this.cameraSettings;
     const exposure = studioExposure(settings.iso, settings.aperture, settings.shutter, settings.nd);
     if (this.renderingPipeline) this.renderingPipeline.imageProcessing.exposure = 0.8 * exposure;
+    const flashCompensation = flashShutterCompensation(shutterSeconds(settings.shutter));
     for (const data of this.lights.values()) {
       data.baseIntensity ??= data.light.intensity;
       data.powerMultiplier ??= 1;
-      data.light.intensity = data.baseIntensity * data.powerMultiplier;
+      data.light.intensity = data.baseIntensity * data.powerMultiplier
+        * (data.isFlash ? flashCompensation : 1);
       data.intensity = data.light.intensity;
       this.updateLightHeadGlow(data);
     }
@@ -10994,16 +11079,84 @@ class VirtualStudio {
   }
 
   // ─── Toast utility ───────────────────────────────────────────────────────
-  private showToast(message: string, type: 'error' | 'warn' | 'info' | 'success' = 'error', durationMs = 5000): void {
+  private showToast(
+    message: string,
+    type: 'error' | 'warn' | 'info' | 'success' = 'error',
+    durationMs = 5000,
+    actions: { label: string; onSelect: () => void }[] = []
+  ): void {
     const el = document.createElement('div');
     el.className = `vs-toast${type === 'error' ? '' : ' ' + type}`;
-    el.textContent = message;
-    document.body.appendChild(el);
-    setTimeout(() => {
+    const text = document.createElement('span');
+    text.textContent = message;
+    el.appendChild(text);
+
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
       el.style.opacity = '0';
       el.style.transition = 'opacity 0.4s ease';
       setTimeout(() => el.remove(), 400);
-    }, durationMs);
+    };
+
+    if (actions.length > 0) {
+      const row = document.createElement('span');
+      row.className = 'vs-toast-actions';
+      for (const action of actions) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'vs-toast-action';
+        button.textContent = action.label;
+        button.addEventListener('click', () => {
+          action.onSelect();
+          dismiss();
+        });
+        row.appendChild(button);
+      }
+      el.appendChild(row);
+    }
+
+    document.body.appendChild(el);
+    setTimeout(dismiss, durationMs);
+  }
+
+  /**
+   * Percentage of clipped highlights that counts as blown rather than a
+   * specular hit. A strobe on full power at a wide aperture passes this
+   * easily, which is correct: the fix is the aperture, not the light.
+   */
+  private static readonly CLIPPING_PROMPT_THRESHOLD = 8;
+  /** Re-arm below this, so one prompt per episode rather than a nag loop. */
+  private static readonly CLIPPING_RESET_THRESHOLD = 3;
+  private clippingPromptArmed = true;
+
+  /**
+   * Offer the scope that answers the question when the frame blows out.
+   *
+   * The photographer stays in control: this never changes the exposure or the
+   * lights, it only offers to show what is clipping.
+   */
+  private offerClippingScope(): void {
+    if (this.highlightClipping < VirtualStudio.CLIPPING_RESET_THRESHOLD) {
+      this.clippingPromptArmed = true;
+      return;
+    }
+    if (!this.clippingPromptArmed) return;
+    if (this.highlightClipping < VirtualStudio.CLIPPING_PROMPT_THRESHOLD) return;
+    // A scope that already shows the clipping answers the question itself.
+    if (this.currentScopeMode === 'zebra' || this.currentScopeMode === 'falsecolor') return;
+
+    this.clippingPromptArmed = false;
+    this.showToast(
+      `Bildet er overeksponert — ${this.highlightClipping.toFixed(0)} % utbrente høylys. Vil du se hvor?`,
+      'warn',
+      12000,
+      [
+        { label: 'Zebra', onSelect: () => this.setScopeMode('zebra') },
+        { label: 'Histogram', onSelect: () => this.setScopeMode('histogram') },
+      ]
+    );
   }
 
   // ─── WebGL context lost recovery ─────────────────────────────────────────
@@ -22875,6 +23028,7 @@ class VirtualStudio {
         shadowEl.style.color = this.shadowClipping > 5 ? '#ff6b6b' : '#00d4ff';
       }
 
+      this.offerClippingScope();
       this.isReadingPixels = false;
     }).catch(() => {
       this.isReadingPixels = false;

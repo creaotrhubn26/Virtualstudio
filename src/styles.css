@@ -1349,6 +1349,24 @@ html, body {
 .vs-toast.info  { border-color: rgba(59, 130, 246, 0.4); color: #93c5fd; }
 .vs-toast.warn  { border-color: rgba(245, 158, 11, 0.4); color: #fcd34d; }
 .vs-toast.success { border-color: rgba(34, 197, 94, 0.4); color: #86efac; }
+.vs-toast-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.vs-toast-action {
+  flex: 1;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.vs-toast-action:hover { background: rgba(255, 255, 255, 0.14); }
+.vs-toast-action:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0); }

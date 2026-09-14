@@ -4,8 +4,14 @@ import {
   coneSolidAngle,
   contactHardeningRatio,
   evAtIso100,
+  distanceForIlluminance,
   fixtureCandela,
+  flashApertureAt,
+  flashEquivalentCandela,
+  flashLuminousExposureAt1m,
+  flashShutterCompensation,
   illuminanceAt,
+  isFlashFixture,
   modifierSizeMetres,
   sceneIntensityFromCandela,
   stopsBetween,
@@ -19,8 +25,16 @@ const REFERENCE_SHUTTER_S = 1 / 125;
 function referenceAperture(id: string): number {
   const spec = getLightById(id);
   if (!spec) throw new Error(`Missing fixture ${id}`);
-  const candela = fixtureCandela({ lux1m: spec.lux1m, lumens: spec.lumens, beamAngleDeg: spec.beamAngle });
+  const candela = fixtureCandela({
+    type: spec.type,
+    guideNumber: spec.guideNumber,
+    lux1m: spec.lux1m,
+    lumens: spec.lumens,
+    beamAngleDeg: spec.beamAngle,
+  });
   if (candela === null) throw new Error(`Fixture ${id} carries no photometric data`);
+  // Flash output is expressed at the 1/125 s reference, so metering the
+  // reference scene at that shutter is the one case where the two agree.
   return apertureForIlluminance(illuminanceAt(candela, SUBJECT_DISTANCE_M), 100, REFERENCE_SHUTTER_S);
 }
 
@@ -40,6 +54,17 @@ describe('fixture photometry', () => {
     expect(fixtureCandela({ lux1m: 45000, lumens: 18500, beamAngleDeg: 55 })).toBe(45000);
     expect(fixtureCandela({})).toBeNull();
     expect(fixtureCandela({ lux1m: 0, lumens: 0 })).toBeNull();
+  });
+
+  it('inverts the inverse-square law to place a fixture', () => {
+    // Placement and falloff have to be each other's inverse, or a rig built
+    // from a target reading will not render that reading.
+    expect(distanceForIlluminance(45000, 45000)).toBeCloseTo(1, 6);
+    expect(illuminanceAt(45000, distanceForIlluminance(45000, 2000))).toBeCloseTo(2000, 6);
+    // Halving the wanted illuminance is 1.41x the distance.
+    expect(distanceForIlluminance(45000, 1000) / distanceForIlluminance(45000, 2000)).toBeCloseTo(Math.SQRT2, 6);
+    for (const bad of [0, -1, NaN]) expect(() => distanceForIlluminance(bad, 100)).toThrow();
+    for (const bad of [0, -1, NaN]) expect(() => distanceForIlluminance(100, bad)).toThrow();
   });
 
   it('obeys the inverse-square law in stops', () => {
@@ -90,6 +115,11 @@ describe('fixture photometry', () => {
     }
     // The 600d is two stops of light above the 120d, so one full stop of aperture.
     expect(referenceAperture('aputure-600d') / referenceAperture('aputure-120d')).toBeCloseTo(2.07, 1);
+    // The strobe lands where its own guide number says it should: f = GN / d.
+    expect(referenceAperture('profoto-b10')).toBeCloseTo(flashApertureAt(72, SUBJECT_DISTANCE_M), 3);
+    // Which is several stops past what the LEDs need — so a mixed rig is only
+    // correctly exposed for one of them at a time, as on a real set.
+    expect(referenceAperture('profoto-b10')).toBeGreaterThan(referenceAperture('aputure-600d') * 4);
   });
 });
 
@@ -126,5 +156,60 @@ describe('modifier size and shadow softness', () => {
     expect(contactHardeningRatio(0.001, Math.PI / 2)).toBeGreaterThanOrEqual(0.002);
     expect(() => contactHardeningRatio(0, beam)).toThrow();
     expect(() => contactHardeningRatio(1, Math.PI)).toThrow();
+  });
+});
+
+describe('flash versus continuous', () => {
+  it('reads a strobe from its guide number, not its modelling lamp', () => {
+    expect(isFlashFixture('strobe')).toBe(true);
+    expect(isFlashFixture('speedlight')).toBe(true);
+    expect(isFlashFixture('led')).toBe(false);
+    expect(isFlashFixture(undefined)).toBe(false);
+
+    const b10 = getLightById('profoto-b10')!;
+    expect(b10.type).toBe('strobe');
+    // The catalogue lists lux1m 10000 for this head — a modelling-lamp figure.
+    // Using it would put a 250 Ws strobe below a 300 W LED.
+    const viaSpec = fixtureCandela({ type: b10.type, guideNumber: b10.guideNumber, lux1m: b10.lux1m, lumens: b10.lumens })!;
+    expect(viaSpec).toBe(flashEquivalentCandela(b10.guideNumber!));
+    expect(viaSpec).toBeGreaterThan(b10.lux1m! * 100);
+  });
+
+  it('follows the guide-number definition f = GN / d', () => {
+    // H = (C/S)·GN² at 1 m, so a flash meter reads f = GN / d at ISO 100.
+    expect(flashLuminousExposureAt1m(72)).toBeCloseTo(2.5 * 72 * 72, 6);
+    expect(flashApertureAt(72, 2.5)).toBeCloseTo(28.8, 3);
+    expect(flashApertureAt(72, 1)).toBeCloseTo(72, 6);
+    // Four times the ISO is two stops, so two stops smaller aperture.
+    expect(flashApertureAt(72, 2.5, 400)).toBeCloseTo(57.6, 3);
+    // Doubling the guide number is two stops of light.
+    expect(stopsBetween(flashLuminousExposureAt1m(36), flashLuminousExposureAt1m(72))).toBeCloseTo(2, 6);
+    for (const bad of [0, -1, NaN, Infinity]) expect(() => flashLuminousExposureAt1m(bad)).toThrow();
+  });
+
+  it('puts a studio strobe well above a continuous LED', () => {
+    const strobe = (id: string) => {
+      const s = getLightById(id)!;
+      return fixtureCandela({ type: s.type, guideNumber: s.guideNumber, lux1m: s.lux1m, lumens: s.lumens })!;
+    };
+    const led = fixtureCandela({ lux1m: getLightById('aputure-300d')!.lux1m })!;
+    // A 1000 Ws head against a 300 W LED is several stops, not a rounding error.
+    expect(stopsBetween(led, strobe('profoto-d2'))).toBeGreaterThan(5);
+    // Strobe against strobe still tracks output: 200 Ws to 1000 Ws.
+    expect(stopsBetween(strobe('godox-ad200pro'), strobe('profoto-d2'))).toBeCloseTo(
+      stopsBetween(52 * 52, 145 * 145), 6,
+    );
+  });
+
+  it('cancels the shutter term so flash exposure ignores shutter speed', () => {
+    // The frame's exposure carries the shutter; this factor removes it again.
+    expect(flashShutterCompensation(1 / 125)).toBeCloseTo(1, 6);
+    expect(flashShutterCompensation(1 / 250)).toBeCloseTo(2, 6);
+    expect(flashShutterCompensation(1 / 60)).toBeCloseTo(0.48, 6);
+    // Net rendered flash exposure is the same at every shutter speed.
+    for (const seconds of [1 / 60, 1 / 125, 1 / 250, 1 / 1000]) {
+      expect(flashShutterCompensation(seconds) * (seconds * 125)).toBeCloseTo(1, 6);
+    }
+    for (const bad of [0, -1, NaN]) expect(() => flashShutterCompensation(bad)).toThrow();
   });
 });

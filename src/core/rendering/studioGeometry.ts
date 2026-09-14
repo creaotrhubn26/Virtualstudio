@@ -54,12 +54,35 @@ export function createStudioGrid(scene: Scene): Mesh {
   return grid;
 }
 
-/** Relative photographic exposure, calibrated at ISO 100, f/2.8, 1/125 s. */
-export function studioExposure(iso: number, aperture: number, shutter: string, nd: number): number {
+/** Seconds from a shutter label such as "1/125", "1/125s" or "0.008". */
+export function shutterSeconds(shutter: string): number {
   const parts = shutter.replace(/s$/, '').trim().split('/').map(Number);
   const seconds = parts.length === 2 ? parts[0] / parts[1] : parts[0];
-  if (![iso, aperture, seconds, nd].every(Number.isFinite) || iso <= 0 || aperture <= 0 || seconds <= 0) {
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    throw new RangeError('Invalid shutter setting');
+  }
+  return seconds;
+}
+
+/**
+ * The part of exposure a flash also obeys: aperture, ISO and ND.
+ *
+ * Split out from the shutter because a flash is over before the shutter
+ * closes, so only these three change how a strobe renders.
+ */
+export function apertureIsoExposure(iso: number, aperture: number, nd: number): number {
+  if (![iso, aperture, nd].every(Number.isFinite) || iso <= 0 || aperture <= 0) {
     throw new RangeError('Invalid photographic exposure settings');
   }
-  return (iso / 100) * (2.8 / aperture) ** 2 * (seconds * 125) * 2 ** -nd;
+  return (iso / 100) * (2.8 / aperture) ** 2 * 2 ** -nd;
+}
+
+/** The shutter's own contribution, relative to the 1/125 s calibration. */
+export function shutterExposure(shutter: string): number {
+  return shutterSeconds(shutter) * 125;
+}
+
+/** Relative photographic exposure, calibrated at ISO 100, f/2.8, 1/125 s. */
+export function studioExposure(iso: number, aperture: number, shutter: string, nd: number): number {
+  return apertureIsoExposure(iso, aperture, nd) * shutterExposure(shutter);
 }

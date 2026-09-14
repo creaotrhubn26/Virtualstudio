@@ -23,6 +23,10 @@ export interface FixturePhotometrics {
   lumens?: number;
   /** Beam angle in degrees (full angle, not half). */
   beamAngleDeg?: number;
+  /** Guide number at ISO 100, in metres. The only honest figure for a strobe. */
+  guideNumber?: number;
+  /** Fixture type from the catalogue; decides flash versus continuous. */
+  type?: string;
 }
 
 /** ISO 2720:1974 incident-light constant for a flat receptor. */
@@ -41,6 +45,24 @@ export const SCENE_INTENSITY_PER_CANDELA = 0.01;
 /** Fallback beam angle (degrees) when a fixture publishes no beam data. */
 export const DEFAULT_BEAM_ANGLE_DEG = 120;
 
+/**
+ * Shutter the preview normalizes flash against.
+ *
+ * A flash is over long before the shutter closes, so its exposure depends on
+ * aperture and ISO alone. The renderer still has one global exposure for the
+ * whole frame, so flash output is expressed as the continuous intensity that
+ * would deposit the same light during this shutter time, and
+ * `flashShutterCompensation` cancels the shutter term again at render time.
+ */
+export const REFERENCE_SHUTTER_SECONDS = 1 / 125;
+
+/** Catalogue types whose light is a flash rather than a continuous source. */
+const FLASH_TYPES = new Set(['strobe', 'flash', 'speedlight']);
+
+export function isFlashFixture(type?: string): boolean {
+  return type !== undefined && FLASH_TYPES.has(type);
+}
+
 /** Solid angle of a cone in steradian: Ω = 2π(1 − cos(θ/2)). */
 export function coneSolidAngle(beamAngleDeg: number): number {
   if (!Number.isFinite(beamAngleDeg) || beamAngleDeg <= 0) {
@@ -51,13 +73,64 @@ export function coneSolidAngle(beamAngleDeg: number): number {
 }
 
 /**
+ * Luminous exposure a flash delivers at 1 m, in lux·seconds, at ISO 100.
+ *
+ * The guide number is defined by f = GN / d, and a flash meter with constant
+ * C = 250 reads f² = H · S / C. At d = 1 m that gives H = (C / S) · GN².
+ */
+export function flashLuminousExposureAt1m(guideNumber: number): number {
+  if (!Number.isFinite(guideNumber) || guideNumber <= 0) {
+    throw new RangeError('Guide number must be a positive finite number');
+  }
+  return (INCIDENT_METER_CONSTANT_C / 100) * guideNumber * guideNumber;
+}
+
+/**
+ * The continuous intensity that would deposit a flash's light in one shutter.
+ *
+ * This is a preview convenience, not a claim that a strobe burns continuously:
+ * `flashShutterCompensation` removes the shutter term again so the rendered
+ * flash exposure stays independent of shutter speed, as it is on a real set.
+ */
+export function flashEquivalentCandela(
+  guideNumber: number,
+  shutterSeconds = REFERENCE_SHUTTER_SECONDS,
+): number {
+  if (!Number.isFinite(shutterSeconds) || shutterSeconds <= 0) {
+    throw new RangeError('Shutter time must be a positive finite number of seconds');
+  }
+  return flashLuminousExposureAt1m(guideNumber) / shutterSeconds;
+}
+
+/**
+ * Factor that cancels the frame's shutter term for a flash fixture.
+ *
+ * The renderer multiplies the whole image by the camera exposure, shutter
+ * included. Scaling a flash by this keeps its contribution fixed while the
+ * shutter still dims continuous sources, which is the actual difference
+ * between a strobe and an LED on set.
+ */
+export function flashShutterCompensation(shutterSeconds: number): number {
+  if (!Number.isFinite(shutterSeconds) || shutterSeconds <= 0) {
+    throw new RangeError('Shutter time must be a positive finite number of seconds');
+  }
+  return REFERENCE_SHUTTER_SECONDS / shutterSeconds;
+}
+
+/**
  * On-axis luminous intensity of a fixture, in candela.
  *
- * lux@1m is preferred because manufacturers measure it directly; lumens is a
- * derived second choice because it has to be spread over the beam solid angle.
- * Returns null when the fixture carries neither.
+ * A strobe's guide number comes first, because it is measured for the flash
+ * itself; a strobe's published lumens usually describe its modelling lamp and
+ * would make a 1000 Ws head read like a small LED. For continuous fixtures
+ * lux@1m wins, since manufacturers measure it directly, and lumens spread over
+ * the beam solid angle is the fallback. Returns null when nothing usable
+ * is present.
  */
 export function fixtureCandela(spec: FixturePhotometrics): number | null {
+  if (isFlashFixture(spec.type) && typeof spec.guideNumber === 'number' && spec.guideNumber > 0) {
+    return flashEquivalentCandela(spec.guideNumber);
+  }
   if (typeof spec.lux1m === 'number' && spec.lux1m > 0) {
     return spec.lux1m;
   }
@@ -66,7 +139,19 @@ export function fixtureCandela(spec: FixturePhotometrics): number | null {
     const solidAngle = coneSolidAngle(beam);
     return solidAngle > 1e-6 ? spec.lumens / solidAngle : spec.lumens;
   }
+  if (typeof spec.guideNumber === 'number' && spec.guideNumber > 0) {
+    return flashEquivalentCandela(spec.guideNumber);
+  }
   return null;
+}
+
+/** Aperture a flash meter reads at ISO 100: f = GN / d. */
+export function flashApertureAt(guideNumber: number, metres: number, iso = 100): number {
+  if (!Number.isFinite(metres) || metres <= 0) {
+    throw new RangeError('Distance must be a positive finite number of metres');
+  }
+  if (!Number.isFinite(iso) || iso <= 0) throw new RangeError('ISO must be positive');
+  return (guideNumber / metres) * Math.sqrt(iso / 100);
 }
 
 /** Inverse-square law: E = I / d². */
@@ -76,6 +161,17 @@ export function illuminanceAt(candela: number, metres: number, minMetres = 0.05)
   }
   const d = Math.max(metres, minMetres);
   return candela / (d * d);
+}
+
+/** Distance at which a source of `candela` delivers `lux`: d = √(I / E). */
+export function distanceForIlluminance(candela: number, lux: number): number {
+  if (!Number.isFinite(candela) || candela <= 0) {
+    throw new RangeError('Candela must be a positive finite number');
+  }
+  if (!Number.isFinite(lux) || lux <= 0) {
+    throw new RangeError('Illuminance must be a positive finite number');
+  }
+  return Math.sqrt(candela / lux);
 }
 
 /** Stops between two illuminances (positive when `to` is brighter). */
