@@ -99,6 +99,7 @@ The renderer is concentrated in a large legacy [`src/main.ts`](src/main.ts). Ext
 - [`src/core/rendering/StudioRoom.ts`](src/core/rendering/StudioRoom.ts): industrial room geometry, furniture, practical lights, batching and roof cutaway behavior.
 - [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts): pose-derived portrait chair and body contact.
 - [`src/core/rendering/studioGeometry.ts`](src/core/rendering/studioGeometry.ts): focal length conversion, exposure calculation, cyclorama and grid.
+- [`src/core/rendering/photometry.ts`](src/core/rendering/photometry.ts): candela from fixture specs, inverse-square illuminance, ISO 2720 metering, modifier size and shadow-softness ratio.
 - [`src/core/services/environmentService.ts`](src/core/services/environmentService.ts): environment state and room toggles.
 - [`src/services/sceneCompressionService.ts`](src/services/sceneCompressionService.ts): lossless v2 document wrapper and legacy v1 reader.
 - [`src/services/studioDocument.ts`](src/services/studioDocument.ts): Zod validation before mutating the scene.
@@ -130,6 +131,22 @@ Camera exposure is preview calibration relative to ISO 100, f/2.8 and 1/125 s. I
 
 The industrial room uses metres and occupies approximately x = -8…8 and z = -9…8. Furniture and room practicals are independently switchable. Roof geometry remains visible to the taking camera but cuts away for high editor viewpoints.
 
+### Light units and shadow softness
+
+[`src/core/rendering/photometry.ts`](src/core/rendering/photometry.ts) holds the photographic units; it is pure arithmetic and unit-tested against ISO 2720 metering, so numbers are asserted rather than judged by eye.
+
+- A continuous fixture's on-axis intensity comes from its published `lux1m`, or from `lumens` spread over the beam solid angle Ω = 2π(1 − cos(θ/2)).
+- A strobe is read from its guide number instead: H = (C / S) · GN² lux·s at 1 m, so a flash meter reads f = GN / d at ISO 100. The catalogue's `lux1m` for a strobe usually describes its modelling lamp and would put a 1000 Ws head below a 300 W LED.
+- `SCENE_INTENSITY_PER_CANDELA` is the one scene calibration constant, fixed on the Aputure LS 300d II (lux@1m = 45000 → scene intensity 450). The mapping is linear and never clamped. An earlier ceiling of 800 made every fixture above 8000 cd render identically.
+- Every studio light uses `FALLOFF_PHYSICAL`, so illuminance is E = I / d². Doubling the distance costs exactly two stops.
+- Shadow softness comes from the modifier's emitting size, not from a per-fixture constant. Rectangular sources collapse to the equal-area square, so a 30 × 120 cm stripbox stays crisper than a 90 × 120 cm softbox.
+- All shadow generators go through `VirtualStudio.configureStudioShadowSoftness`, which uses contact hardening (PCSS) with `shadowMinZ = 0.2` and `shadowMaxZ = 20`. Do not set `blurKernel` or `usePercentageCloserFiltering` on a studio light: Babylon applies `blurKernel` only to the blur-exponential filters, which is why the old per-fixture kernel values had no effect.
+- The default key/fill/rim rig is specified the way it is metered: a key reading at the subject plus the ratios around it (`RIG_KEY_ILLUMINANCE`, `RIG_KEY_TO_FILL`, `RIG_RIM_TO_KEY`). `placeFixtureForIlluminance` then gives each head its catalogue output and derives placement and output percentage from it, moving a fixture closer along its own aim line when the reading is beyond what it can give and dialling it back when it has light to spare. No fixture is ever driven past 100 %.
+- Camera exposure remains image processing only, and a fixture's physical output never moves with ISO, aperture, shutter or ND. The one exception is real: a flash is over before the shutter closes, so shutter speed does not change how a strobe exposes. The frame has a single image-processing exposure that carries the shutter term for continuous light, so `updateSceneBrightness` multiplies flash fixtures by `flashShutterCompensation` to cancel it again. Their rendered contribution then depends on aperture and ISO alone.
+- A strobe therefore sits several stops above a continuous fixture, and a mixed rig is correctly exposed for one of them at a time. That is the real photographic situation, not a bug. When the frame clips, `offerClippingScope` offers to open zebra or the histogram; it never changes the exposure or the lights. The photographer decides.
+
+[`e2e/light-accuracy.spec.ts`](e2e/light-accuracy.spec.ts) is the reference scene: it places catalogue fixtures, asserts their output ratio in stops, checks the falloff and shadow settings, converts the shadow-map light-size ratio back to metres to confirm the penumbra is built from the modifier's real dimensions, verifies that shutter speed changes continuous exposure but not flash exposure, confirms the default rig still delivers the light its hand-tuned predecessor did, and checks that the clipping prompt offers a scope without touching the exposure.
+
 ## Local scene documents
 
 Version 2 documents retain the complete `SceneComposition`, including:
@@ -151,7 +168,7 @@ PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build
 python3 scripts/characters/validate_studio_characters.py
 PLAYWRIGHT_SOFTWARE_GL=1 PATH=/opt/homebrew/opt/node@22/bin:$PATH \
-  npm run test:e2e -- e2e/studio-scene.spec.ts --workers=1
+  npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts --workers=1
 ```
 
 The software-WebGL browser test is slow and is not a device-performance measurement. It covers both GLBs, materials, hierarchy movement, views, exposure, seated body-to-chair contact, chair tracking/removal, failed-import recovery, live preview, 1920 × 1080 PNG export, local save/open and a tablet layout check.
@@ -162,7 +179,7 @@ The local API backend is not running in this verification environment and `/api`
 
 Work in this order unless the user changes priorities:
 
-1. **Photographic light accuracy.** Audit fixture definitions, modifier dimensions, inverse-square falloff, beam angle and shadow softness against documented fixtures. Define repeatable reference scenes and numeric tolerances. Preserve actual light power when camera exposure changes.
+1. **Photographic light accuracy.** *(Fixture output, falloff, shadow softness, the flash-versus-continuous exposure model and the default rig have landed; see "Light units and shadow softness".)* Remaining: measured penumbra comparisons, and bounce/soft-source approximation checked against reference renders rather than by eye.
 2. **Editable posing.** Add constrained joint manipulation on top of the 53-joint rig, starting with head, spine, shoulders, elbows, hands, hips and knees. Keep the three fixed poses as reliable reset states. Prevent impossible limb ranges and floor penetration.
 3. **Broader real character variation.** Extend the offline builder with visibly distinct, licensed body proportions, ages, skin textures, hair and clothing. Every catalogue card must point to an actual different asset. Add facial expression blend shapes only when the source and export path are verified.
 4. **Studio object editing.** Promote selected furniture, including the portrait chair, into scene-owned editable props with clear character-seat attachment state. Serialize ownership and transforms without duplicating the derived chair on load.
@@ -176,7 +193,8 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 - The two people are game-style anatomical characters, not high-resolution scans.
 - There are three dependable fixed poses; arbitrary pose editing and facial expressions remain future work.
 - The room furniture is a fixed environment preset except for the pose-derived chair.
-- Lighting is useful for previsualization but is not yet calibrated photometry or an offline path tracer.
+- Fixture output, falloff and shadow softness now follow published specifications, but this is still a real-time approximation, not measured photometry or an offline path tracer.
+- Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.
 - Backend-dependent workflows require a separately running service and verification.
 - Native iPad behavior and performance have not been tested on hardware.
 
