@@ -30,6 +30,7 @@ import { StudioRoom } from './core/rendering/StudioRoom';
 import { StudioSeat } from './core/rendering/StudioSeat';
 import { StudioWorkspace } from './core/rendering/StudioWorkspace';
 import { createStudioBackdrop, createStudioGrid, studioExposure, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
+import { contactHardeningRatio, fixtureCandela, modifierSizeMetres, sceneIntensityFromCandela } from './core/rendering/photometry';
 import { LightingPhysics } from './core/LightingPhysics';
 import type { SceneComposition } from './core/models/sceneComposer';
 import type { ShotList, CastingShot } from './core/models/production';
@@ -323,6 +324,8 @@ interface LightData {
   modelingLightEnabled?: boolean;
   modelingLightIntensity?: number;
   shadowGenerator?: BABYLON.ShadowGenerator;
+  /** Emitting size of the fixture or modifier, metres. Drives penumbra width. */
+  sourceSizeMetres?: number;
   beamVisualization?: BABYLON.Mesh;
   useCustomColor?: boolean;
   customColor?: string;
@@ -1522,13 +1525,41 @@ class VirtualStudio {
     }
   }
 
+    /**
+     * Contact-hardening (PCSS) shadows whose penumbra follows the fixture's
+     * emitting size, so a 150 cm octabox wraps and a snoot cuts.
+     *
+     * Every shadow generator for a studio light goes through here. Rebuilding
+     * one with plain PCF would silently discard the modifier's softness, which
+     * is what the old per-fixture `blurKernel` values did — Babylon only
+     * applies that kernel to the blur-exponential filters.
+     */
+    public configureStudioShadowSoftness(
+      generator: BABYLON.ShadowGenerator,
+      lightData: Pick<LightData, 'light'> & Partial<Pick<LightData, 'name' | 'sourceSizeMetres'>>,
+    ): void {
+      generator.useContactHardeningShadow = true;
+      generator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM;
+      const light = lightData.light;
+      if (!(light instanceof BABYLON.SpotLight)) return;
+      if (light.shadowMaxZ === undefined) {
+        light.shadowMinZ = 0.2;
+        light.shadowMaxZ = 20;
+      }
+      const sourceSize = lightData.sourceSizeMetres
+        ?? modifierSizeMetres(lightData.name ?? '', undefined);
+      generator.contactHardeningLightSizeUVRatio = contactHardeningRatio(
+        sourceSize,
+        light.angle,
+        light.shadowMaxZ,
+      );
+    }
+
     public updateShadowMaps(): void {
       this.lights.forEach((lightData) => {
         if (!lightData.shadowGenerator && lightData.light instanceof BABYLON.SpotLight) {
           lightData.shadowGenerator = new BABYLON.ShadowGenerator(2048, lightData.light);
-          lightData.shadowGenerator.usePercentageCloserFiltering = true;
-          lightData.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-          lightData.shadowGenerator.blurKernel = 64;
+          this.configureStudioShadowSoftness(lightData.shadowGenerator, lightData);
         }
         if (lightData.shadowGenerator) {
           this.scene.meshes.filter(m => m.isVisible && m !== lightData.mesh).forEach(m => {
@@ -1589,9 +1620,6 @@ class VirtualStudio {
     // Regenerate shadow maps for all lights (Phase 3: Shadow Map Auto-Update)
     private regenerateShadowMaps(): void {
       this.lights.forEach((lightData) => {
-        // Save existing kernel before disposing so we can restore it
-        const savedKernel = lightData.shadowGenerator?.blurKernel ?? 64;
-
         // Dispose existing shadow generator if present
         if (lightData.shadowGenerator) {
           const shadowMap = lightData.shadowGenerator.getShadowMap();
@@ -1605,10 +1633,7 @@ class VirtualStudio {
         // Create new shadow generator for spot/directional lights
         if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.DirectionalLight) {
           const shadowGenerator = new BABYLON.ShadowGenerator(2048, lightData.light);
-          shadowGenerator.usePercentageCloserFiltering = true;
-          shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-          // Restore previously tuned kernel (softbox=64, octabox=96, snoot=4, etc.)
-          shadowGenerator.blurKernel = savedKernel;
+          this.configureStudioShadowSoftness(shadowGenerator, lightData);
 
           // Add all visible meshes as shadow casters
           this.scene.meshes.forEach(mesh => {
@@ -1776,7 +1801,8 @@ class VirtualStudio {
           angle: number;
           exponent: number;
           target: BABYLON.Vector3;
-          blurKernel: number;
+          /** Emitting size of the modifier, metres — sets the penumbra width. */
+          sourceSizeMetres: number;
         }
       ): void => {
         if (!entry) return;
@@ -1801,10 +1827,9 @@ class VirtualStudio {
 
         this.aimLightAt(lightId, config.target);
 
+        data.sourceSizeMetres = config.sourceSizeMetres;
         if (data.shadowGenerator) {
-          data.shadowGenerator.usePercentageCloserFiltering = true;
-          data.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-          data.shadowGenerator.blurKernel = config.blurKernel;
+          this.configureStudioShadowSoftness(data.shadowGenerator, data);
         }
 
         if (data.mesh.material instanceof BABYLON.StandardMaterial) {
@@ -1826,7 +1851,7 @@ class VirtualStudio {
         angle: Math.PI / 3,   // 60° half-angle, softbox-style wide field
         exponent: 2.0,         // near-uniform illumination across panel
         target: new BABYLON.Vector3(0, 1.3, 0),
-        blurKernel: 64,        // softbox: broad soft shadows
+        sourceSizeMetres: 0.9,  // 90 cm softbox: broad soft shadows
       });
 
       applyLightProfile(fillEntry, {
@@ -1835,7 +1860,7 @@ class VirtualStudio {
         angle: Math.PI / 2.5, // 72° — octabox-style very wide
         exponent: 1.5,         // near-uniform, maximum coverage
         target: new BABYLON.Vector3(0, 1.2, 0),
-        blurKernel: 96,        // octabox: maximum beauty softness
+        sourceSizeMetres: 1.2,  // 120 cm octabox: maximum beauty softness
       });
 
       applyLightProfile(rimEntry, {
@@ -1844,7 +1869,7 @@ class VirtualStudio {
         angle: Math.PI / 5,   // 36° — tighter, edge-defining beam
         exponent: 3.5,         // slight centre hotspot for crisp edge
         target: new BABYLON.Vector3(0, 1.45, 0),
-        blurKernel: 32,        // rim: some shadow definition
+        sourceSizeMetres: 0.3,  // 30 cm stripbox: keeps the rim edge defined
       });
 
       // Keep extra lights from flattening facial contrast.
@@ -6079,152 +6104,152 @@ class VirtualStudio {
     // We use moderate values (300-700 cd) balanced against the scene's exposure/tone-map.
     // Softbox (rectangular) → wider beam, lower exponent (uniform field), very soft shadows.
     // Octabox (circular)    → even wider, near-uniform field, maximum shadow softness.
-    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; shadowKernel: number; glbFile: string; faceYawOffset: number | null } } = {
+    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; glbFile: string; faceYawOffset: number | null } } = {
       // faceYawOffset: known TRELLIS models are confirmed -Z face (offset=0).
       //                null = auto-detect from bright submesh centroid (for Tripo/AI models).
-      'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
-      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
-      'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
-      'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
-      'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'godox-ad200pro': { intensity: 240, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'godox-ad400pro': { intensity: 340, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'godox-ad600pro': { intensity: 420, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'profoto-b10plus':{ intensity: 480, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'profoto-b10':    { intensity: 420, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 80,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad200pro': { intensity: 240, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad400pro': { intensity: 340, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad600pro': { intensity: 420, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-b10plus':{ intensity: 480, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-b10':    { intensity: 420, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
 
       // HMI / Fresnel / PAR
-      'arri-m18':        { intensity: 800, name: 'Arri M18 HMI',       cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'arri-m40':        { intensity: 1400, name: 'Arri M40 HMI',      cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'joker-400':       { intensity: 500, name: 'K5600 Joker 400',    cct: 5600, beamAngle: Math.PI / 3.5, exponent: 3.0, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'par-can-1000':    { intensity: 700, name: 'PAR64 1000W',        cct: 3200, beamAngle: Math.PI / 8,   exponent: 5.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'dedolight-150':   { intensity: 280, name: 'Dedolight 150W',     cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'dedolight-dled4': { intensity: 180, name: 'Dedolight DLED4',    cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'chauvet-fresnel-spot': { intensity: 220, name: 'Chauvet Fresnel', cct: 5600, beamAngle: Math.PI / 7, exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'arri-m18':        { intensity: 800, name: 'Arri M18 HMI',       cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'arri-m40':        { intensity: 1400, name: 'Arri M40 HMI',      cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'joker-400':       { intensity: 500, name: 'K5600 Joker 400',    cct: 5600, beamAngle: Math.PI / 3.5, exponent: 3.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'par-can-1000':    { intensity: 700, name: 'PAR64 1000W',        cct: 3200, beamAngle: Math.PI / 8,   exponent: 5.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'dedolight-150':   { intensity: 280, name: 'Dedolight 150W',     cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'dedolight-dled4': { intensity: 180, name: 'Dedolight DLED4',    cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'chauvet-fresnel-spot': { intensity: 220, name: 'Chauvet Fresnel', cct: 5600, beamAngle: Math.PI / 7, exponent: 6.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
 
       // Beauty Dish / Ring
-      'godox-bd-07':         { intensity: 320, name: 'Godox BD-07 Beauty Dish', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'profoto-softlight-65':{ intensity: 350, name: 'Profoto Softlight 65cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'godox-ar400':         { intensity: 280, name: 'Godox AR400 Ring Flash',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
-      'profoto-pro-ring2':   { intensity: 300, name: 'Profoto Pro-Ring2',       cct: 5500, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
+      'godox-bd-07':         { intensity: 320, name: 'Godox BD-07 Beauty Dish', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'profoto-softlight-65':{ intensity: 350, name: 'Profoto Softlight 65cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'godox-ar400':         { intensity: 280, name: 'Godox AR400 Ring Flash',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
+      'profoto-pro-ring2':   { intensity: 300, name: 'Profoto Pro-Ring2',       cct: 5500, beamAngle: Math.PI / 2,   exponent: 1.2, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
 
       // LED Ring Lights
-      'nanlite-halo-14':  { intensity: 160, name: 'Nanlite Halo 14"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'nanlite-halo-26':  { intensity: 260, name: 'Nanlite Halo 26"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'godox-rl-60':      { intensity: 200, name: 'Godox RL-60 Ring',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-halo-14':  { intensity: 160, name: 'Nanlite Halo 14"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-halo-26':  { intensity: 260, name: 'Nanlite Halo 26"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'godox-rl-60':      { intensity: 200, name: 'Godox RL-60 Ring',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
 
       // Large LED Panels
-      'aputure-nova-p300c':  { intensity: 550, name: 'Aputure NOVA P300c',   cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'arri-skypanel-s60':   { intensity: 520, name: 'Arri SkyPanel S60-C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'arri-skypanel-s120':  { intensity: 800, name: 'Arri SkyPanel S120-C', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'rosco-litepad-hol':   { intensity: 180, name: 'Rosco LitePad HO+',   cct: 5500, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'nanlite-mixpad-27c':  { intensity: 140, name: 'Nanlite MixPad 27C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'nanlite-pavotube-15c-kit': { intensity: 120, name: 'Nanlite PavoTube 15C', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 64, glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'aputure-nova-p300c':  { intensity: 550, name: 'Aputure NOVA P300c',   cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'arri-skypanel-s60':   { intensity: 520, name: 'Arri SkyPanel S60-C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'arri-skypanel-s120':  { intensity: 800, name: 'Arri SkyPanel S120-C', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 1.0, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'rosco-litepad-hol':   { intensity: 180, name: 'Rosco LitePad HO+',   cct: 5500, beamAngle: Math.PI / 1.5, exponent: 1.0,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-mixpad-27c':  { intensity: 140, name: 'Nanlite MixPad 27C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-pavotube-15c-kit': { intensity: 120, name: 'Nanlite PavoTube 15C', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
 
       // Speedlights
-      'godox-tt685-ii':  { intensity: 180, name: 'Godox TT685 II',   cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
-      'profoto-a10':     { intensity: 220, name: 'Profoto A10',      cct: 5500, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
-      'canon-600ex-rt':  { intensity: 180, name: 'Canon 600EX-RT',  cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+      'godox-tt685-ii':  { intensity: 180, name: 'Godox TT685 II',   cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+      'profoto-a10':     { intensity: 220, name: 'Profoto A10',      cct: 5500, beamAngle: Math.PI / 3, exponent: 2.5, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+      'canon-600ex-rt':  { intensity: 180, name: 'Canon 600EX-RT',  cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
 
       // ── Light Shapers ──────────────────────────────────────────────────────
       // Softbox — rectangular diffuse sources, very soft wrapping light
-      'shaper-softbox-40':     { intensity: 140, name: 'Softboks 40×40 cm',   cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.4, shadowKernel: 96,  glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
-      'shaper-softbox-60':     { intensity: 220, name: 'Softboks 60×60 cm',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 128, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
-      'shaper-softbox-90x120': { intensity: 350, name: 'Softboks 90×120 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 160, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
-      'shaper-softbox-120x180':{ intensity: 500, name: 'Softboks 120×180 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
-      'shaper-softbox-150x200':{ intensity: 650, name: 'Softboks 150×200 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-40':     { intensity: 140, name: 'Softboks 40×40 cm',   cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.4,  glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-60':     { intensity: 220, name: 'Softboks 60×60 cm',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-90x120': { intensity: 350, name: 'Softboks 90×120 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-120x180':{ intensity: 500, name: 'Softboks 120×180 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.8, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-150x200':{ intensity: 650, name: 'Softboks 150×200 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.7, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
 
       // Octabox — circular diffuse, even fill with natural catchlight
-      'shaper-octabox-60':  { intensity: 250, name: 'Oktaboks 60 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 128, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'shaper-octabox-75':  { intensity: 320, name: 'Oktaboks 75 cm',  cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.1, shadowKernel: 144, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'shaper-octabox-95':  { intensity: 400, name: 'Oktaboks 95 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 160, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'shaper-octabox-120': { intensity: 500, name: 'Oktaboks 120 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 176, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'shaper-octabox-150': { intensity: 600, name: 'Oktaboks 150 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-60':  { intensity: 250, name: 'Oktaboks 60 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-75':  { intensity: 320, name: 'Oktaboks 75 cm',  cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.1, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-95':  { intensity: 400, name: 'Oktaboks 95 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-120': { intensity: 500, name: 'Oktaboks 120 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-150': { intensity: 600, name: 'Oktaboks 150 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
 
       // Stripbox — tall narrow softbox, hair/rim/background accent
-      'shaper-stripbox-15x90':  { intensity: 180, name: 'Stripboks 15×90 cm',  cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.0, shadowKernel: 48,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
-      'shaper-stripbox-30x120': { intensity: 280, name: 'Stripboks 30×120 cm', cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.5, shadowKernel: 64,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
-      'shaper-stripbox-40x140': { intensity: 340, name: 'Stripboks 40×140 cm', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.2, shadowKernel: 80,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
-      'shaper-stripbox-60x180': { intensity: 380, name: 'Stripboks 60×180 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 96,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-15x90':  { intensity: 180, name: 'Stripboks 15×90 cm',  cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.0,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-30x120': { intensity: 280, name: 'Stripboks 30×120 cm', cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.5,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-40x140': { intensity: 340, name: 'Stripboks 40×140 cm', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.2,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-60x180': { intensity: 380, name: 'Stripboks 60×180 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
 
       // Beauty dish — semi-specular, controlled wrap, beauty/portrait
-      'shaper-beautydish-35': { intensity: 220, name: 'Beauty dish 35 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.2, shadowKernel: 48, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'shaper-beautydish-40': { intensity: 300, name: 'Beauty dish 40 cm', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'shaper-beautydish-56': { intensity: 380, name: 'Beauty dish 56 cm', cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.5, shadowKernel: 80, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'shaper-beautydish-70': { intensity: 480, name: 'Beauty dish 70 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.3, shadowKernel: 96, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-35': { intensity: 220, name: 'Beauty dish 35 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.2, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-40': { intensity: 300, name: 'Beauty dish 40 cm', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-56': { intensity: 380, name: 'Beauty dish 56 cm', cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.5, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-70': { intensity: 480, name: 'Beauty dish 70 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.3, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
 
       // Ring light — flat, shadow-free, catchlight ring
-      'shaper-ring-18': { intensity:  90, name: 'Ringslys 7" / 18 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 96,  glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ring-35': { intensity: 160, name: 'Ringslys 14" / 35 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ring-48': { intensity: 210, name: 'Ringslys 19" / 48 cm', cct: 5600, beamAngle: Math.PI / 1.9, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ring-65': { intensity: 260, name: 'Ringslys 26" / 65 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-18': { intensity:  90, name: 'Ringslys 7" / 18 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2,  glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-35': { intensity: 160, name: 'Ringslys 14" / 35 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-48': { intensity: 210, name: 'Ringslys 19" / 48 cm', cct: 5600, beamAngle: Math.PI / 1.9, exponent: 0.9, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-65': { intensity: 260, name: 'Ringslys 26" / 65 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
 
       // Umbrella — silver reflective, bounced warm
-      'shaper-umbrella-reflective':  { intensity: 320, name: 'Paraply sølv 100 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
-      'shaper-umbrella-silver-150':  { intensity: 480, name: 'Paraply sølv 150 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
-      'shaper-umbrella-xl':          { intensity: 580, name: 'Paraply sølv XL 165 cm',cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
+      'shaper-umbrella-reflective':  { intensity: 320, name: 'Paraply sølv 100 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
+      'shaper-umbrella-silver-150':  { intensity: 480, name: 'Paraply sølv 150 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
+      'shaper-umbrella-xl':          { intensity: 580, name: 'Paraply sølv XL 165 cm',cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
 
       // Umbrella — shoot-through, soft transmitted
-      'shaper-umbrella-shootthrough':     { intensity: 280, name: 'Paraply shoot-through 100 cm', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
-      'shaper-umbrella-shootthrough-150': { intensity: 400, name: 'Paraply shoot-through 150 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-shootthrough':     { intensity: 280, name: 'Paraply shoot-through 100 cm', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.7, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-shootthrough-150': { intensity: 400, name: 'Paraply shoot-through 150 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
 
       // Umbrella — gold reflective, warm toned
-      'shaper-umbrella-gold':     { intensity: 300, name: 'Paraply gull 100 cm', cct: 4000, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
-      'shaper-umbrella-gold-150': { intensity: 440, name: 'Paraply gull 150 cm', cct: 4000, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-gold':     { intensity: 300, name: 'Paraply gull 100 cm', cct: 4000, beamAngle: Math.PI / 1.6, exponent: 0.8, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-gold-150': { intensity: 440, name: 'Paraply gull 150 cm', cct: 4000, beamAngle: Math.PI / 1.4, exponent: 0.7, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
 
       // Snoot — cylindrical narrower, hard directional accent/hair light
-      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',      cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
-      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb', cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
-      'shaper-snoot-gel':  { intensity: 240, name: 'Snoot med gelramme',  cct: 5600, beamAngle: Math.PI / 10, exponent: 7.0, shadowKernel: 10, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
+      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',      cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
+      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb', cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
+      'shaper-snoot-gel':  { intensity: 240, name: 'Snoot med gelramme',  cct: 5600, beamAngle: Math.PI / 10, exponent: 7.0, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
 
       // Parabolic reflector — deep dish, specular-to-diffuse adjustable
-      'shaper-para-75':  { intensity: 340, name: 'Parabolreflektor 75 cm',  cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.2, shadowKernel: 40, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
-      'shaper-para-90':  { intensity: 450, name: 'Parabolreflektor 90 cm',  cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 48, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
-      'shaper-para-120': { intensity: 580, name: 'Parabolreflektor 120 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, shadowKernel: 56, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
-      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.6, shadowKernel: 64, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-75':  { intensity: 340, name: 'Parabolreflektor 75 cm',  cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.2, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-90':  { intensity: 450, name: 'Parabolreflektor 90 cm',  cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-120': { intensity: 580, name: 'Parabolreflektor 120 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.6, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
 
       // Fresnel lens — variable spot/flood, sharp-edged theatrical beam
-      'shaper-fresnel-6':  { intensity: 240, name: 'Fresnel 6"',  cct: 5600, beamAngle: Math.PI / 7,   exponent: 4.5, shadowKernel: 20, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 4.0, shadowKernel: 24, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-fresnel-20': { intensity: 720, name: 'Fresnel 20"', cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.0, shadowKernel: 40, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-6':  { intensity: 240, name: 'Fresnel 6"',  cct: 5600, beamAngle: Math.PI / 7,   exponent: 4.5, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 4.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.5, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-20': { intensity: 720, name: 'Fresnel 20"', cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
 
       // LED panel — flat broad source, broadcast/interview fill
-      'shaper-ledpanel-15x30':  { intensity: 100, name: 'LED-panel 15×30 cm',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',   cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0, shadowKernel: 96,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',   cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ledpanel-120x120':{ intensity: 720, name: 'LED-panel 120×120 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-15x30':  { intensity: 100, name: 'LED-panel 15×30 cm',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',   cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',   cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-120x120':{ intensity: 720, name: 'LED-panel 120×120 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.8, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
 
       // Chimera — fabric frame softbox, cinema/broadcast standard
-      'shaper-chimera-2x3': { intensity: 280, name: 'Chimera 60×90 cm (2×3 ft)',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
-      'shaper-chimera-3x4': { intensity: 440, name: 'Chimera 90×120 cm (3×4 ft)',  cct: 5600, beamAngle: Math.PI / 1.7, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
-      'shaper-chimera-4x6': { intensity: 640, name: 'Chimera 120×180 cm (4×6 ft)', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
+      'shaper-chimera-2x3': { intensity: 280, name: 'Chimera 60×90 cm (2×3 ft)',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
+      'shaper-chimera-3x4': { intensity: 440, name: 'Chimera 90×120 cm (3×4 ft)',  cct: 5600, beamAngle: Math.PI / 1.7, exponent: 0.9, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
+      'shaper-chimera-4x6': { intensity: 640, name: 'Chimera 120×180 cm (4×6 ft)', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
 
       // Lantern / Globe — omnidirectional soft wrap-around light
-      'shaper-lantern-45': { intensity: 180, name: 'Lanterneglobus 45 cm', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
-      'shaper-lantern-75': { intensity: 280, name: 'Lanterneglobus 75 cm', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
-      'shaper-lantern-90': { intensity: 360, name: 'Lanterneglobus 90 cm', cct: 5600, beamAngle: Math.PI / 1.05,exponent: 0.4, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
+      'shaper-lantern-45': { intensity: 180, name: 'Lanterneglobus 45 cm', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.5, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
+      'shaper-lantern-75': { intensity: 280, name: 'Lanterneglobus 75 cm', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
+      'shaper-lantern-90': { intensity: 360, name: 'Lanterneglobus 90 cm', cct: 5600, beamAngle: Math.PI / 1.05,exponent: 0.4, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
 
       // Kino Flo — fluorescent tube bank, film/broadcast magazine fill
-      'shaper-kino-2bank': { intensity: 160, name: 'Kino Flo 2 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 128, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
-      'shaper-kino-4bank': { intensity: 280, name: 'Kino Flo 4 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
-      'shaper-kino-2x2':   { intensity: 360, name: 'Kino Flo 2 rør 2 bank', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 160, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
-      'shaper-kino-4x4':   { intensity: 580, name: 'Kino Flo 4 rør 4 bank', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-2bank': { intensity: 160, name: 'Kino Flo 2 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-4bank': { intensity: 280, name: 'Kino Flo 4 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.9, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-2x2':   { intensity: 360, name: 'Kino Flo 2 rør 2 bank', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-4x4':   { intensity: 580, name: 'Kino Flo 4 rør 4 bank', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.7, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
 
       // Diffusion Frame — large silk/muslin scrim on stand
-      'shaper-diffframe-4x4': { intensity: 380, name: 'Diffusjonsramme 4×4 ft', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
-      'shaper-diffframe-6x6': { intensity: 600, name: 'Diffusjonsramme 6×6 ft', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
-      'shaper-diffframe-8x8': { intensity: 820, name: 'Diffusjonsramme 8×8 ft', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
+      'shaper-diffframe-4x4': { intensity: 380, name: 'Diffusjonsramme 4×4 ft', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
+      'shaper-diffframe-6x6': { intensity: 600, name: 'Diffusjonsramme 6×6 ft', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.6, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
+      'shaper-diffframe-8x8': { intensity: 820, name: 'Diffusjonsramme 8×8 ft', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
 
       // Open Reflector — bare bowl, hard specular punch
-      'shaper-openref-standard': { intensity: 420, name: 'Åpen reflektor 60 cm',      cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
-      'shaper-openref-wide':     { intensity: 550, name: 'Åpen reflektor vid 90 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 2.0, shadowKernel: 40, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
-      'shaper-openref-tele':     { intensity: 380, name: 'Åpen reflektor tele 45 cm', cct: 5600, beamAngle: Math.PI / 4.5, exponent: 3.5, shadowKernel: 24, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
+      'shaper-openref-standard': { intensity: 420, name: 'Åpen reflektor 60 cm',      cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.5, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
+      'shaper-openref-wide':     { intensity: 550, name: 'Åpen reflektor vid 90 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 2.0, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
+      'shaper-openref-tele':     { intensity: 380, name: 'Åpen reflektor tele 45 cm', cct: 5600, beamAngle: Math.PI / 4.5, exponent: 3.5, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
     };
 
-    const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
+    const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
 
     // Photometric override: when the fixture has real spec data in
     // LIGHT_DATABASE (lumens, lux1m, beamAngle, cct), derive Babylon's
@@ -6232,39 +6257,24 @@ class VirtualStudio {
     // scalar. This is how set.a.light gets consistent realism across
     // fixtures: real candela feeds inverse-square falloff, which feeds PBR.
     //
-    // cd = lumens / solid-angle, where solid-angle = 2π(1 − cos(beam/2))
-    // lux@1m == cd (since E = I/d² and d=1) — so if the spec gives
-    // lux1m, we use that directly.
+    // The scale is linear and never clamped. An earlier ceiling of 800
+    // collapsed every fixture above 8000 cd onto the same value, so a
+    // 120d, a 300d and a 600d all lit the subject identically.
     const specFromDB = getLightById(modelId);
     if (specFromDB) {
-      const realCct = specFromDB.cct ?? lightConfig.cct;
       const realBeamAngleRad = specFromDB.beamAngle
         ? (specFromDB.beamAngle * Math.PI) / 180
         : lightConfig.beamAngle;
 
-      let candela: number | null = null;
-      if (specFromDB.lux1m && specFromDB.lux1m > 0) {
-        candela = specFromDB.lux1m;
-      } else if (specFromDB.lumens && specFromDB.lumens > 0) {
-        const solidAngle = 2 * Math.PI * (1 - Math.cos(realBeamAngleRad / 2));
-        candela = solidAngle > 1e-6 ? specFromDB.lumens / solidAngle : specFromDB.lumens;
-      }
+      const candela = fixtureCandela({
+        lux1m: specFromDB.lux1m,
+        lumens: specFromDB.lumens,
+        beamAngleDeg: (realBeamAngleRad * 180) / Math.PI,
+      });
 
       if (candela !== null) {
-        // Scale real candela into Babylon scene-intensity units.
-        // Calibrated against the (previously hand-tuned) reference set so
-        // director-placed rigs read at roughly the same exposure as the
-        // hollywood-rembrandt preset's key ≈ 520. Aputure 300D lux1m=45000,
-        // target key ≈ 500 → scale ≈ 0.011, but at that scale low-output
-        // strobes (Profoto D2 lux1m=6000) fade. 0.1 gives Profoto D2 ≈ 600
-        // (right for a 1000Ws strobe in modeling range), Aputure 300D ≈
-        // 4500 (clamped), ARRI M18 continuous-HMI stays visible. Clamp so
-        // one outlier doesn't wash the scene.
-        const CANDELA_TO_BABYLON_INTENSITY = 0.1;
-        const INTENSITY_CEILING = 800;
-        const scaled = candela * CANDELA_TO_BABYLON_INTENSITY;
-        lightConfig.intensity = Math.min(scaled, INTENSITY_CEILING);
-        lightConfig.cct = realCct;
+        lightConfig.intensity = sceneIntensityFromCandela(candela);
+        lightConfig.cct = specFromDB.cct ?? lightConfig.cct;
         lightConfig.beamAngle = realBeamAngleRad;
         lightConfig.name = `${specFromDB.brand} ${specFromDB.model}`;
       }
@@ -6543,13 +6553,21 @@ class VirtualStudio {
       // Store light in lights map
       this.lights.set(lightId, lightData);
 
-      // Create shadow generator immediately with PCF soft shadows.
-      // Kernel size is tuned per light type: softboxes need larger kernels for
-      // diffuse, wrapping shadows; snoots/fresnels use small kernels for crisp edges.
+      // Create shadow generator with contact-hardening (PCSS) shadows, so
+      // penumbra width follows the emitting surface: a 150 cm octabox wraps,
+      // a snoot cuts. `blurKernel` used to carry that intent, but Babylon
+      // only applies it to the blur-exponential filters — under
+      // usePercentageCloserFiltering it was ignored, and every modifier cast
+      // the same shadow regardless of its size.
+      // Bound the shadow frustum to the room (≈16 × 17 m). Left undefined it
+      // inherits the camera's maxZ, which both wastes depth precision and
+      // makes the light-size ratio meaningless.
+      babylonLight.shadowMinZ = 0.2;
+      babylonLight.shadowMaxZ = 20;
+      const sourceSizeMetres = modifierSizeMetres(lightConfig.name, lightConfig.glbFile);
+      lightData.sourceSizeMetres = sourceSizeMetres;
       const shadowGen = new BABYLON.ShadowGenerator(2048, babylonLight);
-      shadowGen.usePercentageCloserFiltering = true;
-      shadowGen.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-      shadowGen.blurKernel = lightConfig.shadowKernel;
+      this.configureStudioShadowSoftness(shadowGen, lightData);
       // Add every visible mesh in the scene as a shadow caster
       this.scene.meshes.forEach(m => {
         if (m.isVisible && m !== mesh && m.getTotalVertices() > 0) {
@@ -6558,7 +6576,10 @@ class VirtualStudio {
       });
       this.scene.meshes.forEach(m => { if (m.isVisible && m.getTotalVertices() > 0) m.receiveShadows = true; });
       lightData.shadowGenerator = shadowGen;
-      console.log(`[addLight] Shadow generator created: kernel=${lightConfig.shadowKernel}, PCF quality=HIGH`);
+      console.log(
+        `[addLight] Shadow generator created: source=${sourceSizeMetres.toFixed(2)} m, ` +
+        `lightSizeUV=${shadowGen.contactHardeningLightSizeUVRatio.toFixed(4)}, PCSS quality=HIGH`
+      );
 
       // Add mesh to gizmo manager for selection
       if (this.gizmoManager?.attachableMeshes) {
@@ -6724,12 +6745,9 @@ class VirtualStudio {
         keyLight.light.specular = this.cctToColor(5600);
       }
       if (keyLight.shadowGenerator) {
-        keyLight.shadowGenerator.useBlurExponentialShadowMap = true;
-        keyLight.shadowGenerator.blurKernel = 64;
-        keyLight.shadowGenerator.depthScale = 50;
         keyLight.shadowGenerator.bias = 0.00004;
         keyLight.shadowGenerator.normalBias = 0.003;
-        keyLight.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+        this.configureStudioShadowSoftness(keyLight.shadowGenerator, keyLight);
       }
     }
 
@@ -6751,11 +6769,9 @@ class VirtualStudio {
         fillLight.light.specular = this.cctToColor(5600);
       }
       if (fillLight.shadowGenerator) {
-        fillLight.shadowGenerator.useBlurExponentialShadowMap = true;
-        fillLight.shadowGenerator.blurKernel = 80;
         fillLight.shadowGenerator.bias = 0.00006;
         fillLight.shadowGenerator.normalBias = 0.003;
-        fillLight.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM;
+        this.configureStudioShadowSoftness(fillLight.shadowGenerator, fillLight);
       }
     }
 
@@ -6776,7 +6792,7 @@ class VirtualStudio {
         rimLight.light.specular = this.cctToColor(5600);
       }
       if (rimLight.shadowGenerator) {
-        rimLight.shadowGenerator.blurKernel = 32;
+        this.configureStudioShadowSoftness(rimLight.shadowGenerator, rimLight);
       }
     }
 
@@ -25222,6 +25238,9 @@ class VirtualStudio {
   }
 
   private calculateLightIntensity(specs: LightSpecs): number {
+    // Same photometric scale as addLight. A log10 compression used to live
+    // here, which put a 200 Ws strobe and a 1000 Ws strobe within a few
+    // percent of each other and made the two light paths disagree.
     const lux1m = LightingPhysics.calculateLux1mFromSpecs({
       lux1m: specs.lux1m,
       lumens: specs.lumens,
@@ -25231,9 +25250,7 @@ class VirtualStudio {
       beamAngle: specs.beamAngle
     });
 
-    const babylonIntensity = Math.log10(lux1m + 1) * 0.5;
-
-    return Math.max(0.5, Math.min(babylonIntensity, 50));
+    return sceneIntensityFromCandela(Math.max(0, lux1m));
   }
 
   private getLightModelUrl(type: string): string | null {
@@ -25457,6 +25474,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -25471,6 +25489,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -25558,6 +25577,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -25574,6 +25594,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -26701,6 +26722,7 @@ class VirtualStudio {
       // Soft modifiers use PointLight for soft, diffused lighting
       light = new BABYLON.PointLight(id, position.clone(), this.scene);
       light.intensity = intensity * 0.6;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
       (light as BABYLON.PointLight).range = 15;
     } else {
@@ -26713,6 +26735,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
     }
 
@@ -26725,18 +26748,18 @@ class VirtualStudio {
       try {
         shadowGenerator = new BABYLON.ShadowGenerator(2048, light);
 
-        // Use PCF (Percentage Closer Filtering) for soft, realistic shadows
-        shadowGenerator.usePercentageCloserFiltering = true;
-        shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-
         // Shadow quality settings - softer, more subtle shadows
         shadowGenerator.setDarkness(0.35); // More subtle shadows
         shadowGenerator.bias = 0.00005;
         shadowGenerator.normalBias = 0.02;
 
-        // Enable contact hardening for distance-based shadow softness (more realistic)
-        shadowGenerator.useContactHardeningShadow = true;
-        shadowGenerator.contactHardeningLightSizeUVRatio = 0.05;
+        // Penumbra from the fixture's own emitting size. A fixed light-size
+        // ratio here gave a snoot and a 150 cm octabox the same shadow edge.
+        this.configureStudioShadowSoftness(shadowGenerator, {
+          light,
+          name,
+          sourceSizeMetres: modifierSizeMetres(name, this.getLightModelUrl(type) ?? undefined),
+        });
 
         // Add all meshes in the scene as shadow casters (except ground and light meshes)
         this.scene.meshes.forEach(mesh => {
@@ -33917,37 +33940,35 @@ window.addEventListener('DOMContentLoaded', () => {
               //   Low  (1-3): near-uniform field across the whole modifier face — softbox/octabox.
               //   Mid  (4-8): slight centre hotspot — beauty dish, barndoors.
               //   High (12+): concentrated beam with sharp edges — fresnel, snoot, grid.
-              // shadowKernel: larger = softer shadow penumbra.
-              //   Octabox/umbrella → 96   (maximum beauty softness)
-              //   Softbox/stripbox → 64   (clean portrait shadow)
-              //   Beauty dish      → 32   (defined but soft)
-              //   Barndoors/grid   → 16   (crisp spill control)
-              //   Fresnel          → 8    (sharp theatrical beam)
-              //   Snoot/gobo       → 4    (hard accent/hair light)
-              type ModProfile = { angle: number; exponent: number; kernel: number };
+              // sizeMetres: the modifier's emitting surface. Penumbra width
+              // scales with it, so this is what separates a wrapping octabox
+              // from a hard snoot. Rectangular sources use the geometric mean
+              // of their two sides, as modifierSizeMetres does.
+              type ModProfile = { angle: number; exponent: number; sizeMetres: number };
               const modProfiles: { [k: string]: ModProfile } = {
-                'softbox':            { angle: Math.PI / 3,    exponent: 2.0,  kernel: 64  },
-                'stripbox':           { angle: Math.PI / 3,    exponent: 2.0,  kernel: 64  },
-                'octabox':            { angle: Math.PI / 2.5,  exponent: 1.5,  kernel: 96  },
-                'umbrella':           { angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
-                'umbrella-reflective':{ angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
-                'silkframe':          { angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
-                'beautydish':         { angle: Math.PI / 4,    exponent: 3.5,  kernel: 32  },
-                'barndoors':          { angle: Math.PI / 5,    exponent: 4.0,  kernel: 16  },
-                'reflector-silver':   { angle: Math.PI / 4,    exponent: 5.0,  kernel: 24  },
-                'reflector-gold':     { angle: Math.PI / 4,    exponent: 5.0,  kernel: 24  },
-                'reflector-white':    { angle: Math.PI / 3,    exponent: 3.5,  kernel: 32  },
-                'fresnel':            { angle: Math.PI / 6,    exponent: 10.0, kernel: 8   },
-                'grid':               { angle: Math.PI / 8,    exponent: 12.0, kernel: 12  },
-                'snoot':              { angle: Math.PI / 12,   exponent: 20.0, kernel: 4   },
-                'gobo':               { angle: Math.PI / 10,   exponent: 18.0, kernel: 4   },
-                'none':               { angle: Math.PI / 4,    exponent: 4.0,  kernel: 32  },
+                'softbox':            { angle: Math.PI / 3,    exponent: 2.0,  sizeMetres: 1.04 }, // 90×120 cm
+                'stripbox':           { angle: Math.PI / 3,    exponent: 2.0,  sizeMetres: 0.60 }, // 30×120 cm
+                'octabox':            { angle: Math.PI / 2.5,  exponent: 1.5,  sizeMetres: 1.20 },
+                'umbrella':           { angle: Math.PI / 2,    exponent: 1.0,  sizeMetres: 1.00 },
+                'umbrella-reflective':{ angle: Math.PI / 2,    exponent: 1.0,  sizeMetres: 1.00 },
+                'silkframe':          { angle: Math.PI / 2,    exponent: 1.0,  sizeMetres: 1.22 }, // 4×4 ft
+                'beautydish':         { angle: Math.PI / 4,    exponent: 3.5,  sizeMetres: 0.42 },
+                'barndoors':          { angle: Math.PI / 5,    exponent: 4.0,  sizeMetres: 0.25 },
+                'reflector-silver':   { angle: Math.PI / 4,    exponent: 5.0,  sizeMetres: 0.30 },
+                'reflector-gold':     { angle: Math.PI / 4,    exponent: 5.0,  sizeMetres: 0.30 },
+                'reflector-white':    { angle: Math.PI / 3,    exponent: 3.5,  sizeMetres: 0.35 },
+                'fresnel':            { angle: Math.PI / 6,    exponent: 10.0, sizeMetres: 0.20 },
+                'grid':               { angle: Math.PI / 8,    exponent: 12.0, sizeMetres: 0.15 },
+                'snoot':              { angle: Math.PI / 12,   exponent: 20.0, sizeMetres: 0.10 },
+                'gobo':               { angle: Math.PI / 10,   exponent: 18.0, sizeMetres: 0.10 },
+                'none':               { angle: Math.PI / 4,    exponent: 4.0,  sizeMetres: 0.30 },
               };
               const prof = modProfiles[modifier] ?? modProfiles['none'];
               light.light.angle    = prof.angle;
               light.light.exponent = prof.exponent;
+              light.sourceSizeMetres = prof.sizeMetres;
               if (light.shadowGenerator) {
-                light.shadowGenerator.blurKernel = prof.kernel;
+                studio.configureStudioShadowSoftness(light.shadowGenerator, light);
               }
               // Gold reflector also warms the colour temperature
               if (modifier === 'reflector-gold') {
@@ -34256,10 +34277,12 @@ window.addEventListener('DOMContentLoaded', () => {
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
-            // Map 0-100% → kernel 4-128 (PCF softness)
-            light.shadowGenerator.blurKernel = Math.max(4, Math.floor((value / 100) * 128));
-            light.shadowGenerator.usePercentageCloserFiltering = value > 0;
-            light.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+            // Shadow softness is the size of the emitting surface, so the
+            // slider scales that rather than a filter kernel: 0% is a bare
+            // 5 cm source, 100% a 2 m silk. Switching the generator to PCF
+            // here used to throw away the modifier's own penumbra.
+            light.sourceSizeMetres = 0.05 + (value / 100) * 1.95;
+            studio.configureStudioShadowSoftness(light.shadowGenerator, light);
           }
         }
       });
@@ -34293,10 +34316,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Copy settings
             newGenerator.setDarkness(oldGenerator.getDarkness());
-            newGenerator.blurKernel = oldGenerator.blurKernel;
             newGenerator.bias = oldGenerator.bias;
-            newGenerator.usePercentageCloserFiltering = true;
-            newGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+            newGenerator.normalBias = oldGenerator.normalBias;
+            studio.configureStudioShadowSoftness(newGenerator, light);
 
             // Add shadow casters
             studio.scene.meshes.forEach(mesh => {
