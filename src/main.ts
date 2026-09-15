@@ -29,7 +29,7 @@ import MP4Box from 'mp4box';
 import { StudioRoom } from './core/rendering/StudioRoom';
 import { StudioSeat } from './core/rendering/StudioSeat';
 import { PoseEditor } from './core/rendering/PoseEditor';
-import { EDITABLE_JOINTS, clampJointRotation } from './core/rendering/poseRig';
+import { EDITABLE_JOINTS, clampJointQuaternion, eulerFromQuat, quatFromEuler, unitVector } from './core/rendering/poseRig';
 import { StudioWorkspace } from './core/rendering/StudioWorkspace';
 import { createStudioBackdrop, createStudioGrid, studioExposure, shutterSeconds, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
 import { contactHardeningRatio, distanceForIlluminance, fixtureCandela, flashShutterCompensation, isFlashFixture, modifierSizeMetres, sceneIntensityFromCandela } from './core/rendering/photometry';
@@ -18430,8 +18430,7 @@ class VirtualStudio {
       if (!current) continue;
       const clip = this.clipJointRotation(mesh, node);
       if (clip && Math.abs(BABYLON.Quaternion.Dot(current, clip)) > 1 - 1e-6) continue;
-      const euler = current.toEulerAngles();
-      edited[id] = { x: euler.x, y: euler.y, z: euler.z };
+      edited[id] = eulerFromQuat(current);
     }
     return Object.keys(edited).length > 0 ? edited : undefined;
   }
@@ -18445,10 +18444,14 @@ class VirtualStudio {
     for (const { id, node } of this.characterJointNodes(mesh)) {
       const stored = rotations[id];
       if (!stored) continue;
-      const clamped = clampJointRotation(id, {
+      const child = node.getChildTransformNodes(true)[0];
+      const boneAxis = child
+        ? unitVector({ x: child.position.x, y: child.position.y, z: child.position.z })
+        : { x: 0, y: 1, z: 0 };
+      const clamped = clampJointQuaternion(id, quatFromEuler({
         x: Number(stored.x), y: Number(stored.y), z: Number(stored.z),
-      });
-      node.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(clamped.x, clamped.y, clamped.z);
+      }), boneAxis);
+      node.rotationQuaternion = new BABYLON.Quaternion(clamped.x, clamped.y, clamped.z, clamped.w);
     }
     this.scene.onAfterRenderObservable.addOnce(() => {
       if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);

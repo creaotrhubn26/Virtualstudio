@@ -82,9 +82,20 @@ Babylon's `getChildMeshes(true)` returns direct descendants in this codebase's A
 
 The three clips remain the reset states; joint editing changes the rotations a clip leaves on the skeleton, and re-applying a clip puts them all back.
 
-[`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts) holds the joint table and is unit-tested. The axis convention is taken from the rig itself rather than guessed: the pose clips in the character builder rotate one local axis per joint, which fixes X as flexion and extension, Y as twist, and Z as movement away from or across the body. A glTF node's rotation is already relative to its bind pose, so the clamped values are anatomical angles measured from the rest stance. The ranges are conventional clinical figures, deliberately a little tighter than a trained body reaches; they are not measured from a subject, and they are per-axis rather than a coupled envelope. A unit test asserts that every rotation the bundled clips strike is inside them, so a limit can never fight a reset state.
+[`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts) holds the joint table and is unit-tested. The axis convention is taken from the rig itself rather than guessed: the pose clips in the character builder rotate one local axis per joint, which fixes X as flexion and extension, Y as twist, and Z as movement away from or across the body. A glTF node's rotation is already relative to its bind pose, so the clamped values are anatomical angles measured from the rest stance. The ranges are conventional clinical figures, deliberately a little tighter than a trained body reaches; they are not measured from a subject. A unit test asserts that every rotation the bundled clips strike is inside them, so a limit can never fight a reset state.
 
-[`src/core/rendering/PoseEditor.ts`](src/core/rendering/PoseEditor.ts) owns the interaction: a handle per joint on the helper layer, a rotation gizmo whose rings are limited to the axes that joint actually has, and a clamp that runs every frame so a drag cannot carry a joint out of range even momentarily. Elbows and knees are hinges — one axis, one direction — and sideways play is driven to zero rather than merely limited.
+Limits are **swing and twist**, not per-axis Euler angles. Elbows and knees are hinges with one axis, one direction, and no sideways play at all. Every other joint has a cone the bone may swing within and a range it may roll about its own length. Per-axis Euler limits were tried first and are the wrong model: every Euler factorisation is ill-conditioned near its middle axis's ±90°, so an ordinary reach decomposes into extreme numbers that a per-axis clamp then mangles — an arm reaching forward came back pinned to its limits with the hand half a metre off target. Swing and twist are stable everywhere, and they are what a published range of motion actually describes. Do not reintroduce per-axis Euler clamping.
+
+[`src/core/rendering/PoseEditor.ts`](src/core/rendering/PoseEditor.ts) owns the interaction: a handle per joint on the helper layer, a rotation gizmo whose rings are limited to the axes that joint actually has, and a clamp that runs every frame so a drag cannot carry a joint out of range even momentarily.
+
+### Reaching with a hand or a foot
+
+A green box on each hand and foot can be dragged to place the limb; the shoulder or hip and the hinge behind it are solved to follow. [`src/core/rendering/limbIk.ts`](src/core/rendering/limbIk.ts) is the pure two-bone solve — the same law-of-cosines construction the character builder uses to put the seated arms on the thighs — and it is unit-tested on segment lengths, reach limits and bend plane. Without a declared pole a solved limb keeps the bend plane its clip gave it, so an elbow never flips behind the body.
+
+Two rig facts that cost real debugging time, both worth keeping in mind before touching this code:
+
+- **The glTF loader parents the figure under a mirrored root**, so a world matrix has a negative determinant and no well-defined rotation to decompose. Reading `absoluteRotationQuaternion` back sent arms off in their own direction entirely. `aimSegment` therefore transforms two *points* into the parent's frame and builds the rotation there, which is exact either way.
+- **The hinge axis is not perpendicular to the limb.** A degree at the elbow is worth about two thirds of a degree of bend, so the joint angle cannot be derived from the solver's interior angle; doing so left the hand four centimetres short. `foldHinge` bisects the joint's own range against the rig until the limb spans the right distance, which assumes nothing about how the axes are laid out.
 
 `VirtualStudio.setPoseEditing` builds the editor lazily against the current figure and disposes it with that figure, so a model swap or a document load cannot leave handles on a dead skeleton. Every joint change re-grounds the figure, but only after the next render: grounding immediately measures the previous pose and leaves the feet in the air, the same trap `applyStudioPose` avoids.
 
@@ -113,7 +124,8 @@ The renderer is concentrated in a large legacy [`src/main.ts`](src/main.ts). Ext
 - [`src/core/rendering/studioGeometry.ts`](src/core/rendering/studioGeometry.ts): focal length conversion, exposure calculation, cyclorama and grid.
 - [`src/core/rendering/photometry.ts`](src/core/rendering/photometry.ts): candela from fixture specs, inverse-square illuminance, ISO 2720 metering, modifier size and shadow-softness ratio.
 - [`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts): editable joints, their axes and their ranges of motion.
-- [`src/core/rendering/PoseEditor.ts`](src/core/rendering/PoseEditor.ts): joint handles, the constrained rotation gizmo and joint read/write.
+- [`src/core/rendering/PoseEditor.ts`](src/core/rendering/PoseEditor.ts): joint handles, the constrained rotation gizmo, limb targets and joint read/write.
+- [`src/core/rendering/limbIk.ts`](src/core/rendering/limbIk.ts): two-bone inverse kinematics for arms and legs.
 - [`src/core/services/environmentService.ts`](src/core/services/environmentService.ts): environment state and room toggles.
 - [`src/services/sceneCompressionService.ts`](src/services/sceneCompressionService.ts): lossless v2 document wrapper and legacy v1 reader.
 - [`src/services/studioDocument.ts`](src/services/studioDocument.ts): Zod validation before mutating the scene.
@@ -194,7 +206,7 @@ The local API backend is not running in this verification environment and `/api`
 Work in this order unless the user changes priorities:
 
 1. **Photographic light accuracy.** *(Fixture output, falloff, shadow softness, the flash-versus-continuous exposure model and the default rig have landed; see "Light units and shadow softness".)* Remaining: measured penumbra comparisons, and bounce/soft-source approximation checked against reference renders rather than by eye.
-2. **Editable posing.** *(Landed for head, neck, spine, shoulders, elbows, hands, hips and knees; see "Editable posing".)* Remaining: dragging a hand or foot to a target instead of rotating each joint, a coupled range-of-motion envelope rather than per-axis limits, and self-intersection between limbs and torso.
+2. **Editable posing.** *(Landed: seventeen joints, swing-and-twist limits, and hand/foot targets solved by two-bone inverse kinematics; see "Editable posing".)* Remaining: an elliptical cone that knows a shoulder is less free across the body than away from it, and self-intersection between limbs and torso.
 3. **Broader real character variation.** Extend the offline builder with visibly distinct, licensed body proportions, ages, skin textures, hair and clothing. Every catalogue card must point to an actual different asset. Add facial expression blend shapes only when the source and export path are verified.
 4. **Studio object editing.** Promote selected furniture, including the portrait chair, into scene-owned editable props with clear character-seat attachment state. Serialize ownership and transforms without duplicating the derived chair on load.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
@@ -205,8 +217,8 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 ## Known limits
 
 - The two people are game-style anatomical characters, not high-resolution scans.
-- Seventeen joints can be posed within conventional ranges of motion. The limits are per-axis rather than a coupled envelope, so two extremes at once are permitted where a body would object, and limbs can still pass through the torso. Facial expressions remain future work.
-- Posing is direct rotation of one joint at a time. There is no inverse kinematics, so placing a hand takes shoulder and elbow separately.
+- Seventeen joints can be posed within conventional ranges of motion, and hands and feet can be placed directly. The swing cone is circular, so a shoulder is allowed as far across the body as away from it, which a real shoulder is not. Limbs can still pass through the torso. Facial expressions remain future work.
+- Inverse kinematics covers the two bones of a limb only. The spine, the shoulder blade and the hips are not carried along, so a reach beyond the arm's own span stops at the shoulder rather than leaning the body into it.
 - The room furniture is a fixed environment preset except for the pose-derived chair.
 - Fixture output, falloff and shadow softness now follow published specifications, but this is still a real-time approximation, not measured photometry or an offline path tracer.
 - Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.

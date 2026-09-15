@@ -26,6 +26,19 @@ test('joints move within their range, stay grounded and survive a round trip', a
     return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked;
   }, undefined, { timeout: 120_000 });
 
+  // Joint limits are expressed as Rz·Ry·Rx, so read them back the same way;
+  // yaw-pitch-roll would gimbal-lock a folded elbow to something else.
+  await page.evaluate(() => {
+    (window as any).jointAngles = (q: any) => {
+      const pitch = Math.min(1, Math.max(-1, 2 * (q.w * q.y - q.z * q.x)));
+      return {
+        x: Math.atan2(2 * (q.w * q.x + q.y * q.z), 1 - 2 * (q.x * q.x + q.y * q.y)),
+        y: Math.asin(pitch),
+        z: Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z)),
+      };
+    };
+  });
+
   // The toggle in the model panel is the way in.
   await page.locator('#studioPoseEdit').check();
   await expect(page.locator('.studio-model-status')).toContainText('Klikk et ledd');
@@ -33,20 +46,26 @@ test('joints move within their range, stay grounded and survive a round trip', a
   const rig = await page.evaluate(() => {
     const s = (window as any).virtualStudio;
     const editor = s.poseEditing;
-    const handles = s.scene.meshes.filter((m: any) => m.name.startsWith('poseHandle_'));
+    const jointHandles = s.scene.meshes.filter((m: any) => m.name.startsWith('poseHandle_'));
+    const reachHandles = s.scene.meshes.filter((m: any) => m.name.startsWith('poseReach_'));
+    const all = [...jointHandles, ...reachHandles];
     return {
       joints: editor.jointCount,
-      handles: handles.length,
+      limbs: editor.limbCount,
+      handles: jointHandles.length,
+      reachHandles: reachHandles.length,
       // Handles are editor furniture: they must never reach the shot or the preview.
-      helperLayer: handles.every((m: any) => m.layerMask === 0x10000000 && m.metadata?.studioHelper === true),
-      pickable: handles.every((m: any) => m.isPickable),
-      visible: handles.every((m: any) => m.isEnabled()),
+      helperLayer: all.every((m: any) => m.layerMask === 0x10000000 && m.metadata?.studioHelper === true),
+      pickable: all.every((m: any) => m.isPickable),
+      visible: all.every((m: any) => m.isEnabled()),
     };
   });
   // Head, neck, three spine joints, two shoulder blades, two shoulders,
   // two elbows, two hands, two hips and two knees.
   expect(rig.joints).toBe(17);
   expect(rig.handles).toBe(17);
+  expect(rig.limbs).toBe(4);
+  expect(rig.reachHandles).toBe(4);
   expect(rig.helperLayer).toBe(true);
   expect(rig.pickable).toBe(true);
   expect(rig.visible).toBe(true);
@@ -70,11 +89,11 @@ test('joints move within their range, stay grounded and survive a round trip', a
     const editor = s.poseEditing;
     const node = (id: string) => s.characterMesh.getChildTransformNodes().find((n: any) => n.name === id);
     editor.setJointRotation('head', { x: 0, y: Math.PI, z: 0 });
-    const head = node('mixamorigHead').rotationQuaternion.toEulerAngles();
+    const head = (window as any).jointAngles(node('mixamorigHead').rotationQuaternion);
     editor.setJointRotation('leftElbow', { x: 0.8, y: 0.5, z: 0.5 });
-    const elbow = node('mixamorigLeftForeArm').rotationQuaternion.toEulerAngles();
+    const elbow = (window as any).jointAngles(node('mixamorigLeftForeArm').rotationQuaternion);
     editor.setJointRotation('leftKnee', { x: 0.6, y: 0, z: 0 });
-    const knee = node('mixamorigLeftLeg').rotationQuaternion.toEulerAngles();
+    const knee = (window as any).jointAngles(node('mixamorigLeftLeg').rotationQuaternion);
     return { head: { x: head.x, y: head.y, z: head.z }, elbow: { x: elbow.x, y: elbow.y, z: elbow.z }, knee: { x: knee.x, y: knee.y, z: knee.z } };
   });
   // The head turns 70°, not all the way round.
@@ -85,6 +104,77 @@ test('joints move within their range, stay grounded and survive a round trip', a
   expect(limits.elbow.z).toBeCloseTo(0, 4);
   // A knee within range is obeyed exactly.
   expect(limits.knee.x).toBeCloseTo(0.6, 4);
+
+  // A hand can be placed directly, with the limb solved behind it.
+  const reach = await page.evaluate(async () => {
+    const s = (window as any).virtualStudio;
+    const settle = () => new Promise(r => s.scene.onAfterRenderObservable.addOnce(() => r(null)));
+    const editor = s.poseEditing;
+    s.applyStudioPose('StudioStand');
+    for (let i = 0; i < 3; i++) await settle();
+
+    const node = (id: string) => s.characterMesh.getChildTransformNodes().find((n: any) => n.name === id);
+    const shoulder = node('mixamorigLeftArm');
+    const elbow = node('mixamorigLeftForeArm');
+    const hand = node('mixamorigLeftHand');
+    const gap = (a: any, b: any) => a.absolutePosition.subtract(b.absolutePosition).length();
+    const upper = gap(elbow, shoulder);
+    const lower = gap(hand, elbow);
+
+    // An easy target: hanging arm, hand brought a little forward and in.
+    const p = shoulder.absolutePosition;
+    const easy = { x: p.x, y: p.y - (upper + lower) * 0.75, z: p.z + (upper + lower) * 0.3 };
+    editor.reachFor('leftArm');
+    editor.reachTo('leftArm', easy);
+    for (let i = 0; i < 3; i++) await settle();
+    [shoulder, elbow, hand].forEach((n: any) => n.computeWorldMatrix(true));
+    const easyHand = hand.absolutePosition;
+    const easyMiss = Math.hypot(easyHand.x - easy.x, easyHand.y - easy.y, easyHand.z - easy.z);
+
+    // A wide one: forward and up, far enough round that the shoulder's own
+    // range starts to have a say.
+    const target = { x: p.x, y: p.y - 0.1, z: p.z + (upper + lower) * 0.7 };
+    editor.reachTo('leftArm', target);
+    for (let i = 0; i < 3; i++) await settle();
+    [shoulder, elbow, hand].forEach((n: any) => n.computeWorldMatrix(true));
+
+    const reached = hand.absolutePosition;
+    const out = {
+      limbs: editor.limbCount,
+      selected: editor.reachingLimbId,
+      // The segments must keep their lengths: a solve that stretches the arm
+      // has moved the skeleton rather than posed it.
+      upperAfter: gap(elbow, shoulder),
+      lowerAfter: gap(hand, elbow),
+      upper, lower, easyMiss,
+      missed: Math.hypot(reached.x - target.x, reached.y - target.y, reached.z - target.z),
+      elbowBend: (window as any).jointAngles(elbow.rotationQuaternion).x,
+    };
+
+    // Out of reach: the hand stops at the arm's limit instead of detaching.
+    const far = { x: p.x, y: p.y, z: p.z + 4 };
+    editor.reachTo('leftArm', far);
+    for (let i = 0; i < 3; i++) await settle();
+    [shoulder, elbow, hand].forEach((n: any) => n.computeWorldMatrix(true));
+    editor.reachFor(null);
+    return { ...out, stretched: gap(hand, shoulder), span: upper + lower };
+  });
+  expect(reach.limbs).toBe(4);
+  expect(reach.selected).toBe('leftArm');
+  expect(reach.upperAfter).toBeCloseTo(reach.upper, 5);
+  expect(reach.lowerAfter).toBeCloseTo(reach.lower, 5);
+  // Both targets are inside what the arm can do, so the hand lands on them.
+  // A solve that merely gets close would hide a rig assumption going wrong:
+  // deriving the elbow angle analytically left the hand four centimetres out,
+  // because this rig's hinge axis is not perpendicular to the limb.
+  expect(reach.easyMiss).toBeLessThan(0.002);
+  expect(reach.missed).toBeLessThan(0.002);
+  // And the elbow it found is a real elbow: bent the way an elbow bends.
+  expect(reach.elbowBend).toBeLessThanOrEqual(1e-6);
+  expect(reach.elbowBend).toBeGreaterThan(-150 * DEG - 1e-6);
+  // An unreachable target never stretches the arm past its own span.
+  expect(reach.stretched).toBeLessThanOrEqual(reach.span);
+  expect(reach.stretched).toBeGreaterThan(reach.span * 0.9);
 
   // Bending a knee lifts a foot; the figure has to end up back on the floor.
   const grounded = await page.evaluate(async () => {
@@ -118,8 +208,8 @@ test('joints move within their range, stay grounded and survive a round trip', a
     s.applyStudioPose('StudioStand');
     await settle(); await settle();
     const node = (id: string) => s.characterMesh.getChildTransformNodes().find((n: any) => n.name === id);
-    const knee = node('mixamorigLeftLeg').rotationQuaternion.toEulerAngles();
-    const head = node('mixamorigHead').rotationQuaternion.toEulerAngles();
+    const knee = (window as any).jointAngles(node('mixamorigLeftLeg').rotationQuaternion);
+    const head = (window as any).jointAngles(node('mixamorigHead').rotationQuaternion);
     return { kneeX: knee.x, headY: head.y };
   });
   expect(reset.kneeX).toBeCloseTo(0, 3);
@@ -145,8 +235,8 @@ test('joints move within their range, stay grounded and survive a round trip', a
     for (let i = 0; i < 6; i++) await settle();
 
     const node = (id: string) => s.characterMesh.getChildTransformNodes().find((n: any) => n.name === id);
-    const head = node('mixamorigHead').rotationQuaternion.toEulerAngles();
-    const elbow = node('mixamorigLeftForeArm').rotationQuaternion.toEulerAngles();
+    const head = (window as any).jointAngles(node('mixamorigHead').rotationQuaternion);
+    const elbow = (window as any).jointAngles(node('mixamorigLeftForeArm').rotationQuaternion);
     return { stored, headY: head.y, elbowX: elbow.x };
   });
   // Only the edited joints are written, not the whole skeleton.
