@@ -28,6 +28,8 @@ import { zipSync, strToU8 } from 'fflate';
 import MP4Box from 'mp4box';
 import { StudioRoom } from './core/rendering/StudioRoom';
 import { StudioSeat } from './core/rendering/StudioSeat';
+import { PoseEditor } from './core/rendering/PoseEditor';
+import { EDITABLE_JOINTS, clampJointRotation } from './core/rendering/poseRig';
 import { StudioWorkspace } from './core/rendering/StudioWorkspace';
 import { createStudioBackdrop, createStudioGrid, studioExposure, shutterSeconds, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
 import { contactHardeningRatio, distanceForIlluminance, fixtureCandela, flashShutterCompensation, isFlashFixture, modifierSizeMetres, sceneIntensityFromCandela } from './core/rendering/photometry';
@@ -721,6 +723,8 @@ class VirtualStudio {
   public workspace: StudioWorkspace | null = null;
   public studioRoom: StudioRoom | null = null;
   private studioSeats = new Map<number, StudioSeat>();
+  private poseEditor: PoseEditor | null = null;
+  private poseGroundingPending = false;
   private engine: BABYLON.Engine;
   public scene: BABYLON.Scene;
   public camera: BABYLON.ArcRotateCamera;
@@ -2033,7 +2037,10 @@ class VirtualStudio {
             rotation: mesh.rotation.asArray() as [number, number, number],
             scale: mesh.scaling.asArray() as [number, number, number],
           }, userData: { ...node.userData, modelUrl: mesh.metadata.sourceModelUrl,
-            heightMeters: mesh.metadata.heightMeters, studioPose: mesh.metadata.studioPose },
+            heightMeters: mesh.metadata.heightMeters, studioPose: mesh.metadata.studioPose,
+            // Joint edits on top of the clip. Absent when the figure is still
+            // in a plain pose, so old documents stay byte-identical.
+            jointRotations: this.getEditedJointRotations(mesh) },
           visible: mesh.isEnabled() }];
         }),
 
@@ -2188,6 +2195,10 @@ class VirtualStudio {
               const mesh = this.characterMesh;
               if (mesh) {
                 if (data.studioPose) this.applyStudioPose(data.studioPose as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
+                // Joint edits sit on top of the clip, so they are replayed
+                // after it, once the clip has written every rotation.
+                const joints = data.jointRotations as Record<string, { x: number; y: number; z: number }> | undefined;
+                if (joints) this.scene.onAfterRenderObservable.addOnce(() => this.applyJointRotations(mesh, joints));
                 const restore = () => {
                   mesh.position.copyFromFloats(...actorData.transform.position);
                   mesh.rotation.copyFromFloats(...actorData.transform.rotation);
@@ -5416,6 +5427,7 @@ class VirtualStudio {
     if (renderCanvas) this.workspace = new StudioWorkspace(this.scene, this.camera, renderCanvas, this.renderingPipeline, () => this.cameraSettings, {
       load: model => this.loadStudioCharacter(model),
       pose: pose => this.applyStudioPose(pose),
+      editPose: enabled => this.setPoseEditing(enabled),
       frame: portrait => {
         const mesh = this.getPrimaryCharacterMesh();
         const position = mesh?.getAbsolutePosition() || BABYLON.Vector3.Zero();
@@ -18374,6 +18386,139 @@ class VirtualStudio {
     this.gizmoManager?.attachToMesh(null);
   }
 
+  /**
+   * The rotation the active pose clip writes for a joint, if it writes one.
+   *
+   * A document should carry what the photographer changed, not the whole
+   * skeleton, so edits are stored as the difference from the clip.
+   */
+  private clipJointRotation(mesh: BABYLON.AbstractMesh, node: BABYLON.TransformNode): BABYLON.Quaternion | null {
+    const poseName = mesh.metadata?.studioPose;
+    if (!poseName) return null;
+    const group = (this.getAnimationGroupsForMesh(mesh) || []).find(candidate => candidate.name === poseName);
+    if (!group) return null;
+    for (const targeted of group.targetedAnimations) {
+      if (targeted.target !== node) continue;
+      if (targeted.animation.targetProperty !== 'rotationQuaternion') continue;
+      const keys = targeted.animation.getKeys();
+      if (keys.length > 0 && keys[0].value instanceof BABYLON.Quaternion) return keys[0].value;
+    }
+    return null;
+  }
+
+  /** Editable joints this figure carries, paired with their scene nodes. */
+  private characterJointNodes(mesh: BABYLON.AbstractMesh): { id: string; node: BABYLON.TransformNode }[] {
+    const nodes = new Map(mesh.getChildTransformNodes().map(node => [node.name, node]));
+    return EDITABLE_JOINTS.flatMap(joint => {
+      const node = nodes.get(joint.node);
+      return node ? [{ id: joint.id, node }] : [];
+    });
+  }
+
+  /**
+   * Joint rotations that differ from the pose clip, in radians.
+   *
+   * Returns undefined when the figure is still exactly in its clip, so a
+   * document from an unedited scene is unchanged by this feature.
+   */
+  private getEditedJointRotations(
+    mesh: BABYLON.AbstractMesh,
+  ): Record<string, { x: number; y: number; z: number }> | undefined {
+    const edited: Record<string, { x: number; y: number; z: number }> = {};
+    for (const { id, node } of this.characterJointNodes(mesh)) {
+      const current = node.rotationQuaternion;
+      if (!current) continue;
+      const clip = this.clipJointRotation(mesh, node);
+      if (clip && Math.abs(BABYLON.Quaternion.Dot(current, clip)) > 1 - 1e-6) continue;
+      const euler = current.toEulerAngles();
+      edited[id] = { x: euler.x, y: euler.y, z: euler.z };
+    }
+    return Object.keys(edited).length > 0 ? edited : undefined;
+  }
+
+  /** Replay stored joint edits, clamped, so a bad file cannot break a figure. */
+  private applyJointRotations(
+    mesh: BABYLON.AbstractMesh,
+    rotations: Record<string, { x: number; y: number; z: number }>,
+  ): void {
+    if (mesh.isDisposed()) return;
+    for (const { id, node } of this.characterJointNodes(mesh)) {
+      const stored = rotations[id];
+      if (!stored) continue;
+      const clamped = clampJointRotation(id, {
+        x: Number(stored.x), y: Number(stored.y), z: Number(stored.z),
+      });
+      node.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(clamped.x, clamped.y, clamped.z);
+    }
+    this.scene.onAfterRenderObservable.addOnce(() => {
+      if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+    });
+  }
+
+  /**
+   * Rest the figure on the floor after its skin matrices have been rebuilt.
+   *
+   * Both a pose clip and a joint edit move the surfaces, and both need the feet
+   * back on the ground afterwards — a bent knee otherwise leaves the shoes in
+   * the air or drives them through the floor.
+   */
+  private groundCharacterSurfaces(mesh: BABYLON.AbstractMesh): void {
+    const surfaces = [mesh, ...mesh.getChildMeshes()].filter(child => child.getTotalVertices() > 0);
+    surfaces.forEach(child => {
+      child.computeWorldMatrix(true);
+      if (child instanceof BABYLON.Mesh) child.refreshBoundingInfo(true);
+    });
+    const bottom = Math.min(...surfaces.map(child => child.getBoundingInfo().boundingBox.minimumWorld.y));
+    if (Number.isFinite(bottom)) mesh.position.y += 0.016 - bottom;
+    mesh.computeWorldMatrix(true);
+  }
+
+  /**
+   * Turn joint handles on or off for the figure on set.
+   *
+   * The editor is built lazily against the current character and thrown away
+   * with it, so a model swap can never leave handles pointing at a dead
+   * skeleton.
+   */
+  public setPoseEditing(enabled: boolean): boolean {
+    const mesh = this.getPrimaryCharacterMesh();
+    if (!mesh) return false;
+
+    if (this.poseEditor && this.poseEditor.characterId !== mesh.uniqueId) {
+      this.poseEditor.dispose();
+      this.poseEditor = null;
+    }
+    if (!this.poseEditor) {
+      if (!enabled) return false;
+      this.poseEditor = new PoseEditor(this.scene, mesh, mesh.uniqueId, () => {
+        // A moved joint lifts or drops the figure, but the skin matrices only
+        // reach the surfaces on the next render — grounding now would measure
+        // the previous pose and leave the feet in the air. One request per
+        // frame is enough however long the drag lasts.
+        if (this.poseGroundingPending) return;
+        this.poseGroundingPending = true;
+        this.scene.onAfterRenderObservable.addOnce(() => {
+          this.poseGroundingPending = false;
+          if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+        });
+      });
+      mesh.onDisposeObservable.addOnce(() => {
+        this.poseEditor?.dispose();
+        this.poseEditor = null;
+      });
+    }
+
+    this.poseEditor.setEnabled(enabled);
+    window.dispatchEvent(new CustomEvent('ch-pose-editing-changed', {
+      detail: { enabled, joints: this.poseEditor.jointCount },
+    }));
+    return true;
+  }
+
+  public get poseEditing(): PoseEditor | null {
+    return this.poseEditor;
+  }
+
   public applyStudioPose(name: 'StudioStand' | 'StudioPortrait' | 'StudioSeated'): boolean {
     const mesh = this.getPrimaryCharacterMesh();
     if (!mesh) return false;
@@ -18394,14 +18539,7 @@ class VirtualStudio {
     // the posed surfaces afterwards; rest-pose bounds would leave seated feet in the air.
     this.scene.onAfterRenderObservable.addOnce(() => {
       if (mesh.isDisposed() || mesh.metadata?.studioPose !== name) return;
-      const surfaces = [mesh, ...mesh.getChildMeshes()].filter(child => child.getTotalVertices() > 0);
-      surfaces.forEach(child => {
-        child.computeWorldMatrix(true);
-        if (child instanceof BABYLON.Mesh) child.refreshBoundingInfo(true);
-      });
-      const bottom = Math.min(...surfaces.map(child => child.getBoundingInfo().boundingBox.minimumWorld.y));
-      if (Number.isFinite(bottom)) mesh.position.y += 0.016 - bottom;
-      mesh.computeWorldMatrix(true);
+      this.groundCharacterSurfaces(mesh);
       this.studioSeats.get(mesh.uniqueId)?.dispose();
       this.studioSeats.delete(mesh.uniqueId);
       if (name === 'StudioSeated') {

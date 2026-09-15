@@ -78,6 +78,18 @@ Babylon's `getChildMeshes(true)` returns direct descendants in this codebase's A
 
 [`src/services/avatarMaterialService.ts`](src/services/avatarMaterialService.ts) must preserve authored GLTF PBR materials, texture maps and hair alpha. Procedural fallback materials are for untextured imports only. Do not flatten the five authored surfaces to one grey material.
 
+### Editable posing
+
+The three clips remain the reset states; joint editing changes the rotations a clip leaves on the skeleton, and re-applying a clip puts them all back.
+
+[`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts) holds the joint table and is unit-tested. The axis convention is taken from the rig itself rather than guessed: the pose clips in the character builder rotate one local axis per joint, which fixes X as flexion and extension, Y as twist, and Z as movement away from or across the body. A glTF node's rotation is already relative to its bind pose, so the clamped values are anatomical angles measured from the rest stance. The ranges are conventional clinical figures, deliberately a little tighter than a trained body reaches; they are not measured from a subject, and they are per-axis rather than a coupled envelope. A unit test asserts that every rotation the bundled clips strike is inside them, so a limit can never fight a reset state.
+
+[`src/core/rendering/PoseEditor.ts`](src/core/rendering/PoseEditor.ts) owns the interaction: a handle per joint on the helper layer, a rotation gizmo whose rings are limited to the axes that joint actually has, and a clamp that runs every frame so a drag cannot carry a joint out of range even momentarily. Elbows and knees are hinges — one axis, one direction — and sideways play is driven to zero rather than merely limited.
+
+`VirtualStudio.setPoseEditing` builds the editor lazily against the current figure and disposes it with that figure, so a model swap or a document load cannot leave handles on a dead skeleton. Every joint change re-grounds the figure, but only after the next render: grounding immediately measures the previous pose and leaves the feet in the air, the same trap `applyStudioPose` avoids.
+
+Joint edits are stored in the actor's `userData.jointRotations` as the difference from the clip, so a document from an unedited scene is unchanged and only moved joints are written. They are clamped again on load, so a corrupt file cannot bend a figure backwards.
+
 ### Seated contact and chair
 
 [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts) creates the leather and chrome portrait chair only for `StudioSeated`:
@@ -100,6 +112,8 @@ The renderer is concentrated in a large legacy [`src/main.ts`](src/main.ts). Ext
 - [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts): pose-derived portrait chair and body contact.
 - [`src/core/rendering/studioGeometry.ts`](src/core/rendering/studioGeometry.ts): focal length conversion, exposure calculation, cyclorama and grid.
 - [`src/core/rendering/photometry.ts`](src/core/rendering/photometry.ts): candela from fixture specs, inverse-square illuminance, ISO 2720 metering, modifier size and shadow-softness ratio.
+- [`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts): editable joints, their axes and their ranges of motion.
+- [`src/core/rendering/PoseEditor.ts`](src/core/rendering/PoseEditor.ts): joint handles, the constrained rotation gizmo and joint read/write.
 - [`src/core/services/environmentService.ts`](src/core/services/environmentService.ts): environment state and room toggles.
 - [`src/services/sceneCompressionService.ts`](src/services/sceneCompressionService.ts): lossless v2 document wrapper and legacy v1 reader.
 - [`src/services/studioDocument.ts`](src/services/studioDocument.ts): Zod validation before mutating the scene.
@@ -168,10 +182,10 @@ PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build
 python3 scripts/characters/validate_studio_characters.py
 PLAYWRIGHT_SOFTWARE_GL=1 PATH=/opt/homebrew/opt/node@22/bin:$PATH \
-  npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts --workers=1
+  npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts e2e/pose-editing.spec.ts --workers=1
 ```
 
-The software-WebGL browser test is slow and is not a device-performance measurement. It covers both GLBs, materials, hierarchy movement, views, exposure, seated body-to-chair contact, chair tracking/removal, failed-import recovery, live preview, 1920 × 1080 PNG export, local save/open and a tablet layout check.
+The software-WebGL browser tests are slow and are not a device-performance measurement. Between them they cover both GLBs, materials, hierarchy movement, views, exposure, seated body-to-chair contact, chair tracking/removal, failed-import recovery, live preview, 1920 × 1080 PNG export, local save/open, a tablet layout check, the lighting reference scene, and joint editing with its limits, grounding, reset and document round trip.
 
 The local API backend is not running in this verification environment and `/api` returns HTTP 500. Do not claim backend-dependent projects, AI generation or cloud asset workflows are verified because the frontend scene test passes.
 
@@ -180,7 +194,7 @@ The local API backend is not running in this verification environment and `/api`
 Work in this order unless the user changes priorities:
 
 1. **Photographic light accuracy.** *(Fixture output, falloff, shadow softness, the flash-versus-continuous exposure model and the default rig have landed; see "Light units and shadow softness".)* Remaining: measured penumbra comparisons, and bounce/soft-source approximation checked against reference renders rather than by eye.
-2. **Editable posing.** Add constrained joint manipulation on top of the 53-joint rig, starting with head, spine, shoulders, elbows, hands, hips and knees. Keep the three fixed poses as reliable reset states. Prevent impossible limb ranges and floor penetration.
+2. **Editable posing.** *(Landed for head, neck, spine, shoulders, elbows, hands, hips and knees; see "Editable posing".)* Remaining: dragging a hand or foot to a target instead of rotating each joint, a coupled range-of-motion envelope rather than per-axis limits, and self-intersection between limbs and torso.
 3. **Broader real character variation.** Extend the offline builder with visibly distinct, licensed body proportions, ages, skin textures, hair and clothing. Every catalogue card must point to an actual different asset. Add facial expression blend shapes only when the source and export path are verified.
 4. **Studio object editing.** Promote selected furniture, including the portrait chair, into scene-owned editable props with clear character-seat attachment state. Serialize ownership and transforms without duplicating the derived chair on load.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
@@ -191,7 +205,8 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 ## Known limits
 
 - The two people are game-style anatomical characters, not high-resolution scans.
-- There are three dependable fixed poses; arbitrary pose editing and facial expressions remain future work.
+- Seventeen joints can be posed within conventional ranges of motion. The limits are per-axis rather than a coupled envelope, so two extremes at once are permitted where a body would object, and limbs can still pass through the torso. Facial expressions remain future work.
+- Posing is direct rotation of one joint at a time. There is no inverse kinematics, so placing a hand takes shoulder and elbow separately.
 - The room furniture is a fixed environment preset except for the pose-derived chair.
 - Fixture output, falloff and shadow softness now follow published specifications, but this is still a real-time approximation, not measured photometry or an offline path tracer.
 - Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.

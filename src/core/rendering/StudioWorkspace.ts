@@ -46,6 +46,7 @@ export class StudioWorkspace {
       load: (model: 'woman' | 'man') => Promise<void>;
       pose: (pose: 'StudioStand' | 'StudioPortrait' | 'StudioSeated') => boolean;
       frame: (portrait: boolean) => void;
+      editPose: (enabled: boolean) => boolean;
     },
     private documents: { save: () => SceneComposition; load: (scene: SceneComposition) => Promise<void> },
   ) {
@@ -100,10 +101,12 @@ export class StudioWorkspace {
       <label for="studioPoseSelect">Posering</label>
       <select id="studioPoseSelect"><option value="StudioStand">Avslappet stående</option><option value="StudioPortrait">Portrett · dreid hode</option><option value="StudioSeated">Sitt på portrettstol</option></select>
       <div class="studio-model-framing"><button type="button" data-frame="portrait">Portrett</button><button type="button" data-frame="full">Hel figur</button></div>
+      <label class="studio-pose-edit"><input type="checkbox" id="studioPoseEdit"> Juster ledd</label>
       <p role="status" class="studio-model-status">Anatomisk modell · hud, hår og klær</p>`;
     container.append(this.modelPanel);
     const modelSelect = this.modelPanel.querySelector<HTMLSelectElement>('#studioModelSelect')!;
     const poseSelect = this.modelPanel.querySelector<HTMLSelectElement>('#studioPoseSelect')!;
+    const poseEdit = this.modelPanel.querySelector<HTMLInputElement>('#studioPoseEdit')!;
     const status = this.modelPanel.querySelector<HTMLElement>('[role="status"]')!;
     modelSelect.addEventListener('change', async () => {
       modelSelect.disabled = poseSelect.disabled = true;
@@ -119,10 +122,19 @@ export class StudioWorkspace {
       const applied = this.characterControls.pose(poseSelect.value as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
       status.textContent = applied ? (poseSelect.value === 'StudioSeated' ? 'Figuren sitter på portrettstolen' : 'Poseringen er oppdatert') : 'Velg en studiomodell for disse poseringene';
     }, { signal: this.abort.signal });
+    poseEdit.addEventListener('change', () => {
+      const active = this.characterControls.editPose(poseEdit.checked);
+      if (!active) poseEdit.checked = false;
+      status.textContent = active
+        ? 'Klikk et ledd på figuren og dra ringen. Poseringene over nullstiller.'
+        : 'Velg en studiomodell for å justere ledd';
+    }, { signal: this.abort.signal });
     window.addEventListener('ch-character-loaded', event => {
       const url = (event as CustomEvent<{ modelUrl: string }>).detail.modelUrl;
       if (url.endsWith('/studio-woman.glb')) modelSelect.value = 'woman';
       if (url.endsWith('/studio-man.glb')) modelSelect.value = 'man';
+      // A new figure carries no handles, so the toggle must not claim otherwise.
+      poseEdit.checked = false;
     }, { signal: this.abort.signal });
     window.addEventListener('ch-character-pose-applied', event => {
       const pose = (event as CustomEvent<{ poseId: string }>).detail.poseId;
