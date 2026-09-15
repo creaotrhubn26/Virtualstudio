@@ -337,8 +337,8 @@
         "StudioPortrait",
         "StudioSeated"
       ],
-      "bytes": 9734264,
-      "sha256": "2b1c2474228d190f63deb06a0852fa366d16c7c5bf964f7aab229e983d5ed7de"
+      "bytes": 1488344,
+      "sha256": "457357188c4e7f11ce6a93928162ad3e3147b010dbba0a5e7a8bc457fdcd6dbd"
     },
     {
       "file": "studio-man.glb",
@@ -353,8 +353,8 @@
         "StudioPortrait",
         "StudioSeated"
       ],
-      "bytes": 9211348,
-      "sha256": "6ee59f9c20375e238fee6ebf847406d8f654afbad9806fe8256fcc4c77eea4a4"
+      "bytes": 1352980,
+      "sha256": "f846eb5aac025086f41414aa1216f10d2bbb71678b9c8b432b1cc8733e0f17da"
     }
   ],
   "wardrobe": [
@@ -367,8 +367,8 @@
       "triangles": 4236,
       "textures": 3,
       "bodyTriangles": 26756,
-      "bytes": 11114912,
-      "sha256": "d597253ea19a7dbbadddc8b0728fa866dcddc192e15d105829ff656aba29338d"
+      "bytes": 197824,
+      "sha256": "9e47e79d028becc4f8724568403d6c7dd6c561cfa72e018a3759eb5fef9b3493"
     },
     {
       "file": "female_casualsuit02.glb",
@@ -379,8 +379,8 @@
       "triangles": 5488,
       "textures": 3,
       "bodyTriangles": 26756,
-      "bytes": 7899228,
-      "sha256": "4da0978e28d117c27251532d44020cd5caba12889527ca13e8275fd4c231c150"
+      "bytes": 257536,
+      "sha256": "bdd8b7534018ca926126441acb73706afe3648b9a51cced81482d6011f7f135a"
     },
     {
       "file": "female_elegantsuit01.glb",
@@ -391,8 +391,8 @@
       "triangles": 4192,
       "textures": 3,
       "bodyTriangles": 26756,
-      "bytes": 5096284,
-      "sha256": "56a131ce571f3e5228a1af0f513ab29b279e80683ae13e1c0cf6f0bcb78b4e8d"
+      "bytes": 199544,
+      "sha256": "65c266659ab8114e8c6554b194dd8191befb60ccf8257727c11358408b1284b1"
     },
     {
       "file": "female_sportsuit01.glb",
@@ -403,8 +403,8 @@
       "triangles": 3436,
       "textures": 3,
       "bodyTriangles": 26756,
-      "bytes": 3505060,
-      "sha256": "81bfb2062a05b6bfec1cbf5133d47b9aac1296c9ea06c75c2670dd12e196d087"
+      "bytes": 164696,
+      "sha256": "b39003beb77781b172c2ec8a65635984e2b961668961d0b5d065edfc6f564c47"
     },
     {
       "file": "shoes01.glb",
@@ -415,8 +415,8 @@
       "triangles": 3320,
       "textures": 2,
       "bodyTriangles": 26756,
-      "bytes": 2369884,
-      "sha256": "d1e29084bd24cb56449dc801655efc76b55d89b590aff679c9619e3ac60a26c9"
+      "bytes": 158516,
+      "sha256": "f97e30e1317374fd79069a3603e01c15f616097ebd5c2fd7ee352ef59d027112"
     },
     {
       "file": "shoes04.glb",
@@ -427,8 +427,8 @@
       "triangles": 3320,
       "textures": 2,
       "bodyTriangles": 26756,
-      "bytes": 1748316,
-      "sha256": "ac87fae789c6273821f6b9a69f1b7ff3e33d37a1447d4e99ae29f709422b5d6d"
+      "bytes": 158516,
+      "sha256": "807c3d7b8ac654106ace4a91bcd373610fbd20b524b038b419b6b78f8c8335f8"
     },
     {
       "file": "male_casualsuit02.glb",
@@ -439,8 +439,8 @@
       "triangles": 4120,
       "textures": 3,
       "bodyTriangles": 26756,
-      "bytes": 10047420,
-      "sha256": "25bdc358de108c32c74ccf588d8f777e84fbdba9cdb7986549b978521326fd45"
+      "bytes": 193296,
+      "sha256": "149cf6fbba11535bc3545480faa4092414847c9ff5e489919e20c1a42e22010f"
     },
     {
       "file": "male_casualsuit04.glb",
@@ -451,8 +451,8 @@
       "triangles": 3240,
       "textures": 3,
       "bodyTriangles": 26756,
-      "bytes": 10767136,
-      "sha256": "0f082516e12089807bf21d4e1bcef105dacabc22dacf5f7bcaedf61466836ef7"
+      "bytes": 156864,
+      "sha256": "85672f4812f39d40bac9c52416c1db636e24c7d5b1be16310ddfeb1793958285"
     },
     {
       "file": "male_elegantsuit01.glb",
@@ -463,8 +463,8 @@
       "triangles": 14956,
       "textures": 1,
       "bodyTriangles": 26756,
-      "bytes": 2614140,
-      "sha256": "9e978d0ac0b2fc2d5928fdb41defc9756399c40936e23192e25fae4c32ef2618"
+      "bytes": 668752,
+      "sha256": "3dc3af69b20b13f6696164f52089b8206d4d76222f5ab050a1cd5843581e79c8"
     },
     {
       "file": "male_worksuit01.glb",
@@ -475,8 +475,8 @@
       "triangles": 6986,
       "textures": 3,
       "bodyTriangles": 26756,
-      "bytes": 12110660,
-      "sha256": "a1d8f7cebb0b457288e2225909cd06d8fc8372826f8429ee91d7db2a8722d19d"
+      "bytes": 329432,
+      "sha256": "119ede3e30e6de7d00e19d71c96c461f397522c7d84c62cc86a058a880f2e010"
     },
     {
       "file": "shoes01.glb",
@@ -487,8 +487,8 @@
       "triangles": 3320,
       "textures": 2,
       "bodyTriangles": 26756,
-      "bytes": 2369948,
-      "sha256": "646798ea84bcfa6a9ed9160e21a3ebd0c3bfe161cf2bfd778683520438939642"
+      "bytes": 158580,
+      "sha256": "27703d9697659d25b2deafd742d18c1fccc87aa980be1f7ad2b9dd895438a85e"
     },
     {
       "file": "shoes03.glb",
@@ -499,8 +499,8 @@
       "triangles": 4128,
       "textures": 1,
       "bodyTriangles": 26756,
-      "bytes": 512952,
-      "sha256": "84265864105beaf01194737e38147bc9979efb6bb20e176e969aab08886dfa35"
+      "bytes": 203884,
+      "sha256": "babb9b23d21f8b6c1b1b5817e040f027b93a3d0a4a3e15a433e1a1696a01e826"
     }
   ]
 }

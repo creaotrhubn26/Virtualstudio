@@ -18486,6 +18486,19 @@ class VirtualStudio {
 
   private wardrobeCatalogue: WardrobeCatalogue | null = null;
 
+  /**
+   * Split an asset URL into the directory Babylon resolves against and the file.
+   *
+   * Character textures are shared files referenced by relative URI, and the
+   * loader resolves those against its root URL. Passing the whole URL as the
+   * filename leaves that root empty, so every texture is looked for at the site
+   * root and the import never finishes.
+   */
+  private static splitAssetUrl(url: string): [string, string] {
+    const cut = url.lastIndexOf('/');
+    return cut < 0 ? ['', url] : [url.slice(0, cut + 1), url.slice(cut + 1)];
+  }
+
   /** The glTF root a figure's body meshes hang from; garments join it there. */
   private bodyRootFor(mesh: BABYLON.AbstractMesh): BABYLON.TransformNode | null {
     const name = mesh.metadata?.bodyRootName as string | undefined;
@@ -18533,8 +18546,11 @@ class VirtualStudio {
       skin,
       skeleton,
       garments,
-      resolveUrl: garment => resolveModelPath(`/models/avatars/studio/wardrobe/${garment.body}/${garment.file}`),
-      importMesh: url => BABYLON.SceneLoader.ImportMeshAsync('', '', url, this.scene),
+      resolveUrl: garment => ({
+        root: resolveModelPath('/models/avatars/studio/') ,
+        file: `wardrobe/${garment.body}/${garment.file}`,
+      }),
+      importMesh: (root, file) => BABYLON.SceneLoader.ImportMeshAsync('', root, file, this.scene),
     });
     mesh.metadata = { ...mesh.metadata, wardrobe: garments.map(garment => garment.id) };
     mesh.onDisposeObservable.addOnce(() => forgetFigure(mesh));
@@ -19093,7 +19109,8 @@ class VirtualStudio {
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
 
     try {
-      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
+      const result = await BABYLON.SceneLoader.ImportMeshAsync(
+        '', ...VirtualStudio.splitAssetUrl(modelUrl), this.scene);
       importedAnimationGroups = result.animationGroups || [];
       if (!result.meshes.some(mesh => mesh.getTotalVertices() > 0)) throw new Error('Modellfilen inneholder ingen geometri');
       if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
@@ -19321,8 +19338,14 @@ class VirtualStudio {
 
     if (this.characterMesh) {
       // A studio body ships with no clothes of its own, so dress it before
-      // anything else looks at it.
-      await this.dressStudioCharacter(this.characterMesh, modelUrl, options?.wardrobe);
+      // anything else looks at it. A wardrobe that will not load must not stop
+      // the figure being usable, so this never throws past here.
+      try {
+        await this.dressStudioCharacter(this.characterMesh, modelUrl, options?.wardrobe);
+      } catch (error) {
+        console.error('[wardrobe] Could not dress the figure', error);
+        this.showToast('Klærne kunne ikke lastes. Figuren vises uten.', 'warn');
+      }
 
       await this.ensureRigRegisteredForMesh(this.characterMesh, name, importedAnimationGroups);
 
@@ -19547,7 +19570,8 @@ class VirtualStudio {
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
 
     try {
-      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
+      const result = await BABYLON.SceneLoader.ImportMeshAsync(
+        '', ...VirtualStudio.splitAssetUrl(modelUrl), this.scene);
       importedAnimationGroups = result.animationGroups || [];
       mesh = result.meshes[0];
       mesh.name = `story_${storyRigId}`;

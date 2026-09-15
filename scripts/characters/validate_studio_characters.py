@@ -72,9 +72,26 @@ def check_surfaces(doc, accessor):
 
 
 def check_textures(doc, expected):
+    """Textures are shared files beside the models, not embedded copies.
+
+    A garment is mostly texture and the same cloth is worn by every body shape
+    it was cut for, so embedding would multiply one fabric across every
+    archetype that wears it.
+
+    The URI is relative to the studio directory rather than to the GLB, because
+    the loader resolves images against the root URL it is given and rejects any
+    path containing '..' outright. The same file therefore works unchanged from
+    `public/` and from the CDN, whose layouts mirror."""
     for image in doc['images']:
-        assert 'uri' not in image and image['mimeType'] in ['image/png', 'image/jpeg']
-        assert doc['bufferViews'][image['bufferView']]['byteLength'] > 100
+        assert 'bufferView' not in image, 'textures are shared, not embedded'
+        uri = image['uri']
+        assert not uri.startswith(('/', 'http')), uri
+        assert '..' not in uri, f'the loader refuses parent traversal: {uri}'
+        target = (ROOT / uri).resolve()
+        assert target.is_file(), target
+        assert target.stat().st_size > 100, target
+        raw = target.read_bytes()[:8]
+        assert raw.startswith(b'\x89PNG') or raw.startswith(b'\xff\xd8'), target
     assert len(doc['images']) == expected
 
 
@@ -107,7 +124,7 @@ for model in manifest['models']:
     hair = next(m for m in doc['materials'] if m['name'] == 'Hair')
     assert hair['alphaMode'] == 'MASK' and hair['doubleSided']
     print(f"PASS {model['file']}: {triangles} triangles, {counts['Skin']} of them body, "
-          f"53 joints, 3 surfaces, 3 poses, embedded textures, normalized skin weights")
+          f"53 joints, 3 surfaces, 3 poses, shared textures, normalized skin weights")
 
 bodies = {model['file'].removesuffix('.glb'): model for model in manifest['models']}
 by_body = {}

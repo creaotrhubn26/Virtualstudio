@@ -8,6 +8,7 @@ from collections import defaultdict
 import numpy as np
 REPO = Path(__file__).resolve().parents[2]
 OUT = REPO / "public/models/avatars/studio"
+TEXTURES = OUT / "textures"
 CACHE = Path(os.environ.get("STUDIO_CHARACTER_CACHE", str(Path(tempfile.gettempdir()) / "virtualstudio-character-source")))
 REV = "437dd513888a92399d1d3200d2e80859fae55abc"
 BASE_URL = f"https://raw.githubusercontent.com/makehumancommunity/mpfb2/{REV}/src/mpfb/data/"
@@ -166,7 +167,16 @@ for side, label in [('l','Left'),('r','Right')]:
 
 
 class GLB:
-    def __init__(self):
+    def __init__(self, texture_prefix='textures'):
+        # Textures are written once beside the models and referenced by
+        # relative URI rather than embedded. A garment is mostly texture, and
+        # the same cloth is worn by every body shape it was cut for; embedding
+        # would multiply one fabric across every archetype that wears it.
+        #
+        # The URI is relative to the studio directory, not to the GLB: the
+        # loader resolves images against the root URL it was given, and it
+        # rejects any path containing '..' outright.
+        self.texture_prefix = texture_prefix
         self.doc = {'asset': {'version':'2.0', 'generator':'Virtualstudio anatomical character builder',
                              'copyright':'MakeHuman Community CC0 data; studio assembly by CreatorHub'},
                     'scene':0, 'scenes':[{'nodes':[]}], 'nodes':[], 'meshes':[], 'skins':[],
@@ -197,8 +207,15 @@ class GLB:
         key = str(path)
         if key in self.images: return self.images[key]
         raw = path.read_bytes()
-        mime = 'image/png' if raw.startswith(b'\x89PNG') else 'image/jpeg'
-        self.doc['images'].append({'bufferView':self.view(raw),'mimeType':mime,'name':path.name})
+        # Name by content, so two assets sharing a fabric share the file and a
+        # changed texture can never be served from a stale cached path.
+        digest = hashlib.sha256(raw).hexdigest()[:16]
+        suffix = '.png' if raw.startswith(b'\x89PNG') else '.jpg'
+        shared = TEXTURES / (digest + suffix)
+        if not shared.exists():
+            shared.parent.mkdir(parents=True, exist_ok=True)
+            shared.write_bytes(raw)
+        self.doc['images'].append({'uri': f'{self.texture_prefix}/{shared.name}', 'name': path.name})
         self.doc['textures'].append({'sampler':0,'source':len(self.doc['images'])-1})
         self.images[key] = len(self.doc['textures'])-1
         return self.images[key]

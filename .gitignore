@@ -94,3 +94,4 @@ test-results/
 # published set down with scripts/aws/fetch-assets.sh.
 public/models/avatars/studio/*.glb
 public/models/avatars/studio/wardrobe/
+public/models/avatars/studio/textures/

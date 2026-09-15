@@ -159,9 +159,15 @@ export interface DressOptions {
   /** The body's skeleton; a garment is skinned to it, not to its own copy. */
   skeleton: Skeleton;
   garments: WardrobeGarment[];
-  /** Resolves a garment's file to a loadable URL. */
-  resolveUrl: (garment: WardrobeGarment) => string;
-  importMesh: (url: string) => Promise<{
+  /**
+   * Where to load a garment from, split the way the loader wants it.
+   *
+   * `root` is what relative texture URIs inside the file resolve against, so
+   * it has to be the directory the shared textures sit in, not the garment's
+   * own directory.
+   */
+  resolveUrl: (garment: WardrobeGarment) => { root: string; file: string };
+  importMesh: (root: string, file: string) => Promise<{
     meshes: AbstractMesh[];
     skeletons: Skeleton[];
     transformNodes: TransformNode[];
@@ -195,7 +201,8 @@ export async function dressFigure(options: DressOptions): Promise<string[]> {
 
   for (const garment of garments) {
     if (figure.worn.some(worn => worn.id === garment.id)) continue;
-    const imported = await options.importMesh(options.resolveUrl(garment));
+    const { root, file } = options.resolveUrl(garment);
+    const imported = await options.importMesh(root, file);
     const mesh = imported.meshes.find(candidate => candidate.getTotalVertices() > 0);
     if (!mesh) {
       imported.meshes.forEach(node => node.dispose());
