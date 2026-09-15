@@ -28,6 +28,12 @@ import { zipSync, strToU8 } from 'fflate';
 import MP4Box from 'mp4box';
 import { StudioRoom } from './core/rendering/StudioRoom';
 import { StudioSeat } from './core/rendering/StudioSeat';
+import { PoseEditor } from './core/rendering/PoseEditor';
+import { StudioProps } from './core/rendering/StudioProps';
+import { parseProps, type StudioProp } from './services/studioProps';
+import { bodyIdFromModelUrl, defaultWardrobeFor, dressFigure, forgetFigure, garmentLabel, garmentsForBody,
+  loadWardrobeCatalogue, resolveWardrobe, wornGarments, type WardrobeCatalogue } from './services/wardrobeService';
+import { EDITABLE_JOINTS, clampJointQuaternion, eulerFromQuat, quatFromEuler, unitVector } from './core/rendering/poseRig';
 import { StudioWorkspace } from './core/rendering/StudioWorkspace';
 import { createStudioBackdrop, createStudioGrid, studioExposure, shutterSeconds, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
 import { contactHardeningRatio, distanceForIlluminance, fixtureCandela, flashShutterCompensation, isFlashFixture, modifierSizeMetres, sceneIntensityFromCandela } from './core/rendering/photometry';
@@ -721,6 +727,9 @@ class VirtualStudio {
   public workspace: StudioWorkspace | null = null;
   public studioRoom: StudioRoom | null = null;
   private studioSeats = new Map<number, StudioSeat>();
+  private poseEditor: PoseEditor | null = null;
+  private props: StudioProps | null = null;
+  private poseGroundingPending = false;
   private engine: BABYLON.Engine;
   public scene: BABYLON.Scene;
   public camera: BABYLON.ArcRotateCamera;
@@ -2033,9 +2042,20 @@ class VirtualStudio {
             rotation: mesh.rotation.asArray() as [number, number, number],
             scale: mesh.scaling.asArray() as [number, number, number],
           }, userData: { ...node.userData, modelUrl: mesh.metadata.sourceModelUrl,
-            heightMeters: mesh.metadata.heightMeters, studioPose: mesh.metadata.studioPose },
+            heightMeters: mesh.metadata.heightMeters, studioPose: mesh.metadata.studioPose,
+            // Joint edits on top of the clip. Absent when the figure is still
+            // in a plain pose, so old documents stay byte-identical.
+            jointRotations: this.getEditedJointRotations(mesh),
+            // What the figure has on, so it opens in the same part it was cast in.
+            wardrobe: wornGarments(mesh) },
           visible: mesh.isEnabled() }];
         }),
+
+        // Everything the photographer has taken hold of: claimed studio
+        // objects keep only their key and transform, imported models keep
+        // where they came from. A separate key from the older `props`, which
+        // belongs to the asset-library loader and means something else.
+        studioProps: this.props?.props ?? [],
 
         // Serialize camera
         cameras: [{
@@ -2184,10 +2204,15 @@ class VirtualStudio {
             const actorNode = actorData as any; // Type assertion for legacy data
             if (actorData.userData?.modelUrl) {
               const data = actorData.userData;
-              await this.loadCharacterModel(String(data.modelUrl), actorData.name, '', Number(data.heightMeters || 1.7) / 1.7, { additive: true });
+              const savedWardrobe = Array.isArray(data.wardrobe) ? (data.wardrobe as string[]) : undefined;
+              await this.loadCharacterModel(String(data.modelUrl), actorData.name, '', Number(data.heightMeters || 1.7) / 1.7, { additive: true, wardrobe: savedWardrobe });
               const mesh = this.characterMesh;
               if (mesh) {
                 if (data.studioPose) this.applyStudioPose(data.studioPose as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
+                // Joint edits sit on top of the clip, so they are replayed
+                // after it, once the clip has written every rotation.
+                const joints = data.jointRotations as Record<string, { x: number; y: number; z: number }> | undefined;
+                if (joints) this.scene.onAfterRenderObservable.addOnce(() => this.applyJointRotations(mesh, joints));
                 const restore = () => {
                   mesh.position.copyFromFloats(...actorData.transform.position);
                   mesh.rotation.copyFromFloats(...actorData.transform.rotation);
@@ -2218,6 +2243,12 @@ class VirtualStudio {
           }
         }
       }
+
+      // Objects the photographer had taken hold of, restored after the actors.
+      // A claimed object may be one the studio derives from a figure -- the
+      // portrait chair is built from the seated pose -- so there is nothing to
+      // hand back until the figure is on set and has settled into its pose.
+      await this.restoreStudioProps(preset);
 
       if (preset.cameraSettings) {
         Object.assign(this.cameraSettings, preset.cameraSettings);
@@ -5416,6 +5447,10 @@ class VirtualStudio {
     if (renderCanvas) this.workspace = new StudioWorkspace(this.scene, this.camera, renderCanvas, this.renderingPipeline, () => this.cameraSettings, {
       load: model => this.loadStudioCharacter(model),
       pose: pose => this.applyStudioPose(pose),
+      editPose: enabled => this.setPoseEditing(enabled),
+      wardrobe: () => this.getWardrobeOptions(),
+      wearing: () => this.getCharacterWardrobe(),
+      wear: items => this.setCharacterWardrobe(items),
       frame: portrait => {
         const mesh = this.getPrimaryCharacterMesh();
         const position = mesh?.getAbsolutePosition() || BABYLON.Vector3.Zero();
@@ -18374,6 +18409,320 @@ class VirtualStudio {
     this.gizmoManager?.attachToMesh(null);
   }
 
+  /**
+   * The rotation the active pose clip writes for a joint, if it writes one.
+   *
+   * A document should carry what the photographer changed, not the whole
+   * skeleton, so edits are stored as the difference from the clip.
+   */
+  private clipJointRotation(mesh: BABYLON.AbstractMesh, node: BABYLON.TransformNode): BABYLON.Quaternion | null {
+    const poseName = mesh.metadata?.studioPose;
+    if (!poseName) return null;
+    const group = (this.getAnimationGroupsForMesh(mesh) || []).find(candidate => candidate.name === poseName);
+    if (!group) return null;
+    for (const targeted of group.targetedAnimations) {
+      if (targeted.target !== node) continue;
+      if (targeted.animation.targetProperty !== 'rotationQuaternion') continue;
+      const keys = targeted.animation.getKeys();
+      if (keys.length > 0 && keys[0].value instanceof BABYLON.Quaternion) return keys[0].value;
+    }
+    return null;
+  }
+
+  /** Editable joints this figure carries, paired with their scene nodes. */
+  private characterJointNodes(mesh: BABYLON.AbstractMesh): { id: string; node: BABYLON.TransformNode }[] {
+    const nodes = new Map(mesh.getChildTransformNodes().map(node => [node.name, node]));
+    return EDITABLE_JOINTS.flatMap(joint => {
+      const node = nodes.get(joint.node);
+      return node ? [{ id: joint.id, node }] : [];
+    });
+  }
+
+  /**
+   * Joint rotations that differ from the pose clip, in radians.
+   *
+   * Returns undefined when the figure is still exactly in its clip, so a
+   * document from an unedited scene is unchanged by this feature.
+   */
+  private getEditedJointRotations(
+    mesh: BABYLON.AbstractMesh,
+  ): Record<string, { x: number; y: number; z: number }> | undefined {
+    const edited: Record<string, { x: number; y: number; z: number }> = {};
+    for (const { id, node } of this.characterJointNodes(mesh)) {
+      const current = node.rotationQuaternion;
+      if (!current) continue;
+      const clip = this.clipJointRotation(mesh, node);
+      if (clip && Math.abs(BABYLON.Quaternion.Dot(current, clip)) > 1 - 1e-6) continue;
+      edited[id] = eulerFromQuat(current);
+    }
+    return Object.keys(edited).length > 0 ? edited : undefined;
+  }
+
+  /** Replay stored joint edits, clamped, so a bad file cannot break a figure. */
+  private applyJointRotations(
+    mesh: BABYLON.AbstractMesh,
+    rotations: Record<string, { x: number; y: number; z: number }>,
+  ): void {
+    if (mesh.isDisposed()) return;
+    for (const { id, node } of this.characterJointNodes(mesh)) {
+      const stored = rotations[id];
+      if (!stored) continue;
+      const child = node.getChildTransformNodes(true)[0];
+      const boneAxis = child
+        ? unitVector({ x: child.position.x, y: child.position.y, z: child.position.z })
+        : { x: 0, y: 1, z: 0 };
+      const clamped = clampJointQuaternion(id, quatFromEuler({
+        x: Number(stored.x), y: Number(stored.y), z: Number(stored.z),
+      }), boneAxis);
+      node.rotationQuaternion = new BABYLON.Quaternion(clamped.x, clamped.y, clamped.z, clamped.w);
+    }
+    this.scene.onAfterRenderObservable.addOnce(() => {
+      if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+    });
+  }
+
+  /**
+   * Rest the figure on the floor after its skin matrices have been rebuilt.
+   *
+   * Both a pose clip and a joint edit move the surfaces, and both need the feet
+   * back on the ground afterwards — a bent knee otherwise leaves the shoes in
+   * the air or drives them through the floor.
+   */
+  private groundCharacterSurfaces(mesh: BABYLON.AbstractMesh): void {
+    const surfaces = [mesh, ...mesh.getChildMeshes()].filter(child => child.getTotalVertices() > 0);
+    surfaces.forEach(child => {
+      child.computeWorldMatrix(true);
+      if (child instanceof BABYLON.Mesh) child.refreshBoundingInfo(true);
+    });
+    const bottom = Math.min(...surfaces.map(child => child.getBoundingInfo().boundingBox.minimumWorld.y));
+    if (Number.isFinite(bottom)) mesh.position.y += 0.016 - bottom;
+    mesh.computeWorldMatrix(true);
+  }
+
+  private wardrobeCatalogue: WardrobeCatalogue | null = null;
+
+  /**
+   * Everything on set the photographer can take hold of.
+   *
+   * Built on first use, because it needs the gizmo manager, and kept for the
+   * life of the scene: a prop outlives the figure and the room around it.
+   */
+  public studioProps(): StudioProps | null {
+    if (this.props) return this.props;
+    if (!this.gizmoManager) return null;
+    this.props = new StudioProps({
+      scene: this.scene,
+      gizmos: this.gizmoManager,
+      importModel: async url => {
+        const result = await BABYLON.SceneLoader.ImportMeshAsync(
+          '', ...VirtualStudio.splitAssetUrl(url), this.scene);
+        const root = result.meshes[0] ?? result.transformNodes[0] ?? null;
+        if (root) root.name = url.split('/').pop() ?? root.name;
+        return root;
+      },
+      onChanged: (props, selectedId) => {
+        window.dispatchEvent(new CustomEvent('ch-studio-props', { detail: { props, selectedId } }));
+      },
+    });
+    return this.props;
+  }
+
+  /**
+   * How to stop the studio driving an object the photographer has claimed.
+   *
+   * The portrait chair follows the figure every frame; once it is a prop the
+   * document owns where it stands, so the tracking has to end.
+   */
+  private releaseStudioObject(key: string): (() => void) | undefined {
+    if (key !== 'portraitChair') return undefined;
+    const seats = [...this.studioSeats.values()];
+    if (seats.length === 0) return undefined;
+    return () => seats.forEach(seat => seat.release());
+  }
+
+  /**
+   * Put a document's claimed objects back, once the scene can offer them.
+   *
+   * Waits for the frames that let derived geometry appear: the portrait chair
+   * is built in an after-render callback, so asking for it any sooner finds
+   * nothing and reports it missing.
+   */
+  private async restoreStudioProps(preset: SceneComposition): Promise<void> {
+    const saved = parseProps((preset as unknown as Record<string, unknown>).studioProps);
+    if (saved.length === 0) return;
+    const props = this.studioProps();
+    if (!props) return;
+
+    for (let frame = 0; frame < 3; frame++) {
+      await new Promise<void>(resolve => this.scene.onAfterRenderObservable.addOnce(() => resolve()));
+    }
+    const { missing } = await props.restore(saved, key => this.releaseStudioObject(key));
+    if (missing.length > 0) {
+      console.warn('[props] This scene has nothing to hand back for:', missing.map(prop => prop.name));
+      this.showToast(`${missing.length} objekt(er) finnes ikke i denne scenen og ble utelatt.`, 'warn');
+    }
+  }
+
+  /** Take ownership of something the studio built, so it can be moved and saved. */
+  public claimStudioObject(key: string, name?: string): StudioProp | null {
+    return this.studioProps()?.claim(key, name, this.releaseStudioObject(key)) ?? null;
+  }
+
+  /** Bring a model onto the set as a prop. */
+  public async addStudioProp(url: string, name?: string): Promise<StudioProp | null> {
+    const props = this.studioProps();
+    if (!props) return null;
+    return props.add(resolveModelPath(url), name);
+  }
+
+  /**
+   * Split an asset URL into the directory Babylon resolves against and the file.
+   *
+   * Character textures are shared files referenced by relative URI, and the
+   * loader resolves those against its root URL. Passing the whole URL as the
+   * filename leaves that root empty, so every texture is looked for at the site
+   * root and the import never finishes.
+   */
+  private static splitAssetUrl(url: string): [string, string] {
+    const cut = url.lastIndexOf('/');
+    return cut < 0 ? ['', url] : [url.slice(0, cut + 1), url.slice(cut + 1)];
+  }
+
+  /** The glTF root a figure's body meshes hang from; garments join it there. */
+  private bodyRootFor(mesh: BABYLON.AbstractMesh): BABYLON.TransformNode | null {
+    const name = mesh.metadata?.bodyRootName as string | undefined;
+    const children = mesh.getChildTransformNodes(true);
+    return (name ? children.find(node => node.name === name) : undefined) ?? children[0] ?? null;
+  }
+
+  /**
+   * Put clothes on a studio body.
+   *
+   * Only the bundled studio figures have a wardrobe; any other import is left
+   * exactly as its file describes it. A missing or unreachable catalogue leaves
+   * the figure undressed rather than failing the load, and says so.
+   */
+  private async dressStudioCharacter(
+    mesh: BABYLON.AbstractMesh,
+    modelUrl: string,
+    requested?: string[],
+  ): Promise<void> {
+    const body = bodyIdFromModelUrl(modelUrl);
+    if (!body) return;
+
+    try {
+      this.wardrobeCatalogue ??= await loadWardrobeCatalogue();
+    } catch (error) {
+      console.warn('[wardrobe] Catalogue unavailable; figure stays undressed', error);
+      this.showToast('Garderoben kunne ikke lastes. Figuren vises uten klær.', 'warn');
+      return;
+    }
+
+    const bodyRoot = this.bodyRootFor(mesh);
+    const skin = mesh.getChildMeshes().find(child => child.name === 'Skin') as BABYLON.Mesh | undefined;
+    const skeleton = skin?.skeleton ?? mesh.getChildMeshes().find(child => child.skeleton)?.skeleton;
+    if (!bodyRoot || !skin || !skeleton) {
+      console.warn('[wardrobe] Body is missing its skin or skeleton; nothing to dress');
+      return;
+    }
+
+    const wanted = requested ?? defaultWardrobeFor(this.wardrobeCatalogue, body);
+    const garments = resolveWardrobe(this.wardrobeCatalogue, body, wanted);
+    await dressFigure({
+      scene: this.scene,
+      characterRoot: mesh,
+      bodyRoot,
+      skin,
+      skeleton,
+      garments,
+      resolveUrl: garment => ({
+        root: resolveModelPath('/models/avatars/studio/') ,
+        file: `wardrobe/${garment.body}/${garment.file}`,
+      }),
+      importMesh: (root, file) => BABYLON.SceneLoader.ImportMeshAsync('', root, file, this.scene),
+    });
+    mesh.metadata = { ...mesh.metadata, wardrobe: garments.map(garment => garment.id) };
+    mesh.onDisposeObservable.addOnce(() => forgetFigure(mesh));
+    window.dispatchEvent(new CustomEvent('ch-character-wardrobe', {
+      detail: { wearing: garments.map(garment => garment.id) },
+    }));
+  }
+
+  /** Change what the figure on set is wearing. */
+  public async setCharacterWardrobe(items: string[]): Promise<string[]> {
+    const mesh = this.getPrimaryCharacterMesh();
+    const modelUrl = mesh?.metadata?.sourceModelUrl as string | undefined;
+    if (!mesh || !modelUrl) return [];
+    await this.dressStudioCharacter(mesh, modelUrl, items);
+    // Clothes change the silhouette, so the figure may need setting down again.
+    this.scene.onAfterRenderObservable.addOnce(() => {
+      if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+    });
+    return wornGarments(mesh);
+  }
+
+  /** Garments the figure on set can wear, labelled for the studio UI. */
+  public getWardrobeOptions(): { id: string; label: string; slot: string }[] {
+    const mesh = this.getPrimaryCharacterMesh();
+    const body = bodyIdFromModelUrl((mesh?.metadata?.sourceModelUrl as string) ?? '');
+    if (!body || !this.wardrobeCatalogue) return [];
+    return garmentsForBody(this.wardrobeCatalogue, body).map(garment => ({
+      id: garment.id, label: garmentLabel(garment.id), slot: garment.slot,
+    }));
+  }
+
+  /** The garments the figure on set has on. */
+  public getCharacterWardrobe(): string[] {
+    const mesh = this.getPrimaryCharacterMesh();
+    return mesh ? wornGarments(mesh) : [];
+  }
+
+  /**
+   * Turn joint handles on or off for the figure on set.
+   *
+   * The editor is built lazily against the current character and thrown away
+   * with it, so a model swap can never leave handles pointing at a dead
+   * skeleton.
+   */
+  public setPoseEditing(enabled: boolean): boolean {
+    const mesh = this.getPrimaryCharacterMesh();
+    if (!mesh) return false;
+
+    if (this.poseEditor && this.poseEditor.characterId !== mesh.uniqueId) {
+      this.poseEditor.dispose();
+      this.poseEditor = null;
+    }
+    if (!this.poseEditor) {
+      if (!enabled) return false;
+      this.poseEditor = new PoseEditor(this.scene, mesh, mesh.uniqueId, () => {
+        // A moved joint lifts or drops the figure, but the skin matrices only
+        // reach the surfaces on the next render — grounding now would measure
+        // the previous pose and leave the feet in the air. One request per
+        // frame is enough however long the drag lasts.
+        if (this.poseGroundingPending) return;
+        this.poseGroundingPending = true;
+        this.scene.onAfterRenderObservable.addOnce(() => {
+          this.poseGroundingPending = false;
+          if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+        });
+      });
+      mesh.onDisposeObservable.addOnce(() => {
+        this.poseEditor?.dispose();
+        this.poseEditor = null;
+      });
+    }
+
+    this.poseEditor.setEnabled(enabled);
+    window.dispatchEvent(new CustomEvent('ch-pose-editing-changed', {
+      detail: { enabled, joints: this.poseEditor.jointCount },
+    }));
+    return true;
+  }
+
+  public get poseEditing(): PoseEditor | null {
+    return this.poseEditor;
+  }
+
   public applyStudioPose(name: 'StudioStand' | 'StudioPortrait' | 'StudioSeated'): boolean {
     const mesh = this.getPrimaryCharacterMesh();
     if (!mesh) return false;
@@ -18394,14 +18743,7 @@ class VirtualStudio {
     // the posed surfaces afterwards; rest-pose bounds would leave seated feet in the air.
     this.scene.onAfterRenderObservable.addOnce(() => {
       if (mesh.isDisposed() || mesh.metadata?.studioPose !== name) return;
-      const surfaces = [mesh, ...mesh.getChildMeshes()].filter(child => child.getTotalVertices() > 0);
-      surfaces.forEach(child => {
-        child.computeWorldMatrix(true);
-        if (child instanceof BABYLON.Mesh) child.refreshBoundingInfo(true);
-      });
-      const bottom = Math.min(...surfaces.map(child => child.getBoundingInfo().boundingBox.minimumWorld.y));
-      if (Number.isFinite(bottom)) mesh.position.y += 0.016 - bottom;
-      mesh.computeWorldMatrix(true);
+      this.groundCharacterSurfaces(mesh);
       this.studioSeats.get(mesh.uniqueId)?.dispose();
       this.studioSeats.delete(mesh.uniqueId);
       if (name === 'StudioSeated') {
@@ -18846,6 +19188,8 @@ class VirtualStudio {
       rotation?: [number, number, number];
       storyRigId?: string;
       additive?: boolean;
+      /** Garment ids to open wearing; the body's default set when absent. */
+      wardrobe?: string[];
       tints?: { skin: string; top: string; bottom: string; accent: string } | null;
     },
   ): Promise<void> {
@@ -18854,7 +19198,8 @@ class VirtualStudio {
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
 
     try {
-      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
+      const result = await BABYLON.SceneLoader.ImportMeshAsync(
+        '', ...VirtualStudio.splitAssetUrl(modelUrl), this.scene);
       importedAnimationGroups = result.animationGroups || [];
       if (!result.meshes.some(mesh => mesh.getTotalVertices() > 0)) throw new Error('Modellfilen inneholder ingen geometri');
       if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
@@ -18865,6 +19210,8 @@ class VirtualStudio {
       this.characterMesh.name = name;
       this.characterMesh.metadata = this.characterMesh.metadata || {};
       (this.characterMesh.metadata as Record<string, unknown>).sourceModelUrl = modelUrl;
+      // Garments join the figure under the same glTF root the body meshes use.
+      (this.characterMesh.metadata as Record<string, unknown>).bodyRootName = importedRoot.name;
       this.trackAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
       this.stopAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
 
@@ -19079,6 +19426,16 @@ class VirtualStudio {
     }));
 
     if (this.characterMesh) {
+      // A studio body ships with no clothes of its own, so dress it before
+      // anything else looks at it. A wardrobe that will not load must not stop
+      // the figure being usable, so this never throws past here.
+      try {
+        await this.dressStudioCharacter(this.characterMesh, modelUrl, options?.wardrobe);
+      } catch (error) {
+        console.error('[wardrobe] Could not dress the figure', error);
+        this.showToast('Klærne kunne ikke lastes. Figuren vises uten.', 'warn');
+      }
+
       await this.ensureRigRegisteredForMesh(this.characterMesh, name, importedAnimationGroups);
 
       // Notify story loader which rig was created for this character
@@ -19302,7 +19659,8 @@ class VirtualStudio {
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
 
     try {
-      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
+      const result = await BABYLON.SceneLoader.ImportMeshAsync(
+        '', ...VirtualStudio.splitAssetUrl(modelUrl), this.scene);
       importedAnimationGroups = result.animationGroups || [];
       mesh = result.meshes[0];
       mesh.name = `story_${storyRigId}`;

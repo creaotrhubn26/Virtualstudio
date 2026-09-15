@@ -46,6 +46,10 @@ export class StudioWorkspace {
       load: (model: 'woman' | 'man') => Promise<void>;
       pose: (pose: 'StudioStand' | 'StudioPortrait' | 'StudioSeated') => boolean;
       frame: (portrait: boolean) => void;
+      editPose: (enabled: boolean) => boolean;
+      wardrobe: () => { id: string; label: string; slot: string }[];
+      wearing: () => string[];
+      wear: (items: string[]) => Promise<string[]>;
     },
     private documents: { save: () => SceneComposition; load: (scene: SceneComposition) => Promise<void> },
   ) {
@@ -100,10 +104,52 @@ export class StudioWorkspace {
       <label for="studioPoseSelect">Posering</label>
       <select id="studioPoseSelect"><option value="StudioStand">Avslappet stående</option><option value="StudioPortrait">Portrett · dreid hode</option><option value="StudioSeated">Sitt på portrettstol</option></select>
       <div class="studio-model-framing"><button type="button" data-frame="portrait">Portrett</button><button type="button" data-frame="full">Hel figur</button></div>
+      <label for="studioOutfitSelect">Antrekk</label>
+      <select id="studioOutfitSelect"></select>
+      <label for="studioShoesSelect">Sko</label>
+      <select id="studioShoesSelect"></select>
+      <label class="studio-pose-edit"><input type="checkbox" id="studioPoseEdit"> Juster ledd</label>
       <p role="status" class="studio-model-status">Anatomisk modell · hud, hår og klær</p>`;
     container.append(this.modelPanel);
     const modelSelect = this.modelPanel.querySelector<HTMLSelectElement>('#studioModelSelect')!;
     const poseSelect = this.modelPanel.querySelector<HTMLSelectElement>('#studioPoseSelect')!;
+    const poseEdit = this.modelPanel.querySelector<HTMLInputElement>('#studioPoseEdit')!;
+    const outfitSelect = this.modelPanel.querySelector<HTMLSelectElement>('#studioOutfitSelect')!;
+    const shoesSelect = this.modelPanel.querySelector<HTMLSelectElement>('#studioShoesSelect')!;
+
+    /** Show the garments this body can wear, with what it has on selected. */
+    const refreshWardrobe = () => {
+      const garments = this.characterControls.wardrobe();
+      const worn = new Set(this.characterControls.wearing());
+      for (const [select, slot] of [[outfitSelect, 'outfit'], [shoesSelect, 'shoes']] as const) {
+        const options = garments.filter(garment => garment.slot === slot);
+        select.replaceChildren(...options.map(garment => {
+          const option = document.createElement('option');
+          option.value = garment.id;
+          option.textContent = garment.label;
+          option.selected = worn.has(garment.id);
+          return option;
+        }));
+        // A body with nothing cut for it has no choice to offer.
+        select.disabled = options.length === 0;
+      }
+    };
+
+    const wear = async () => {
+      outfitSelect.disabled = shoesSelect.disabled = true;
+      status.textContent = 'Skifter antrekk …';
+      try {
+        await this.characterControls.wear([outfitSelect.value, shoesSelect.value].filter(Boolean));
+        status.textContent = 'Antrekket er skiftet';
+      } catch {
+        status.textContent = 'Antrekket kunne ikke skiftes.';
+      } finally {
+        refreshWardrobe();
+      }
+    };
+    outfitSelect.addEventListener('change', () => { void wear(); }, { signal: this.abort.signal });
+    shoesSelect.addEventListener('change', () => { void wear(); }, { signal: this.abort.signal });
+    window.addEventListener('ch-character-wardrobe', () => refreshWardrobe(), { signal: this.abort.signal });
     const status = this.modelPanel.querySelector<HTMLElement>('[role="status"]')!;
     modelSelect.addEventListener('change', async () => {
       modelSelect.disabled = poseSelect.disabled = true;
@@ -119,10 +165,20 @@ export class StudioWorkspace {
       const applied = this.characterControls.pose(poseSelect.value as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
       status.textContent = applied ? (poseSelect.value === 'StudioSeated' ? 'Figuren sitter på portrettstolen' : 'Poseringen er oppdatert') : 'Velg en studiomodell for disse poseringene';
     }, { signal: this.abort.signal });
+    poseEdit.addEventListener('change', () => {
+      const active = this.characterControls.editPose(poseEdit.checked);
+      if (!active) poseEdit.checked = false;
+      status.textContent = active
+        ? 'Klikk et ledd på figuren og dra ringen. Poseringene over nullstiller.'
+        : 'Velg en studiomodell for å justere ledd';
+    }, { signal: this.abort.signal });
     window.addEventListener('ch-character-loaded', event => {
       const url = (event as CustomEvent<{ modelUrl: string }>).detail.modelUrl;
       if (url.endsWith('/studio-woman.glb')) modelSelect.value = 'woman';
       if (url.endsWith('/studio-man.glb')) modelSelect.value = 'man';
+      // A new figure carries no handles, so the toggle must not claim otherwise.
+      poseEdit.checked = false;
+      refreshWardrobe();
     }, { signal: this.abort.signal });
     window.addEventListener('ch-character-pose-applied', event => {
       const pose = (event as CustomEvent<{ poseId: string }>).detail.poseId;

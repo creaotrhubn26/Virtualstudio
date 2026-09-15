@@ -39,16 +39,22 @@ test('anatomical studio models, posing, navigation, exposure and camera export',
       root: root.uniqueId, primary: s.getPrimaryCharacterMesh().uniqueId,
       surfaces: meshes.map((m: any) => m.name),
       textures: meshes.map((m: any) => m.material.getActiveTextures().length),
-      bones: meshes[0].skeleton.bones.length,
+      bones: meshes.map((m: any) => m.skeleton.bones.length),
+      skeletons: meshes.map((m: any) => m.skeleton.uniqueId),
       source: root.metadata.sourceModelUrl,
       shot: [s.camera.alpha, s.camera.beta, s.camera.radius, ...s.camera.target.asArray(), s.camera.fov],
     };
   });
   expect(initial.primary).toBe(initial.root);
   expect(initial.source).toContain('studio-woman.glb');
-  expect(initial.surfaces).toEqual(['Skin', 'female_casualsuit01', 'shoes01', 'Eyes', 'Hair']);
-  expect(initial.textures).toEqual([1, 3, 2, 1, 1]);
-  expect(initial.bones).toBe(53);
+  // The body carries skin, eyes and hair; its clothes are separate files worn
+  // on top, so they arrive after it rather than baked into it.
+  expect(initial.surfaces.slice(0, 3)).toEqual(['Skin', 'Eyes', 'Hair']);
+  expect(initial.surfaces.slice(3).sort()).toEqual(['female_casualsuit01', 'shoes01']);
+  expect(initial.textures.slice(0, 3)).toEqual([1, 1, 1]);
+  // Every surface, clothes included, is driven by the one 53-joint skeleton.
+  expect(initial.bones).toEqual(initial.skeletons.map(() => 53));
+  expect(new Set(initial.skeletons).size).toBe(1);
   await expect(page.locator('.viewport-2d')).toBeHidden();
   for (const view of ['top', 'front', 'side', 'studio']) {
     await page.locator(`button[data-studio-view="${view}"]`).click();
@@ -57,7 +63,7 @@ test('anatomical studio models, posing, navigation, exposure and camera export',
       return [s.camera.alpha, s.camera.beta, s.camera.radius, ...s.camera.target.asArray(), s.camera.fov];
     })).toEqual(initial.shot);
   }
-  // Model movement resolves the common wrapper, leaving all five surfaces aligned.
+  // Model movement resolves the common wrapper, leaving body and clothes aligned.
   expect(await page.evaluate(() => {
     const s = (window as any).virtualStudio, root = s.getPrimaryCharacterMesh();
     root.position.x += .25;

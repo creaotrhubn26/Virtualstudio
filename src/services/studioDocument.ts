@@ -13,6 +13,16 @@ const schema = z.object({
   lights: z.array(z.object({ id: z.string(), name: z.string(), type: z.string(), position: vector, rotation: vector,
     scale: vector, intensity: finite.nonnegative(), cct: finite.positive(), visible: z.boolean(), modifier: z.string() }).passthrough()),
   actors: z.array(node), props: z.array(node), layers: z.array(z.unknown()),
+  // Objects the photographer took hold of. Validated here so a malformed list
+  // is refused before the current scene is cleared, not after.
+  studioProps: z.array(z.object({
+    id: z.string().min(1), name: z.string(),
+    source: z.union([
+      z.object({ kind: z.literal('model'), url: z.string().min(1) }),
+      z.object({ kind: z.literal('scene'), mesh: z.string().min(1) }),
+    ]),
+    transform, visible: z.boolean(), locked: z.boolean(),
+  }).passthrough()).optional(),
   cameraSettings: z.object({ aperture: finite.positive(), iso: finite.positive(), focalLength: finite.positive(),
     shutter: z.string().regex(/^(?:\d+(?:\.\d+)?|\d+\/\d+)$/), nd: finite }).passthrough(),
   environment: z.object({

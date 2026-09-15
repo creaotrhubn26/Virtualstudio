@@ -173,6 +173,8 @@ export interface EnvironmentState {
 }
 
 // Main scene composition interface
+import type { StudioProp } from '../../services/studioProps';
+
 export interface SceneComposition {
   id: string;
   name: string;
@@ -184,7 +186,13 @@ export interface SceneComposition {
   cameras: CameraPreset[]; // All Cam A-E presets
   lights: LightState[]; // All light positions and settings
   actors: SceneNode[]; // All actors in scene
-  props: SceneNode[]; // All props in scene
+  props: SceneNode[]; // All props in scene (asset-library loader)
+  /**
+   * Objects the photographer has taken hold of: studio-built geometry claimed
+   * by its stable key, and models imported onto the set. Optional, so a
+   * document written before props existed still reads.
+   */
+  studioProps?: StudioProp[];
   cameraSettings: CameraSettings; // Aperture, ISO, shutter, etc.
   
   // Composition

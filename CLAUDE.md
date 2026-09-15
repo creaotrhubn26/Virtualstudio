@@ -38,17 +38,28 @@ The builder performs these steps:
 
 1. Load the MakeHuman base topology and apply pinned anatomical targets for male/female shape and head form.
 2. Scale the body to the declared real-world height: 1.72 m for the woman and 1.82 m for the man.
-3. Fit CC0 clothing and shoes to the morphed body through their barycentric bindings. Delete covered body vertices to prevent skin from showing through clothes.
-4. Transfer and normalize skin weights, retaining at most four joint influences per vertex for GLTF compatibility.
-5. Export the 53-joint `game_engine` skeleton with Mixamo-compatible joint names and inverse bind matrices.
-6. Preserve separate surfaces for skin, clothing, shoes, eyes and alpha-cutout hair. Embed albedo, normal and occlusion textures in each GLB.
-7. Export `StudioStand`, `StudioPortrait` and `StudioSeated` as complete fixed-pose animation clips. Every clip writes every joint rotation so switching poses resets cleanly.
+3. Transfer and normalize skin weights, retaining at most four joint influences per vertex for GLTF compatibility.
+4. Export the 53-joint `game_engine` skeleton with Mixamo-compatible joint names and inverse bind matrices. Joint order is deterministic and identical in every file, which is what lets a garment built separately be worn on any body.
+5. Export the body with **every** face, and separate surfaces for skin, eyes and alpha-cutout hair. Embed albedo, normal and occlusion textures.
+6. Fit each CC0 garment to the morphed body through its barycentric bindings and export it as its own GLB, carrying the list of body triangles it covers.
+7. Export `StudioStand`, `StudioPortrait` and `StudioSeated` as complete fixed-pose animation clips on the body. Every clip writes every joint rotation so switching poses resets cleanly. Garments carry no clips; they ride the body's skeleton.
 8. Solve the seated arms from actual limb lengths so the hands rest on the thighs instead of floating beside the body.
 
 The generated runtime files are:
 
-- `public/models/avatars/studio/studio-woman.glb`
-- `public/models/avatars/studio/studio-man.glb`
+- `public/models/avatars/studio/studio-woman.glb`, `studio-man.glb` — bodies, with no clothes of their own
+- `public/models/avatars/studio/wardrobe/<body>/<garment>.glb` — one file per garment
+- `public/models/avatars/studio/wardrobe.json` — the catalogue: which garments fit which body, which slot each fills, the body triangles each covers, and what a body opens wearing
+
+### Wardrobe as a layer
+
+A body used to ship with its one outfit baked in, with the body faces underneath **deleted** so skin could not show through. That made a figure able to play exactly one part: you could not put the same person in a work suit and an evening suit.
+
+The body now keeps every face, and each garment records the body triangles it covers as sorted `[start, end)` ranges. Triangle order is the builder's fan triangulation of the full body face list, so the ranges index straight into the exported `Skin` mesh; `validate_studio_characters.py` asserts the body is exactly 26756 triangles for this reason. [`src/services/wardrobeService.ts`](src/services/wardrobeService.ts) rebuilds the index buffer from the union of the worn garments' ranges, so removing a garment puts the skin back.
+
+A garment is imported with a copy of the rig, which is **discarded**: the mesh is skinned to the body's skeleton instead, so it follows every pose and joint edit without being animated separately. The duplicate joints must go — they carry the same names as the body's, and the pose editor looks its joints up by name.
+
+Only the bundled `studio-*` bodies have a wardrobe. Any other import is left exactly as its file describes it, and an unreachable catalogue leaves the figure undressed with a warning rather than failing the load.
 
 Rebuild them with Blender, because the builder uses NumPy:
 
@@ -78,6 +89,46 @@ Babylon's `getChildMeshes(true)` returns direct descendants in this codebase's A
 
 [`src/services/avatarMaterialService.ts`](src/services/avatarMaterialService.ts) must preserve authored GLTF PBR materials, texture maps and hair alpha. Procedural fallback materials are for untextured imports only. Do not flatten the five authored surfaces to one grey material.
 
+### Editable posing
+
+The three clips remain the reset states; joint editing changes the rotations a clip leaves on the skeleton, and re-applying a clip puts them all back.
+
+[`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts) holds the joint table and is unit-tested. The axis convention is taken from the rig itself rather than guessed: the pose clips in the character builder rotate one local axis per joint, which fixes X as flexion and extension, Y as twist, and Z as movement away from or across the body. A glTF node's rotation is already relative to its bind pose, so the clamped values are anatomical angles measured from the rest stance. The ranges are conventional clinical figures, deliberately a little tighter than a trained body reaches; they are not measured from a subject. A unit test asserts that every rotation the bundled clips strike is inside them, so a limit can never fight a reset state.
+
+Limits are **swing and twist**, not per-axis Euler angles. Elbows and knees are hinges with one axis, one direction, and no sideways play at all. Every other joint has a cone the bone may swing within and a range it may roll about its own length. Per-axis Euler limits were tried first and are the wrong model: every Euler factorisation is ill-conditioned near its middle axis's ±90°, so an ordinary reach decomposes into extreme numbers that a per-axis clamp then mangles — an arm reaching forward came back pinned to its limits with the hand half a metre off target. Swing and twist are stable everywhere, and they are what a published range of motion actually describes. Do not reintroduce per-axis Euler clamping.
+
+[`src/core/rendering/PoseEditor.ts`](src/core/rendering/PoseEditor.ts) owns the interaction: a handle per joint on the helper layer, a rotation gizmo whose rings are limited to the axes that joint actually has, and a clamp that runs every frame so a drag cannot carry a joint out of range even momentarily.
+
+### Reaching with a hand or a foot
+
+A green box on each hand and foot can be dragged to place the limb; the shoulder or hip and the hinge behind it are solved to follow. [`src/core/rendering/limbIk.ts`](src/core/rendering/limbIk.ts) is the pure two-bone solve — the same law-of-cosines construction the character builder uses to put the seated arms on the thighs — and it is unit-tested on segment lengths, reach limits and bend plane. Without a declared pole a solved limb keeps the bend plane its clip gave it, so an elbow never flips behind the body.
+
+Two rig facts that cost real debugging time, both worth keeping in mind before touching this code:
+
+- **The glTF loader parents the figure under a mirrored root**, so a world matrix has a negative determinant and no well-defined rotation to decompose. Reading `absoluteRotationQuaternion` back sent arms off in their own direction entirely. `aimSegment` therefore transforms two *points* into the parent's frame and builds the rotation there, which is exact either way.
+- **The hinge axis is not perpendicular to the limb.** A degree at the elbow is worth about two thirds of a degree of bend, so the joint angle cannot be derived from the solver's interior angle; doing so left the hand four centimetres short. `foldHinge` bisects the joint's own range against the rig until the limb spans the right distance, which assumes nothing about how the axes are laid out.
+
+`VirtualStudio.setPoseEditing` builds the editor lazily against the current figure and disposes it with that figure, so a model swap or a document load cannot leave handles on a dead skeleton. Every joint change re-grounds the figure, but only after the next render: grounding immediately measures the previous pose and leaves the feet in the air, the same trap `applyStudioPose` avoids.
+
+Joint edits are stored in the actor's `userData.jointRotations` as the difference from the clip, so a document from an unedited scene is unchanged and only moved joints are written. They are clamped again on load, so a corrupt file cannot bend a figure backwards.
+
+### Objects on set
+
+The studio builds a great deal of geometry the user cannot touch. Each piece of it used to be a special case, and a scenario needing a hospital bed or an air ambulance would have been one more. A **prop** is the single general answer: a named thing with a transform that can be selected, moved, hidden and saved, whatever its geometry came from.
+
+Two things become a prop, and after that they behave identically:
+
+- **Geometry the studio built**, claimed by its stable `metadata.studioObjectKey`. Anything the studio learns to build later becomes claimable by setting that key — nothing is registered in a list. The key matters: the portrait chair's Babylon node is named after the figure's unique id, which differs every session, so a claim on the name would never find it again.
+- **A model file**, imported onto the set. The document keeps where it came from.
+
+**Ownership is the point.** Until an object is claimed the studio owns it; afterwards the document owns its transform. `StudioProps.claim` takes a release callback for whatever the studio was doing to that object, and `VirtualStudio.releaseStudioObject` supplies it: the portrait chair follows the figure every frame, and `StudioSeat.release` ends that tracking so the studio does not put the chair back under the figure on the next frame. This is the ownership and serialization design the chair was waiting for.
+
+Claimed objects are stored under `studioProps` in the document — a separate key from the older `props`, which belongs to the asset-library loader and means something else. A claimed object travels as a key and a transform, never as geometry. Removing a prop gives studio-built geometry back untouched and only disposes what the prop system imported.
+
+They are restored **after** the actors and after a few rendered frames, because a derived object does not exist until the thing it derives from does: the chair is built in an after-render callback of the seated pose. Claims this scene cannot honour — a sofa in a document opened against an empty room — are reported to the photographer rather than silently dropped.
+
+Room furniture is still merged into batched geometry for draw-call cost, so individual pieces carry no key yet and cannot be claimed. Giving them keys means keeping them as separate meshes, which is a deliberate trade against the batching `StudioRoom` does today.
+
 ### Seated contact and chair
 
 [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts) creates the leather and chrome portrait chair only for `StudioSeated`:
@@ -91,6 +142,25 @@ Babylon's `getChildMeshes(true)` returns direct descendants in this codebase's A
 
 The chair is derived from the character pose. A saved actor with `studioPose: "StudioSeated"` recreates it after document load. The chair is currently not an independently editable prop; making it editable requires an explicit ownership and serialization design.
 
+## Where the assets live
+
+The character bodies and every garment are **not in git**. They are built offline and published to the Virtualstudio S3 bucket, which sits behind a CloudFront distribution; the bucket itself is private and reachable only through that distribution's origin access control.
+
+```
+s3://virtualstudio-assets-<account>/
+  assets/models|audio|images|textures|pattern-thumbnails/   cached a year, path-addressed
+  system/characters/                                        manifests, cached a minute
+  releases/                                                 immutable snapshots for rollback
+```
+
+- [`scripts/aws/provision-assets.sh`](scripts/aws/provision-assets.sh) creates the bucket, the distribution and the deploy policy. It is idempotent; run it again after changing a policy.
+- [`scripts/aws/sync-assets.sh`](scripts/aws/sync-assets.sh) publishes `public/` and invalidates the manifests.
+- [`scripts/aws/fetch-assets.sh`](scripts/aws/fetch-assets.sh) brings a published set down into `public/`. **A fresh clone needs this before the studio shows a figure or the Playwright suites run**, because the GLBs are gitignored.
+
+[`src/config/assetConfig.ts`](src/config/assetConfig.ts) resolves an asset against `VITE_ASSET_CDN_BASE` when it is set, Cloudflare R2 when the older flag is set, and the local path otherwise. Development and the browser tests run on local paths, which is why they work offline. Cloudflare R2 remains wired up while assets move across; it is not the destination.
+
+CloudFront charges for egress where R2 did not, so keep an eye on what a first visit actually downloads: a dressed figure is about 23 MB.
+
 ## Scene architecture
 
 The renderer is concentrated in a large legacy [`src/main.ts`](src/main.ts). Extend it carefully and move self-contained new behavior into focused modules instead of adding more unrelated UI or geometry code there.
@@ -98,8 +168,13 @@ The renderer is concentrated in a large legacy [`src/main.ts`](src/main.ts). Ext
 - [`src/core/rendering/StudioWorkspace.ts`](src/core/rendering/StudioWorkspace.ts): studio navigation camera, shot view, live camera preview, model/pose controls, room controls and local document UI.
 - [`src/core/rendering/StudioRoom.ts`](src/core/rendering/StudioRoom.ts): industrial room geometry, furniture, practical lights, batching and roof cutaway behavior.
 - [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts): pose-derived portrait chair and body contact.
+- [`src/core/rendering/StudioProps.ts`](src/core/rendering/StudioProps.ts): objects the photographer can take hold of, claim, move and save.
+- [`src/services/studioProps.ts`](src/services/studioProps.ts): what a prop is in a document, and how one is read back.
 - [`src/core/rendering/studioGeometry.ts`](src/core/rendering/studioGeometry.ts): focal length conversion, exposure calculation, cyclorama and grid.
 - [`src/core/rendering/photometry.ts`](src/core/rendering/photometry.ts): candela from fixture specs, inverse-square illuminance, ISO 2720 metering, modifier size and shadow-softness ratio.
+- [`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts): editable joints, their axes and their ranges of motion.
+- [`src/core/rendering/PoseEditor.ts`](src/core/rendering/PoseEditor.ts): joint handles, the constrained rotation gizmo, limb targets and joint read/write.
+- [`src/core/rendering/limbIk.ts`](src/core/rendering/limbIk.ts): two-bone inverse kinematics for arms and legs.
 - [`src/core/services/environmentService.ts`](src/core/services/environmentService.ts): environment state and room toggles.
 - [`src/services/sceneCompressionService.ts`](src/services/sceneCompressionService.ts): lossless v2 document wrapper and legacy v1 reader.
 - [`src/services/studioDocument.ts`](src/services/studioDocument.ts): Zod validation before mutating the scene.
@@ -151,7 +226,8 @@ The industrial room uses metres and occupies approximately x = -8…8 and z = -9
 
 Version 2 documents retain the complete `SceneComposition`, including:
 
-- actor source path, height, transform and studio pose;
+- actor source path, height, transform, studio pose, joint edits and wardrobe;
+- claimed objects and imported props under `studioProps`;
 - light fixture ID, position, aim, output, beam settings and enabled state;
 - taking-camera settings;
 - industrial room type, furnishings and practical-light switches.
@@ -163,15 +239,19 @@ Validate an entire file before clearing the current scene. Maintain legacy v1 re
 Use Node 22 in this repository. Node 26 caused Vitest memory failures in the current local environment.
 
 ```sh
+scripts/aws/fetch-assets.sh models          # character GLBs are not in git
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm ci
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build
 python3 scripts/characters/validate_studio_characters.py
 PLAYWRIGHT_SOFTWARE_GL=1 PATH=/opt/homebrew/opt/node@22/bin:$PATH \
-  npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts --workers=1
+  npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts e2e/pose-editing.spec.ts \
+    e2e/wardrobe.spec.ts e2e/studio-props.spec.ts --workers=1
 ```
 
-The software-WebGL browser test is slow and is not a device-performance measurement. It covers both GLBs, materials, hierarchy movement, views, exposure, seated body-to-chair contact, chair tracking/removal, failed-import recovery, live preview, 1920 × 1080 PNG export, local save/open and a tablet layout check.
+The character build is reproducible and takes about 11 seconds: the same sources produce byte-identical GLBs, so a changed hash means a changed input.
+
+The software-WebGL browser tests are slow and are not a device-performance measurement. Between them they cover both GLBs, materials, hierarchy movement, views, exposure, seated body-to-chair contact, chair tracking/removal, failed-import recovery, live preview, 1920 × 1080 PNG export, local save/open, a tablet layout check, the lighting reference scene, and joint editing with its limits, grounding, reset and document round trip.
 
 The local API backend is not running in this verification environment and `/api` returns HTTP 500. Do not claim backend-dependent projects, AI generation or cloud asset workflows are verified because the frontend scene test passes.
 
@@ -180,9 +260,9 @@ The local API backend is not running in this verification environment and `/api`
 Work in this order unless the user changes priorities:
 
 1. **Photographic light accuracy.** *(Fixture output, falloff, shadow softness, the flash-versus-continuous exposure model and the default rig have landed; see "Light units and shadow softness".)* Remaining: measured penumbra comparisons, and bounce/soft-source approximation checked against reference renders rather than by eye.
-2. **Editable posing.** Add constrained joint manipulation on top of the 53-joint rig, starting with head, spine, shoulders, elbows, hands, hips and knees. Keep the three fixed poses as reliable reset states. Prevent impossible limb ranges and floor penetration.
-3. **Broader real character variation.** Extend the offline builder with visibly distinct, licensed body proportions, ages, skin textures, hair and clothing. Every catalogue card must point to an actual different asset. Add facial expression blend shapes only when the source and export path are verified.
-4. **Studio object editing.** Promote selected furniture, including the portrait chair, into scene-owned editable props with clear character-seat attachment state. Serialize ownership and transforms without duplicating the derived chair on load.
+2. **Editable posing.** *(Landed: seventeen joints, swing-and-twist limits, and hand/foot targets solved by two-bone inverse kinematics; see "Editable posing".)* Remaining: an elliptical cone that knows a shoulder is less free across the body than away from it, and self-intersection between limbs and torso.
+3. **Broader real character variation.** *(Wardrobe is now a layer; see "Wardrobe as a layer".)* Remaining: body archetypes and the 50 figures built on them, using the pinned pack's 22 usable skins (six ethnicities across three ages), 10 hairstyles and 12 outfits. Garments are fitted per body shape, so a new archetype means refitting the wardrobe for it — keep the number of archetypes small and vary skin, hair, face and height freely on top. Add facial expression blend shapes only when the source and export path are verified.
+4. **Studio object editing.** *(The general prop system has landed; see "Objects on set".)* Remaining: give room furniture stable keys so individual pieces can be claimed, which means keeping them as separate meshes rather than batched; a panel for browsing and placing props; and animation tracks in the document, without which a scenario that depends on something moving does not survive saving.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
 6. **iPad prototype after the scene contract stabilizes.** Reuse the same source character data and scene schema, export USDZ offline, and test SwiftUI + RealityKit on a physical target iPad. Measure frame time, memory and sustained thermal behavior before choosing RealityKit alone or custom Metal rendering.
 
@@ -190,9 +270,12 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 
 ## Known limits
 
-- The two people are game-style anatomical characters, not high-resolution scans.
-- There are three dependable fixed poses; arbitrary pose editing and facial expressions remain future work.
-- The room furniture is a fixed environment preset except for the pose-derived chair.
+- The two people are game-style anatomical characters, not high-resolution scans. There are two body shapes; the wardrobe is cut per shape, so a new shape needs its garments refitted.
+- A garment is drawn over the body with the covered triangles removed. There is no cloth simulation and no collision, so an extreme pose can still push a limb through a sleeve.
+- Seventeen joints can be posed within conventional ranges of motion, and hands and feet can be placed directly. The swing cone is circular, so a shoulder is allowed as far across the body as away from it, which a real shoulder is not. Limbs can still pass through the torso. Facial expressions remain future work.
+- Inverse kinematics covers the two bones of a limb only. The spine, the shoulder blade and the hips are not carried along, so a reach beyond the arm's own span stops at the shoulder rather than leaning the body into it.
+- Room furniture is batched geometry and cannot be claimed piece by piece yet. The portrait chair and imported models can.
+- The document stores no animation tracks, so a scenario that depends on something moving — a vehicle arriving — does not survive being saved.
 - Fixture output, falloff and shadow softness now follow published specifications, but this is still a real-time approximation, not measured photometry or an offline path tracer.
 - Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.
 - Backend-dependent workflows require a separately running service and verification.
