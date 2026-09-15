@@ -29,6 +29,8 @@ import MP4Box from 'mp4box';
 import { StudioRoom } from './core/rendering/StudioRoom';
 import { StudioSeat } from './core/rendering/StudioSeat';
 import { PoseEditor } from './core/rendering/PoseEditor';
+import { StudioProps } from './core/rendering/StudioProps';
+import { parseProps, type StudioProp } from './services/studioProps';
 import { bodyIdFromModelUrl, defaultWardrobeFor, dressFigure, forgetFigure, garmentLabel, garmentsForBody,
   loadWardrobeCatalogue, resolveWardrobe, wornGarments, type WardrobeCatalogue } from './services/wardrobeService';
 import { EDITABLE_JOINTS, clampJointQuaternion, eulerFromQuat, quatFromEuler, unitVector } from './core/rendering/poseRig';
@@ -726,6 +728,7 @@ class VirtualStudio {
   public studioRoom: StudioRoom | null = null;
   private studioSeats = new Map<number, StudioSeat>();
   private poseEditor: PoseEditor | null = null;
+  private props: StudioProps | null = null;
   private poseGroundingPending = false;
   private engine: BABYLON.Engine;
   public scene: BABYLON.Scene;
@@ -2048,6 +2051,12 @@ class VirtualStudio {
           visible: mesh.isEnabled() }];
         }),
 
+        // Everything the photographer has taken hold of: claimed studio
+        // objects keep only their key and transform, imported models keep
+        // where they came from. A separate key from the older `props`, which
+        // belongs to the asset-library loader and means something else.
+        studioProps: this.props?.props ?? [],
+
         // Serialize camera
         cameras: [{
           id: 'main',
@@ -2234,6 +2243,12 @@ class VirtualStudio {
           }
         }
       }
+
+      // Objects the photographer had taken hold of, restored after the actors.
+      // A claimed object may be one the studio derives from a figure -- the
+      // portrait chair is built from the seated pose -- so there is nothing to
+      // hand back until the figure is on set and has settled into its pose.
+      await this.restoreStudioProps(preset);
 
       if (preset.cameraSettings) {
         Object.assign(this.cameraSettings, preset.cameraSettings);
@@ -18485,6 +18500,80 @@ class VirtualStudio {
   }
 
   private wardrobeCatalogue: WardrobeCatalogue | null = null;
+
+  /**
+   * Everything on set the photographer can take hold of.
+   *
+   * Built on first use, because it needs the gizmo manager, and kept for the
+   * life of the scene: a prop outlives the figure and the room around it.
+   */
+  public studioProps(): StudioProps | null {
+    if (this.props) return this.props;
+    if (!this.gizmoManager) return null;
+    this.props = new StudioProps({
+      scene: this.scene,
+      gizmos: this.gizmoManager,
+      importModel: async url => {
+        const result = await BABYLON.SceneLoader.ImportMeshAsync(
+          '', ...VirtualStudio.splitAssetUrl(url), this.scene);
+        const root = result.meshes[0] ?? result.transformNodes[0] ?? null;
+        if (root) root.name = url.split('/').pop() ?? root.name;
+        return root;
+      },
+      onChanged: (props, selectedId) => {
+        window.dispatchEvent(new CustomEvent('ch-studio-props', { detail: { props, selectedId } }));
+      },
+    });
+    return this.props;
+  }
+
+  /**
+   * How to stop the studio driving an object the photographer has claimed.
+   *
+   * The portrait chair follows the figure every frame; once it is a prop the
+   * document owns where it stands, so the tracking has to end.
+   */
+  private releaseStudioObject(key: string): (() => void) | undefined {
+    if (key !== 'portraitChair') return undefined;
+    const seats = [...this.studioSeats.values()];
+    if (seats.length === 0) return undefined;
+    return () => seats.forEach(seat => seat.release());
+  }
+
+  /**
+   * Put a document's claimed objects back, once the scene can offer them.
+   *
+   * Waits for the frames that let derived geometry appear: the portrait chair
+   * is built in an after-render callback, so asking for it any sooner finds
+   * nothing and reports it missing.
+   */
+  private async restoreStudioProps(preset: SceneComposition): Promise<void> {
+    const saved = parseProps((preset as unknown as Record<string, unknown>).studioProps);
+    if (saved.length === 0) return;
+    const props = this.studioProps();
+    if (!props) return;
+
+    for (let frame = 0; frame < 3; frame++) {
+      await new Promise<void>(resolve => this.scene.onAfterRenderObservable.addOnce(() => resolve()));
+    }
+    const { missing } = await props.restore(saved, key => this.releaseStudioObject(key));
+    if (missing.length > 0) {
+      console.warn('[props] This scene has nothing to hand back for:', missing.map(prop => prop.name));
+      this.showToast(`${missing.length} objekt(er) finnes ikke i denne scenen og ble utelatt.`, 'warn');
+    }
+  }
+
+  /** Take ownership of something the studio built, so it can be moved and saved. */
+  public claimStudioObject(key: string, name?: string): StudioProp | null {
+    return this.studioProps()?.claim(key, name, this.releaseStudioObject(key)) ?? null;
+  }
+
+  /** Bring a model onto the set as a prop. */
+  public async addStudioProp(url: string, name?: string): Promise<StudioProp | null> {
+    const props = this.studioProps();
+    if (!props) return null;
+    return props.add(resolveModelPath(url), name);
+  }
 
   /**
    * Split an asset URL into the directory Babylon resolves against and the file.

@@ -112,6 +112,23 @@ Two rig facts that cost real debugging time, both worth keeping in mind before t
 
 Joint edits are stored in the actor's `userData.jointRotations` as the difference from the clip, so a document from an unedited scene is unchanged and only moved joints are written. They are clamped again on load, so a corrupt file cannot bend a figure backwards.
 
+### Objects on set
+
+The studio builds a great deal of geometry the user cannot touch. Each piece of it used to be a special case, and a scenario needing a hospital bed or an air ambulance would have been one more. A **prop** is the single general answer: a named thing with a transform that can be selected, moved, hidden and saved, whatever its geometry came from.
+
+Two things become a prop, and after that they behave identically:
+
+- **Geometry the studio built**, claimed by its stable `metadata.studioObjectKey`. Anything the studio learns to build later becomes claimable by setting that key — nothing is registered in a list. The key matters: the portrait chair's Babylon node is named after the figure's unique id, which differs every session, so a claim on the name would never find it again.
+- **A model file**, imported onto the set. The document keeps where it came from.
+
+**Ownership is the point.** Until an object is claimed the studio owns it; afterwards the document owns its transform. `StudioProps.claim` takes a release callback for whatever the studio was doing to that object, and `VirtualStudio.releaseStudioObject` supplies it: the portrait chair follows the figure every frame, and `StudioSeat.release` ends that tracking so the studio does not put the chair back under the figure on the next frame. This is the ownership and serialization design the chair was waiting for.
+
+Claimed objects are stored under `studioProps` in the document — a separate key from the older `props`, which belongs to the asset-library loader and means something else. A claimed object travels as a key and a transform, never as geometry. Removing a prop gives studio-built geometry back untouched and only disposes what the prop system imported.
+
+They are restored **after** the actors and after a few rendered frames, because a derived object does not exist until the thing it derives from does: the chair is built in an after-render callback of the seated pose. Claims this scene cannot honour — a sofa in a document opened against an empty room — are reported to the photographer rather than silently dropped.
+
+Room furniture is still merged into batched geometry for draw-call cost, so individual pieces carry no key yet and cannot be claimed. Giving them keys means keeping them as separate meshes, which is a deliberate trade against the batching `StudioRoom` does today.
+
 ### Seated contact and chair
 
 [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts) creates the leather and chrome portrait chair only for `StudioSeated`:
@@ -151,6 +168,8 @@ The renderer is concentrated in a large legacy [`src/main.ts`](src/main.ts). Ext
 - [`src/core/rendering/StudioWorkspace.ts`](src/core/rendering/StudioWorkspace.ts): studio navigation camera, shot view, live camera preview, model/pose controls, room controls and local document UI.
 - [`src/core/rendering/StudioRoom.ts`](src/core/rendering/StudioRoom.ts): industrial room geometry, furniture, practical lights, batching and roof cutaway behavior.
 - [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts): pose-derived portrait chair and body contact.
+- [`src/core/rendering/StudioProps.ts`](src/core/rendering/StudioProps.ts): objects the photographer can take hold of, claim, move and save.
+- [`src/services/studioProps.ts`](src/services/studioProps.ts): what a prop is in a document, and how one is read back.
 - [`src/core/rendering/studioGeometry.ts`](src/core/rendering/studioGeometry.ts): focal length conversion, exposure calculation, cyclorama and grid.
 - [`src/core/rendering/photometry.ts`](src/core/rendering/photometry.ts): candela from fixture specs, inverse-square illuminance, ISO 2720 metering, modifier size and shadow-softness ratio.
 - [`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts): editable joints, their axes and their ranges of motion.
@@ -208,6 +227,7 @@ The industrial room uses metres and occupies approximately x = -8…8 and z = -9
 Version 2 documents retain the complete `SceneComposition`, including:
 
 - actor source path, height, transform, studio pose, joint edits and wardrobe;
+- claimed objects and imported props under `studioProps`;
 - light fixture ID, position, aim, output, beam settings and enabled state;
 - taking-camera settings;
 - industrial room type, furnishings and practical-light switches.
@@ -225,7 +245,8 @@ PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build
 python3 scripts/characters/validate_studio_characters.py
 PLAYWRIGHT_SOFTWARE_GL=1 PATH=/opt/homebrew/opt/node@22/bin:$PATH \
-  npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts e2e/pose-editing.spec.ts e2e/wardrobe.spec.ts --workers=1
+  npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts e2e/pose-editing.spec.ts \
+    e2e/wardrobe.spec.ts e2e/studio-props.spec.ts --workers=1
 ```
 
 The character build is reproducible and takes about 11 seconds: the same sources produce byte-identical GLBs, so a changed hash means a changed input.
@@ -241,7 +262,7 @@ Work in this order unless the user changes priorities:
 1. **Photographic light accuracy.** *(Fixture output, falloff, shadow softness, the flash-versus-continuous exposure model and the default rig have landed; see "Light units and shadow softness".)* Remaining: measured penumbra comparisons, and bounce/soft-source approximation checked against reference renders rather than by eye.
 2. **Editable posing.** *(Landed: seventeen joints, swing-and-twist limits, and hand/foot targets solved by two-bone inverse kinematics; see "Editable posing".)* Remaining: an elliptical cone that knows a shoulder is less free across the body than away from it, and self-intersection between limbs and torso.
 3. **Broader real character variation.** *(Wardrobe is now a layer; see "Wardrobe as a layer".)* Remaining: body archetypes and the 50 figures built on them, using the pinned pack's 22 usable skins (six ethnicities across three ages), 10 hairstyles and 12 outfits. Garments are fitted per body shape, so a new archetype means refitting the wardrobe for it — keep the number of archetypes small and vary skin, hair, face and height freely on top. Add facial expression blend shapes only when the source and export path are verified.
-4. **Studio object editing.** Promote selected furniture, including the portrait chair, into scene-owned editable props with clear character-seat attachment state. Serialize ownership and transforms without duplicating the derived chair on load.
+4. **Studio object editing.** *(The general prop system has landed; see "Objects on set".)* Remaining: give room furniture stable keys so individual pieces can be claimed, which means keeping them as separate meshes rather than batched; a panel for browsing and placing props; and animation tracks in the document, without which a scenario that depends on something moving does not survive saving.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
 6. **iPad prototype after the scene contract stabilizes.** Reuse the same source character data and scene schema, export USDZ offline, and test SwiftUI + RealityKit on a physical target iPad. Measure frame time, memory and sustained thermal behavior before choosing RealityKit alone or custom Metal rendering.
 
@@ -253,7 +274,8 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 - A garment is drawn over the body with the covered triangles removed. There is no cloth simulation and no collision, so an extreme pose can still push a limb through a sleeve.
 - Seventeen joints can be posed within conventional ranges of motion, and hands and feet can be placed directly. The swing cone is circular, so a shoulder is allowed as far across the body as away from it, which a real shoulder is not. Limbs can still pass through the torso. Facial expressions remain future work.
 - Inverse kinematics covers the two bones of a limb only. The spine, the shoulder blade and the hips are not carried along, so a reach beyond the arm's own span stops at the shoulder rather than leaning the body into it.
-- The room furniture is a fixed environment preset except for the pose-derived chair.
+- Room furniture is batched geometry and cannot be claimed piece by piece yet. The portrait chair and imported models can.
+- The document stores no animation tracks, so a scenario that depends on something moving — a vehicle arriving — does not survive being saved.
 - Fixture output, falloff and shadow softness now follow published specifications, but this is still a real-time approximation, not measured photometry or an offline path tracer.
 - Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.
 - Backend-dependent workflows require a separately running service and verification.

@@ -15,7 +15,9 @@ export class StudioSeat {
 
   constructor(private scene: Scene, private character: AbstractMesh, private shadows: () => ShadowGenerator[]) {
     this.root = new TransformNode(`studioPortraitChair_${character.uniqueId}`, scene);
-    this.root.metadata = { studioSeat: true, characterId: character.uniqueId };
+    // A stable key, unlike the node's name, so a photographer who takes
+    // ownership of the chair can be given it back when the scene reopens.
+    this.root.metadata = { studioSeat: true, characterId: character.uniqueId, studioObjectKey: 'portraitChair' };
     this.seat = new TransformNode('studioPortraitChair_seat', scene);
     this.seat.parent = this.root;
     const leather = this.material('leather', '#80482f', .53, 0);
@@ -133,6 +135,23 @@ export class StudioSeat {
     this.stem.position.y = .05 + this.stem.scaling.y / 2;
     this.root.metadata.contact = contact.asArray();
     this.root.metadata.seatTopY = this.seat.position.y;
+  }
+
+  /**
+   * Stop following the character, leaving the chair where it stands.
+   *
+   * Called when the chair becomes an editable prop: from then on the document
+   * owns its transform, and the seat controller must not move it back under
+   * the figure on the next frame.
+   */
+  release(): void {
+    this.scene.onBeforeRenderObservable.remove(this.observer);
+    this.observer = null;
+    this.root.metadata = { ...this.root.metadata, released: true };
+  }
+
+  get isReleased(): boolean {
+    return this.observer === null;
   }
 
   dispose(): void {
