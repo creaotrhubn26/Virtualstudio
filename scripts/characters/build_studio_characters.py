@@ -253,56 +253,103 @@ class GLB:
         path.write_bytes(data)
 
 
-def build(name, male, height, outfit, shoes, hair):
-    g = GLB(); raw = morphed(male, oval=0.15 if not male else -0.12)
-    body_ids=list(groups['body']); floor=min(raw[body_ids,1]); scale=height/(max(raw[body_ids,1])-floor)
+def figure(male, height):
+    """The morphed body in metres, grounded at the feet, with its joint centres."""
+    raw = morphed(male, oval=0.15 if not male else -0.12)
+    body_ids = list(groups['body'])
+    floor = min(raw[body_ids, 1])
+    scale = height / (max(raw[body_ids, 1]) - floor)
+
     def convert(v):
-        v=np.array(v).copy();v[...,1]-=floor;return v*scale
-    positions=convert(raw)
-    joints={k:convert(point(spec['head'],raw)) for k,spec in rig.items()}
-    joints['Root']=np.zeros(3)
-    names=[]
+        v = np.array(v).copy()
+        v[..., 1] -= floor
+        return v * scale
+
+    joints = {k: convert(point(spec['head'], raw)) for k, spec in rig.items()}
+    joints['Root'] = np.zeros(3)
+    return raw, convert, joints
+
+
+def skeleton(g, joints, name):
+    """Emit the 53-joint rig. Joint order is deterministic, so a garment built
+    separately indexes the same joints as the body it will be worn on."""
+    names = []
+
     def add(k):
-        p=rig[k]['parent']
-        if p and p not in names: add(p)
-        if k not in names: names.append(k)
-    for k in rig: add(k)
+        parent = rig[k]['parent']
+        if parent and parent not in names:
+            add(parent)
+        if k not in names:
+            names.append(k)
+
+    for k in rig:
+        add(k)
     for k in names:
-        parent=rig[k]['parent']; t=joints[k]-(joints[parent] if parent else 0)
-        node={'name':BONE_NAMES[k],'translation':t.tolist()}
-        children=[names.index(n) for n in names if rig[n]['parent']==k]
-        if children: node['children']=children
+        parent = rig[k]['parent']
+        translation = joints[k] - (joints[parent] if parent else 0)
+        node = {'name': BONE_NAMES[k], 'translation': translation.tolist()}
+        children = [names.index(n) for n in names if rig[n]['parent'] == k]
+        if children:
+            node['children'] = children
         g.doc['nodes'].append(node)
     g.doc['scenes'][0]['nodes'].append(names.index('Root'))
-    inverse=[]
+    inverse = []
     for k in names:
-        m=np.eye(4);m[:3,3]=-joints[k];inverse.append(m.T.ravel())
-    g.doc['skins'].append({'joints':list(range(len(names))),'skeleton':names.index('Root'),
-                          'inverseBindMatrices':g.accessor(inverse,'MAT4'),'name':name+'Rig'})
-    garments=[]; hidden=set()
-    for item in [outfit,shoes]:
-        v,uv,faces=fit_asset('clothes',item,raw); bind,deleted=asset_bindings('clothes',item)
-        assert len(bind)==len(v)
-        hidden|=deleted
-        garments.append((item,convert(v),[f for _,f in faces],uv,bind))
-    body_faces=[f for group,f in base_faces if group=='body' and not any(i in hidden for i,_ in f)]
-    skin='skins/young_caucasian_male/young_lightskinned_male_diffuse.png' if male else 'skins/young_caucasian_female2/young_lightskinned_female_diffuse2.png'
-    g.add_mesh('Skin',positions,body_faces,base_uv,skin_weights,g.material('Skin',system_file(skin),0.58),names)
-    for item,v,faces,uv,bind in garments:
-        prefix=f'clothes/{item}/'
-        props={t[0]:t[1:] for line in system_file(prefix+item+'.mhmat').read_text().splitlines() if (t:=line.split()) and not t[0].startswith('#')}
-        def tex(key): return system_file(prefix+props[key][0]) if key in props else None
-        mat=g.material('Clothing' if item==outfit else 'Shoes',tex('diffuseTexture'),0.84 if item==outfit else 0.55,tex('normalmapTexture'),tex('aomapTexture'))
-        g.add_mesh(item,v,faces,uv,bind,mat,names)
-    for kind,item,label in [('eyes','low-poly','Eyes'),('hair',hair,'Hair')]:
-        v,uv,faces=fit_asset(kind,item,raw)
-        texture=system_file('eyes/materials/brown_eye.png' if kind=='eyes' else f'hair/{item}/{item}_diffuse.png')
-        mat=g.material(label,texture,0.17 if kind=='eyes' else 0.72,alpha=kind=='hair')
-        g.add_mesh(label,convert(v),[f for _,f in faces],uv,[[('head',1)] for _ in v],mat,names)
-    # Frozen studio poses; each clip carries ALL joint rotations so switching resets cleanly.
-    def quat(axis,angle):
-        q=[0.,0.,0.,math.cos(angle/2)];q[axis]=math.sin(angle/2);return q
-    poses={
+        m = np.eye(4)
+        m[:3, 3] = -joints[k]
+        inverse.append(m.T.ravel())
+    g.doc['skins'].append({'joints': list(range(len(names))), 'skeleton': names.index('Root'),
+                           'inverseBindMatrices': g.accessor(inverse, 'MAT4'), 'name': name + 'Rig'})
+    return names
+
+
+def body_faces():
+    """Every face of the body, with nothing cut away for a garment.
+
+    The body used to be exported with holes where its one outfit sat, which is
+    why a figure could only ever wear that outfit. The holes are now described
+    per garment instead, so any garment can be worn on any body."""
+    return [f for group, f in base_faces if group == 'body']
+
+
+def covered_triangles(faces, hidden):
+    """Which of `faces`' triangles a garment covers, as [start, end) ranges.
+
+    Triangle order matches GLB.add_mesh's fan triangulation, so these index
+    straight into the exported body mesh. Ranges rather than a list of indices:
+    a suit covers thousands of contiguous triangles and the ranges are short."""
+    ranges = []
+    total = 0
+    for face in faces:
+        count = len(face) - 2
+        if any(index in hidden for index, _ in face):
+            if ranges and ranges[-1][1] == total:
+                ranges[-1][1] = total + count
+            else:
+                ranges.append([total, total + count])
+        total += count
+    return ranges, total
+
+
+def material_properties(item):
+    prefix = f'clothes/{item}/'
+    lines = system_file(prefix + item + '.mhmat').read_text().splitlines()
+    props = {t[0]: t[1:] for line in lines if (t := line.split()) and not t[0].startswith('#')}
+
+    def texture(key):
+        return system_file(prefix + props[key][0]) if key in props else None
+
+    return texture
+
+
+def add_poses(g, joints, names):
+    """Frozen studio poses; each clip carries ALL joint rotations so switching resets cleanly."""
+    def quat(axis, angle):
+        q = [0., 0., 0., math.cos(angle / 2)]
+        q[axis] = math.sin(angle / 2)
+        return q
+
+    poses = {
         'StudioStand': {'upperarm_l':(2,-0.40),'upperarm_r':(2,0.40),'lowerarm_l':(0,-0.08),'lowerarm_r':(0,-0.08)},
         'StudioPortrait': {'upperarm_l':(2,-0.40),'upperarm_r':(2,0.40),'lowerarm_l':(0,-0.18),'lowerarm_r':(0,-0.08),'head':(1,0.22),'spine_03':(1,-0.12)},
         'StudioSeated': {'upperarm_l':(2,-0.30),'upperarm_r':(2,0.30),'lowerarm_l':(0,-1.0),'lowerarm_r':(0,-1.0),
@@ -347,14 +394,103 @@ def build(name, male, height, outfit, shoes, hair):
             animation['samplers'].append({'input':times,'output':output,'interpolation':'LINEAR'})
             animation['channels'].append({'sampler':len(animation['samplers'])-1,'target':{'node':names.index(k),'path':'rotation'}})
         g.doc['animations'].append(animation)
-    path=OUT/(name+'.glb');g.write(path)
-    summary={'file':path.name,'heightMeters':height,'joints':len(names),'surfaces':len(g.doc['meshes']),
-             'triangles':sum(g.doc['accessors'][m['primitives'][0]['indices']]['count']//3 for m in g.doc['meshes']),
-             'textures':len(g.doc['images']),'poses':list(poses),'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
-    print(json.dumps(summary),flush=True)
+    return list(poses)
+
+
+def summarise(path, extra):
+    raw = path.read_bytes()
+    return {'file': path.name, **extra, 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
+
+
+def build_body(name, male, height, hair, skin_asset):
+    """A figure with skin, eyes and hair, and no clothes of its own."""
+    g = GLB()
+    raw, convert, joints = figure(male, height)
+    names = skeleton(g, joints, name)
+    faces = body_faces()
+    g.add_mesh('Skin', convert(raw), faces, base_uv, skin_weights,
+               g.material('Skin', system_file(skin_asset), 0.58), names)
+    for kind, item, label in [('eyes', 'low-poly', 'Eyes'), ('hair', hair, 'Hair')]:
+        v, uv, item_faces = fit_asset(kind, item, raw)
+        texture = system_file('eyes/materials/brown_eye.png' if kind == 'eyes' else f'hair/{item}/{item}_diffuse.png')
+        material = g.material(label, texture, 0.17 if kind == 'eyes' else 0.72, alpha=kind == 'hair')
+        g.add_mesh(label, convert(v), [f for _, f in item_faces], uv, [[('head', 1)] for _ in v], material, names)
+    poses = add_poses(g, joints, names)
+    path = OUT / (name + '.glb')
+    g.write(path)
+    _, body_triangles = covered_triangles(faces, set())
+    summary = summarise(path, {
+        'heightMeters': height, 'joints': len(names), 'surfaces': len(g.doc['meshes']),
+        'triangles': sum(g.doc['accessors'][m['primitives'][0]['indices']]['count'] // 3 for m in g.doc['meshes']),
+        'bodyTriangles': body_triangles, 'textures': len(g.doc['images']), 'poses': poses})
+    print(json.dumps(summary), flush=True)
     return summary
 
+
+def build_garment(body, item, slot, male, height):
+    """One garment, fitted to a body shape, with the body triangles it covers.
+
+    Exported on its own so a garment is downloaded once and worn by any figure
+    of the same shape, instead of being baked into every figure that wears it."""
+    g = GLB()
+    raw, convert, joints = figure(male, height)
+    names = skeleton(g, joints, item)
+    vertices, uv, faces = fit_asset('clothes', item, raw)
+    bindings, hidden = asset_bindings('clothes', item)
+    assert len(bindings) == len(vertices)
+    ranges, body_triangles = covered_triangles(body_faces(), hidden)
+    texture = material_properties(item)
+    label = 'Shoes' if slot == 'shoes' else 'Clothing'
+    material = g.material(label, texture('diffuseTexture'), 0.55 if slot == 'shoes' else 0.84,
+                          texture('normalmapTexture'), texture('aomapTexture'))
+    g.add_mesh(item, convert(vertices), [f for _, f in faces], uv, bindings, material, names)
+    path = OUT / 'wardrobe' / body / (item + '.glb')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    g.write(path)
+    summary = summarise(path, {
+        'id': item, 'body': body, 'slot': slot, 'joints': len(names),
+        'triangles': g.doc['accessors'][g.doc['meshes'][0]['primitives'][0]['indices']]['count'] // 3,
+        'textures': len(g.doc['images']),
+        'hidesBodyTriangles': ranges, 'bodyTriangles': body_triangles})
+    print(json.dumps({k: v for k, v in summary.items() if k != 'hidesBodyTriangles'}), flush=True)
+    return summary
+
+
+# Which garments each body shape can wear. The CC0 pack names its outfits by
+# sex, so the two lists differ; shoes fit either.
+WARDROBE = {
+    'studio-woman': [('female_casualsuit01', 'outfit'), ('female_casualsuit02', 'outfit'),
+                     ('female_elegantsuit01', 'outfit'), ('female_sportsuit01', 'outfit'),
+                     ('shoes01', 'shoes'), ('shoes04', 'shoes')],
+    'studio-man': [('male_casualsuit02', 'outfit'), ('male_casualsuit04', 'outfit'),
+                   ('male_elegantsuit01', 'outfit'), ('male_worksuit01', 'outfit'),
+                   ('shoes01', 'shoes'), ('shoes03', 'shoes')],
+}
+
+# What a figure wears when nothing else is chosen: the look the studio shipped
+# with, so an existing scene opens unchanged.
+DEFAULT_WARDROBE = {
+    'studio-woman': ['female_casualsuit01', 'shoes01'],
+    'studio-man': ['male_casualsuit02', 'shoes01'],
+}
+
+BODIES = [
+    {'name': 'studio-woman', 'male': False, 'height': 1.72, 'hair': 'ponytail01',
+     'skin': 'skins/young_caucasian_female2/young_lightskinned_female_diffuse2.png'},
+    {'name': 'studio-man', 'male': True, 'height': 1.82, 'hair': 'short02',
+     'skin': 'skins/young_caucasian_male/young_lightskinned_male_diffuse.png'},
+]
+
 if __name__ == '__main__':
-    models=[build('studio-woman',False,1.72,'female_casualsuit01','shoes01','ponytail01'),
-            build('studio-man',True,1.82,'male_casualsuit02','shoes01','short02')]
-    (OUT/'manifest.json').write_text(json.dumps({'revision':REV,'license':'CC0-1.0','sources':sources,'models':models},indent=2)+'\n')
+    models = []
+    garments = []
+    for body in BODIES:
+        models.append(build_body(body['name'], body['male'], body['height'], body['hair'], body['skin']))
+        for item, slot in WARDROBE[body['name']]:
+            garments.append(build_garment(body['name'], item, slot, body['male'], body['height']))
+    wardrobe = {'garments': garments, 'defaults': DEFAULT_WARDROBE}
+    (OUT / 'wardrobe.json').write_text(json.dumps(wardrobe, indent=2) + '\n')
+    (OUT / 'manifest.json').write_text(json.dumps(
+        {'revision': REV, 'license': 'CC0-1.0', 'sources': sources,
+         'models': models, 'wardrobe': [{k: v for k, v in g.items() if k != 'hidesBodyTriangles'} for g in garments]},
+        indent=2) + '\n')

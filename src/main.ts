@@ -29,6 +29,8 @@ import MP4Box from 'mp4box';
 import { StudioRoom } from './core/rendering/StudioRoom';
 import { StudioSeat } from './core/rendering/StudioSeat';
 import { PoseEditor } from './core/rendering/PoseEditor';
+import { bodyIdFromModelUrl, defaultWardrobeFor, dressFigure, forgetFigure, garmentLabel, garmentsForBody,
+  loadWardrobeCatalogue, resolveWardrobe, wornGarments, type WardrobeCatalogue } from './services/wardrobeService';
 import { EDITABLE_JOINTS, clampJointQuaternion, eulerFromQuat, quatFromEuler, unitVector } from './core/rendering/poseRig';
 import { StudioWorkspace } from './core/rendering/StudioWorkspace';
 import { createStudioBackdrop, createStudioGrid, studioExposure, shutterSeconds, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
@@ -2040,7 +2042,9 @@ class VirtualStudio {
             heightMeters: mesh.metadata.heightMeters, studioPose: mesh.metadata.studioPose,
             // Joint edits on top of the clip. Absent when the figure is still
             // in a plain pose, so old documents stay byte-identical.
-            jointRotations: this.getEditedJointRotations(mesh) },
+            jointRotations: this.getEditedJointRotations(mesh),
+            // What the figure has on, so it opens in the same part it was cast in.
+            wardrobe: wornGarments(mesh) },
           visible: mesh.isEnabled() }];
         }),
 
@@ -2191,7 +2195,8 @@ class VirtualStudio {
             const actorNode = actorData as any; // Type assertion for legacy data
             if (actorData.userData?.modelUrl) {
               const data = actorData.userData;
-              await this.loadCharacterModel(String(data.modelUrl), actorData.name, '', Number(data.heightMeters || 1.7) / 1.7, { additive: true });
+              const savedWardrobe = Array.isArray(data.wardrobe) ? (data.wardrobe as string[]) : undefined;
+              await this.loadCharacterModel(String(data.modelUrl), actorData.name, '', Number(data.heightMeters || 1.7) / 1.7, { additive: true, wardrobe: savedWardrobe });
               const mesh = this.characterMesh;
               if (mesh) {
                 if (data.studioPose) this.applyStudioPose(data.studioPose as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
@@ -5428,6 +5433,9 @@ class VirtualStudio {
       load: model => this.loadStudioCharacter(model),
       pose: pose => this.applyStudioPose(pose),
       editPose: enabled => this.setPoseEditing(enabled),
+      wardrobe: () => this.getWardrobeOptions(),
+      wearing: () => this.getCharacterWardrobe(),
+      wear: items => this.setCharacterWardrobe(items),
       frame: portrait => {
         const mesh = this.getPrimaryCharacterMesh();
         const position = mesh?.getAbsolutePosition() || BABYLON.Vector3.Zero();
@@ -18476,6 +18484,94 @@ class VirtualStudio {
     mesh.computeWorldMatrix(true);
   }
 
+  private wardrobeCatalogue: WardrobeCatalogue | null = null;
+
+  /** The glTF root a figure's body meshes hang from; garments join it there. */
+  private bodyRootFor(mesh: BABYLON.AbstractMesh): BABYLON.TransformNode | null {
+    const name = mesh.metadata?.bodyRootName as string | undefined;
+    const children = mesh.getChildTransformNodes(true);
+    return (name ? children.find(node => node.name === name) : undefined) ?? children[0] ?? null;
+  }
+
+  /**
+   * Put clothes on a studio body.
+   *
+   * Only the bundled studio figures have a wardrobe; any other import is left
+   * exactly as its file describes it. A missing or unreachable catalogue leaves
+   * the figure undressed rather than failing the load, and says so.
+   */
+  private async dressStudioCharacter(
+    mesh: BABYLON.AbstractMesh,
+    modelUrl: string,
+    requested?: string[],
+  ): Promise<void> {
+    const body = bodyIdFromModelUrl(modelUrl);
+    if (!body) return;
+
+    try {
+      this.wardrobeCatalogue ??= await loadWardrobeCatalogue();
+    } catch (error) {
+      console.warn('[wardrobe] Catalogue unavailable; figure stays undressed', error);
+      this.showToast('Garderoben kunne ikke lastes. Figuren vises uten klær.', 'warn');
+      return;
+    }
+
+    const bodyRoot = this.bodyRootFor(mesh);
+    const skin = mesh.getChildMeshes().find(child => child.name === 'Skin') as BABYLON.Mesh | undefined;
+    const skeleton = skin?.skeleton ?? mesh.getChildMeshes().find(child => child.skeleton)?.skeleton;
+    if (!bodyRoot || !skin || !skeleton) {
+      console.warn('[wardrobe] Body is missing its skin or skeleton; nothing to dress');
+      return;
+    }
+
+    const wanted = requested ?? defaultWardrobeFor(this.wardrobeCatalogue, body);
+    const garments = resolveWardrobe(this.wardrobeCatalogue, body, wanted);
+    await dressFigure({
+      scene: this.scene,
+      characterRoot: mesh,
+      bodyRoot,
+      skin,
+      skeleton,
+      garments,
+      resolveUrl: garment => resolveModelPath(`/models/avatars/studio/wardrobe/${garment.body}/${garment.file}`),
+      importMesh: url => BABYLON.SceneLoader.ImportMeshAsync('', '', url, this.scene),
+    });
+    mesh.metadata = { ...mesh.metadata, wardrobe: garments.map(garment => garment.id) };
+    mesh.onDisposeObservable.addOnce(() => forgetFigure(mesh));
+    window.dispatchEvent(new CustomEvent('ch-character-wardrobe', {
+      detail: { wearing: garments.map(garment => garment.id) },
+    }));
+  }
+
+  /** Change what the figure on set is wearing. */
+  public async setCharacterWardrobe(items: string[]): Promise<string[]> {
+    const mesh = this.getPrimaryCharacterMesh();
+    const modelUrl = mesh?.metadata?.sourceModelUrl as string | undefined;
+    if (!mesh || !modelUrl) return [];
+    await this.dressStudioCharacter(mesh, modelUrl, items);
+    // Clothes change the silhouette, so the figure may need setting down again.
+    this.scene.onAfterRenderObservable.addOnce(() => {
+      if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+    });
+    return wornGarments(mesh);
+  }
+
+  /** Garments the figure on set can wear, labelled for the studio UI. */
+  public getWardrobeOptions(): { id: string; label: string; slot: string }[] {
+    const mesh = this.getPrimaryCharacterMesh();
+    const body = bodyIdFromModelUrl((mesh?.metadata?.sourceModelUrl as string) ?? '');
+    if (!body || !this.wardrobeCatalogue) return [];
+    return garmentsForBody(this.wardrobeCatalogue, body).map(garment => ({
+      id: garment.id, label: garmentLabel(garment.id), slot: garment.slot,
+    }));
+  }
+
+  /** The garments the figure on set has on. */
+  public getCharacterWardrobe(): string[] {
+    const mesh = this.getPrimaryCharacterMesh();
+    return mesh ? wornGarments(mesh) : [];
+  }
+
   /**
    * Turn joint handles on or off for the figure on set.
    *
@@ -18987,6 +19083,8 @@ class VirtualStudio {
       rotation?: [number, number, number];
       storyRigId?: string;
       additive?: boolean;
+      /** Garment ids to open wearing; the body's default set when absent. */
+      wardrobe?: string[];
       tints?: { skin: string; top: string; bottom: string; accent: string } | null;
     },
   ): Promise<void> {
@@ -19006,6 +19104,8 @@ class VirtualStudio {
       this.characterMesh.name = name;
       this.characterMesh.metadata = this.characterMesh.metadata || {};
       (this.characterMesh.metadata as Record<string, unknown>).sourceModelUrl = modelUrl;
+      // Garments join the figure under the same glTF root the body meshes use.
+      (this.characterMesh.metadata as Record<string, unknown>).bodyRootName = importedRoot.name;
       this.trackAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
       this.stopAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
 
@@ -19220,6 +19320,10 @@ class VirtualStudio {
     }));
 
     if (this.characterMesh) {
+      // A studio body ships with no clothes of its own, so dress it before
+      // anything else looks at it.
+      await this.dressStudioCharacter(this.characterMesh, modelUrl, options?.wardrobe);
+
       await this.ensureRigRegisteredForMesh(this.characterMesh, name, importedAnimationGroups);
 
       // Notify story loader which rig was created for this character
