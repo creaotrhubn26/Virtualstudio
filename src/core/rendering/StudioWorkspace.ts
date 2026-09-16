@@ -55,6 +55,12 @@ export class StudioWorkspace {
       setCueEnabled: (id: string, enabled: boolean) => boolean;
       setCueStart: (id: string, start: number) => boolean;
       removeCue: (id: string) => boolean;
+      locations: () => { id: string; label: string; hint: string }[];
+      brand: () => { name: string; tagline: string; slogan: string; accent: string; surface: string };
+      setBrand: (brand: Partial<{ name: string; tagline: string; slogan: string; accent: string; surface: string }>)
+        => { name: string; tagline: string; slogan: string; accent: string; surface: string };
+      applyLocation: (id: string) => Promise<boolean>;
+      currentLocation: () => string | null;
       looks: () => { id: string; label: string; hint: string; group: string }[];
       applyLook: (id: string) => Promise<boolean>;
       currentLook: () => string | null;
@@ -216,7 +222,7 @@ export class StudioWorkspace {
     this.environmentPanel.setAttribute('aria-label', 'Omgivelser');
     this.environmentPanel.innerHTML = `<div class="studio-model-heading">OMGIVELSER</div>
       <label for="studioRoomSelect">Studiorom</label>
-      <select id="studioRoomSelect"><option value="industrial">Industristudio · 16 × 17 m</option><option value="none">Åpent opptaksområde</option></select>
+      <select id="studioRoomSelect"></select>
       <label class="studio-room-toggle"><input type="checkbox" id="studioFurnishings"> Møbler og innredning</label>
       <label class="studio-room-toggle"><input type="checkbox" id="studioPracticals"> Romlys</label>
       <div class="studio-model-framing"><button type="button" data-document="save">Lagre oppsett</button><button type="button" data-document="open">Åpne oppsett</button></div>
@@ -247,9 +253,23 @@ export class StudioWorkspace {
       finally { fileInput.value = ''; buttons.forEach(button => button.disabled = false); }
     }, { signal: this.abort.signal });
     const roomSelect = this.environmentPanel.querySelector<HTMLSelectElement>('#studioRoomSelect')!;
+    // The same places as the buttons, so the two never drift apart.
+    roomSelect.replaceChildren(...this.characterControls.locations().map(location => {
+      const option = document.createElement('option');
+      option.value = location.id;
+      option.textContent = location.label;
+      option.title = location.hint;
+      return option;
+    }));
     const furnishings = this.environmentPanel.querySelector<HTMLInputElement>('#studioFurnishings')!;
     const practicals = this.environmentPanel.querySelector<HTMLInputElement>('#studioPracticals')!;
-    roomSelect.addEventListener('change', () => environmentService.setStudioRoom({ type: roomSelect.value as 'industrial' | 'none' }), { signal: this.abort.signal });
+    roomSelect.addEventListener('change', () => {
+      void this.characterControls.applyLocation(roomSelect.value);
+    }, { signal: this.abort.signal });
+    window.addEventListener('ch-location-changed', event => {
+      const id = (event as CustomEvent<{ id: string }>).detail?.id;
+      if (id) roomSelect.value = id;
+    }, { signal: this.abort.signal });
     furnishings.addEventListener('change', () => environmentService.setStudioRoom({ furnishings: furnishings.checked }), { signal: this.abort.signal });
     practicals.addEventListener('change', () => environmentService.setStudioRoom({ practicals: practicals.checked }), { signal: this.abort.signal });
     const syncRoom = () => {
@@ -439,6 +459,26 @@ export class StudioWorkspace {
     this.sequencePanel.className = 'studio-sequence-panel';
     this.sequencePanel.setAttribute('aria-label', 'Bevegelser og sekvens');
     this.sequencePanel.innerHTML = `
+      <div class="studio-sequence-heading">STED</div>
+      <div class="studio-move-buttons studio-location-buttons"></div>
+      <p class="studio-location-status" role="status">Studio</p>
+      <details class="studio-move-group studio-brand-group"><summary>Merke</summary>
+        <div class="studio-brand-fields">
+          <label for="studioBrandName">Navn på stedet</label>
+          <input type="text" id="studioBrandName" maxlength="28" autocomplete="off">
+          <label for="studioBrandTagline">Undertekst</label>
+          <input type="text" id="studioBrandTagline" maxlength="48" autocomplete="off">
+          <label for="studioBrandSlogan">Tekst på skiltet ute</label>
+          <textarea id="studioBrandSlogan" rows="3" maxlength="60"></textarea>
+          <div class="studio-brand-colours">
+            <label for="studioBrandAccent">Farge</label>
+            <input type="color" id="studioBrandAccent">
+            <label for="studioBrandSurface">Bunn</label>
+            <input type="color" id="studioBrandSurface">
+          </div>
+          <p class="studio-brand-status" role="status">Vises på skilt og plakater i pizzeriaen.</p>
+        </div>
+      </details>
       <div class="studio-sequence-heading">LYSSETTING</div>
       <div class="studio-look-groups"></div>
       <p class="studio-look-status" role="status">Studio · portrett</p>
@@ -462,6 +502,8 @@ export class StudioWorkspace {
       lengthLabel.textContent = `${Number(length.value).toFixed(1).replace('.', ',')} sekunder`;
     }, { signal: this.abort.signal });
 
+    this.buildLocationButtons();
+    this.buildBrandFields();
     this.buildLookButtons();
 
     for (const move of this.characterControls.moves()) {
@@ -498,6 +540,124 @@ export class StudioWorkspace {
 
     window.addEventListener('ch-sequence-changed', () => this.renderSequence(), { signal: this.abort.signal });
     this.renderSequence();
+  }
+
+  /**
+   * Where the scene is: one button per place.
+   *
+   * A place brings its own room and the lighting that belongs to it, so the
+   * first question anyone has to answer is answered with one press. There are
+   * only a handful, so they stand open rather than behind a summary.
+   */
+  private buildLocationButtons(): void {
+    const group = this.sequencePanel.querySelector<HTMLElement>('.studio-location-buttons')!;
+    const status = this.sequencePanel.querySelector<HTMLElement>('.studio-location-status')!;
+    const locations = this.characterControls.locations();
+
+    for (const location of locations) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.location = location.id;
+      button.textContent = location.label;
+      button.title = location.hint;
+      group.append(button);
+    }
+
+    // The room is built before its lighting, and the room's own notification
+    // would otherwise overwrite "working" with the finished name while the
+    // fixtures are still going up — a panel claiming to be done, and a test
+    // reading the claim.
+    let settingScene = false;
+    const showCurrent = () => {
+      const current = this.characterControls.currentLocation();
+      for (const button of group.querySelectorAll<HTMLButtonElement>('button[data-location]')) {
+        button.setAttribute('aria-pressed', String(button.dataset.location === current));
+      }
+      if (settingScene) return;
+      const here = locations.find(location => location.id === current);
+      status.textContent = here ? here.label : 'Egne omgivelser';
+    };
+
+    group.addEventListener('click', event => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-location]');
+      if (!button || button.disabled) return;
+      const location = locations.find(candidate => candidate.id === button.dataset.location);
+      if (!location) return;
+
+      // Building a room and relighting it takes a moment, and silence in that
+      // moment reads as a dead button.
+      const all = [...group.querySelectorAll<HTMLButtonElement>('button[data-location]')];
+      for (const other of all) other.disabled = true;
+      settingScene = true;
+      status.textContent = `Setter scenen · ${location.label} …`;
+
+      const settle = (message: string) => {
+        for (const other of all) other.disabled = false;
+        settingScene = false;
+        showCurrent();
+        if (message) status.textContent = message;
+      };
+      void this.characterControls.applyLocation(location.id)
+        .then(applied => settle(applied ? '' : 'Fikk ikke satt stedet. Prøv et annet.'))
+        .catch(error => {
+          console.error('[StudioWorkspace] location failed', error);
+          settle('Fikk ikke satt stedet. Prøv et annet.');
+        });
+    }, { signal: this.abort.signal });
+
+    window.addEventListener('ch-location-changed', () => showCurrent(), { signal: this.abort.signal });
+    // The first room is built from the environment service, not from a button,
+    // so the panel has to hear that too or it opens claiming an empty stage.
+    window.addEventListener('vs-environment-changed', () => showCurrent(), { signal: this.abort.signal });
+    showCurrent();
+  }
+
+  /**
+   * Whose place it is.
+   *
+   * One text field and a colour, and the name is over the door — the fastest
+   * demonstration this tool has. The signs are painted when the room is built,
+   * so an edit commits when it is finished rather than on every keystroke: a
+   * rebuild per letter would be unusable.
+   */
+  private buildBrandFields(): void {
+    const panel = this.sequencePanel;
+    const name = panel.querySelector<HTMLInputElement>('#studioBrandName')!;
+    const tagline = panel.querySelector<HTMLInputElement>('#studioBrandTagline')!;
+    const slogan = panel.querySelector<HTMLTextAreaElement>('#studioBrandSlogan')!;
+    const accent = panel.querySelector<HTMLInputElement>('#studioBrandAccent')!;
+    const surfaceColour = panel.querySelector<HTMLInputElement>('#studioBrandSurface')!;
+    const status = panel.querySelector<HTMLElement>('.studio-brand-status')!;
+
+    const show = () => {
+      const brand = this.characterControls.brand();
+      name.value = brand.name;
+      tagline.value = brand.tagline;
+      slogan.value = brand.slogan;
+      accent.value = brand.accent;
+      surfaceColour.value = brand.surface;
+    };
+
+    const commit = () => {
+      status.textContent = 'Setter opp skiltene …';
+      const brand = this.characterControls.setBrand({
+        name: name.value,
+        tagline: tagline.value,
+        slogan: slogan.value,
+        accent: accent.value,
+        surface: surfaceColour.value,
+      });
+      // Show what was actually kept, so a name too long for a sign does not
+      // quietly disagree with what is on the wall.
+      show();
+      status.textContent = `${brand.name} står på skiltet.`;
+    };
+
+    for (const field of [name, tagline, slogan, accent, surfaceColour]) {
+      field.addEventListener('change', commit, { signal: this.abort.signal });
+    }
+    window.addEventListener('ch-brand-changed', show, { signal: this.abort.signal });
+    show();
   }
 
   /**
@@ -544,6 +704,25 @@ export class StudioWorkspace {
     }
 
     const status = this.sequencePanel.querySelector<HTMLElement>('.studio-look-status')!;
+
+    // The look can be set from here, or by choosing a place, or come back from
+    // a document. Reading it off the scene rather than off the last click is
+    // what keeps the panel honest about which of those happened.
+    let settingLook = false;
+    const showCurrentLook = () => {
+      const current = this.characterControls.currentLook();
+      for (const button of groups.querySelectorAll<HTMLButtonElement>('button[data-look]')) {
+        const active = button.dataset.look === current;
+        button.setAttribute('aria-pressed', String(active));
+        // Open the group holding the look that is on, so it is visible rather
+        // than merely true.
+        if (active) button.closest('details')?.setAttribute('open', '');
+      }
+      if (settingLook) return;
+      const here = looks.find(look => look.id === current);
+      status.textContent = here ? here.label : 'Lys fra dokumentet';
+    };
+
     groups.addEventListener('click', event => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-look]');
       if (!button || button.disabled) return;
@@ -554,14 +733,14 @@ export class StudioWorkspace {
       // dead button, so the panel says what it is doing before it does it.
       const all = [...groups.querySelectorAll<HTMLButtonElement>('button[data-look]')];
       for (const other of all) other.disabled = true;
+      settingLook = true;
       status.textContent = `Setter lys · ${look.label} …`;
 
       const settle = (applied: boolean, message: string) => {
-        for (const other of all) {
-          other.disabled = false;
-          other.setAttribute('aria-pressed', String(applied && other === button));
-        }
-        status.textContent = message;
+        for (const other of all) other.disabled = false;
+        settingLook = false;
+        showCurrentLook();
+        if (!applied) status.textContent = message;
       };
       // A rig that fails halfway must not leave every button dead and the
       // panel saying it is still working.
@@ -573,15 +752,10 @@ export class StudioWorkspace {
         });
     }, { signal: this.abort.signal });
 
-    // An opened document brings its own fixtures, which belong to no look.
-    window.addEventListener('ch-look-changed', event => {
-      const detail = (event as CustomEvent<{ id: string | null; label: string }>).detail;
-      if (detail?.id) return;
-      for (const button of groups.querySelectorAll<HTMLButtonElement>('button[data-look]')) {
-        button.setAttribute('aria-pressed', 'false');
-      }
-      status.textContent = detail?.label ?? 'Egendefinert lys';
-    }, { signal: this.abort.signal });
+    // A place brings its own lighting, and an opened document brings fixtures
+    // that belong to no look at all. Both reach the panel the same way.
+    window.addEventListener('ch-look-changed', () => showCurrentLook(), { signal: this.abort.signal });
+    showCurrentLook();
   }
 
   /**

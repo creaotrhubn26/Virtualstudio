@@ -234,6 +234,41 @@ export const LIGHTING_LOOKS: LightingLook[] = [
     ],
   },
   {
+    id: 'pizzeria-kveld',
+    label: 'Pizzeria · kveld',
+    hint: 'Varmt lys fra vedovnen, lave pendler over bordene og stearinlys. Lavt og gyllent.',
+    group: 'rom',
+    keyStops: -1.5,
+    fixtures: [
+      {
+        // Motivated by the oven mouth: low, warm and coming from one side.
+        fixture: 'aputure-300d', name: 'Ovnen · motivert',
+        position: { x: 2.6, y: 1.25, z: 1.6 }, aim: { x: 0, y: 1.3, z: 0 },
+        stops: 0, cct: 2400, beamDeg: 70, exponent: 1.6, bias: 0.00005, normalBias: 0.003,
+      },
+      {
+        fixture: 'amaran-100x', name: 'Utfylling · varm',
+        position: { x: -2.6, y: 2, z: -1.4 }, aim: { x: 0, y: 1.3, z: 0 },
+        stops: 2, cct: 2900, beamDeg: 70, exponent: 1.4,
+      },
+      {
+        fixture: 'aputure-300d-strip', name: 'Kantlys · bakfra',
+        position: { x: -1.6, y: 2.7, z: 2.4 }, aim: { x: 0, y: 1.5, z: 0 },
+        stops: 1.5, cct: 3000, beamDeg: 40, exponent: 3.5,
+      },
+      {
+        fixture: 'practical-pendant-warm', name: 'Pendel · over bordet',
+        position: { x: -0.3, y: 1.8, z: 0.4 }, aim: { x: 0, y: 1.1, z: 0 },
+        stops: 2, cct: 2400, motivating: true,
+      },
+      {
+        fixture: 'candle-light', name: 'Stearinlys · på bordet',
+        position: { x: -0.1, y: 0.95, z: 0.4 }, aim: { x: 0, y: 1.2, z: 0 },
+        stops: 3.5, cct: 1900, motivating: true,
+      },
+    ],
+  },
+  {
     id: 'kontor',
     label: 'Kontor',
     hint: 'Lysstoffrør i taket, dagslys fra siden, lampe på pulten. Jevnt og nøkternt.',

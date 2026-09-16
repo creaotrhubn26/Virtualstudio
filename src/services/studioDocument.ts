@@ -51,7 +51,16 @@ const schema = z.object({
     shutter: z.string().regex(/^(?:\d+(?:\.\d+)?|\d+\/\d+)$/), nd: finite }).passthrough(),
   environment: z.object({
     walls: z.array(z.unknown()), floors: z.array(z.unknown()),
-    room: z.object({ type: z.enum(['none', 'industrial']), furnishings: z.boolean(), practicals: z.boolean() }).optional(),
+    room: z.object({
+      type: z.enum(['none', 'industrial', 'kitchen', 'hospital', 'pizzeria']),
+      furnishings: z.boolean(), practicals: z.boolean(),
+      // Whose place it is. Every field is optional and normalised on the way
+      // in, so a half-written brand opens with a plain sign rather than none.
+      brand: z.object({
+        name: z.string().optional(), tagline: z.string().optional(), slogan: z.string().optional(),
+        accent: z.string().optional(), surface: z.string().optional(), logoUrl: z.string().optional(),
+      }).passthrough().optional(),
+    }).optional(),
   }).passthrough().optional(),
 }).passthrough();
 

@@ -36,6 +36,9 @@ import { parseAnimation, sampleAnimation, sequenceDuration, upsertKeyframe,
 import { ALL_MOVES, buildCameraMove, buildLightMove, type MoveDescription } from './services/movePresets';
 import { DEFAULT_LOOK_ID, LIGHTING_LOOKS, fixtureIlluminance, lookById,
   type LightingLook, type LookFixture } from './services/lightingLooks';
+import { STUDIO_LOCATIONS, insideRoom, locationById, locationForRoom,
+  type StudioLocation } from './services/studioLocations';
+import { DEFAULT_BRAND, normaliseBrand, type StudioBrand } from './services/studioBranding';
 import { bodyIdFromModelUrl, defaultWardrobeFor, dressFigure, forgetFigure, garmentLabel, garmentsForBody,
   loadWardrobeCatalogue, resolveWardrobe, wornGarments, type WardrobeCatalogue } from './services/wardrobeService';
 import { EDITABLE_JOINTS, clampJointQuaternion, eulerFromQuat, quatFromEuler, unitVector } from './core/rendering/poseRig';
@@ -5473,6 +5476,11 @@ class VirtualStudio {
       setCueEnabled: (id, enabled) => this.setCueEnabled(id, enabled),
       setCueStart: (id, start) => this.setCueStart(id, start),
       removeCue: id => this.removeCue(id),
+      locations: () => this.availableLocations(),
+      brand: () => this.currentBrand(),
+      setBrand: brand => this.setBrand(brand),
+      applyLocation: id => this.applyLocation(id),
+      currentLocation: () => this.currentLocation(),
       looks: () => this.availableLooks(),
       applyLook: id => this.applyLook(id),
       currentLook: () => this.currentLook(),
@@ -6862,12 +6870,23 @@ class VirtualStudio {
    */
   private async buildLookFixture(look: LightingLook, spec: LookFixture): Promise<void> {
     const aim = new BABYLON.Vector3(spec.aim.x, spec.aim.y, spec.aim.z);
-    const stand = new BABYLON.Vector3(spec.position.x, spec.position.y, spec.position.z);
+    // A look is written for a studio with room to back a light into. In a
+    // kitchen the same stand would be through the wall, so it is walked in
+    // along its own aim line — same direction, same modelling, less distance.
+    const bounds = locationById(this.currentLocation() ?? '')?.bounds;
+    const wanted = bounds ? insideRoom(spec.position, spec.aim, bounds) : spec.position;
+    const stand = new BABYLON.Vector3(wanted.x, wanted.y, wanted.z);
     // A lamp, a window or a candle is where it is. It gives what it can give
     // from there; only a working light is walked in to make its level.
     const placement = spec.motivating
-      ? { position: stand, powerMultiplier: this.motivatingOutput(spec, aim, fixtureIlluminance(look, spec)) }
+      ? { position: stand, powerMultiplier: this.motivatingOutput(spec, aim, fixtureIlluminance(look, spec), stand) }
       : this.placeFixtureForIlluminance(spec.fixture, stand, aim, fixtureIlluminance(look, spec));
+    // Walking a light closer to make its reading must not push it through a
+    // wall either.
+    if (bounds) {
+      const kept = insideRoom(placement.position, spec.aim, bounds);
+      placement.position.set(kept.x, kept.y, kept.z);
+    }
 
     const id = await this.addLight(spec.fixture, placement.position);
     const data = this.lights.get(id);
@@ -6898,7 +6917,7 @@ class VirtualStudio {
    * Never above its own output: a practical that cannot reach the level asked
    * for simply burns at full, which is what the real lamp would do.
    */
-  private motivatingOutput(spec: LookFixture, aim: BABYLON.Vector3, wanted: number): number {
+  private motivatingOutput(spec: LookFixture, aim: BABYLON.Vector3, wanted: number, stand?: BABYLON.Vector3): number {
     const catalogue = getLightById(spec.fixture);
     const candela = catalogue
       ? fixtureCandela({
@@ -6912,9 +6931,80 @@ class VirtualStudio {
     if (candela === null) return 1;
 
     const output = sceneIntensityFromCandela(candela);
-    const distance = new BABYLON.Vector3(spec.position.x, spec.position.y, spec.position.z)
+    const distance = (stand ?? new BABYLON.Vector3(spec.position.x, spec.position.y, spec.position.z))
       .subtract(aim).length();
     return Math.min(1, (wanted * distance * distance) / output);
+  }
+
+  /**
+   * Whose place this is: the name over the door and the colours with it.
+   *
+   * The signs are painted when the room is built, so changing the brand
+   * rebuilds the room. That is why this commits on a finished edit rather than
+   * on every keystroke.
+   */
+  public setBrand(brand: Partial<StudioBrand>): StudioBrand {
+    const next = normaliseBrand({ ...this.currentBrand(), ...brand });
+    environmentService.setStudioRoom({ brand: next });
+    window.dispatchEvent(new CustomEvent('ch-brand-changed', { detail: next }));
+    return next;
+  }
+
+  public currentBrand(): StudioBrand {
+    return normaliseBrand(this.studioRoom?.getState().brand ?? DEFAULT_BRAND);
+  }
+
+  /** The places the scene can be set in. */
+  public availableLocations(): StudioLocation[] {
+    return STUDIO_LOCATIONS;
+  }
+
+  /**
+   * Where the scene is, read from the room that is actually standing.
+   *
+   * Asking the room rather than remembering the last button means an opened
+   * document reports the place it really shows, not the last one chosen.
+   */
+  public currentLocation(): string | null {
+    const room = this.studioRoom?.getState().type ?? 'none';
+    return locationForRoom(room)?.id ?? null;
+  }
+
+  /**
+   * Set the scene somewhere: build the room and light it the way it is lit.
+   *
+   * Both halves stay ordinary afterwards. The room is scene geometry and the
+   * look leaves fixtures on stands, so relighting the kitchen for the evening
+   * is one more button, not a different mode.
+   */
+  public async applyLocation(id: string): Promise<boolean> {
+    const location = locationById(id);
+    if (!location) return false;
+
+    // The seamless paper belongs to the studio. In a kitchen it stands in the
+    // middle of the room, behind the figure, being a cyclorama.
+    if (location.room === 'industrial' || location.room === 'none') {
+      if (!this.currentBackdropMesh) this.loadBackdrop('seamless-default', { receiveShadow: true });
+    } else {
+      this.removeBackdrop();
+    }
+
+    environmentService.setStudioRoom({
+      type: location.room,
+      furnishings: location.furnishings,
+      practicals: location.practicals,
+    });
+    // The room is rebuilt from the service's notification, so the fixtures are
+    // placed against the walls that are actually up.
+    await new Promise<void>(resolve => this.scene.onAfterRenderObservable.addOnce(() => resolve()));
+    // A place that arrives unlit is half a place, so its lighting decides
+    // whether the move succeeded.
+    const lit = await this.applyLook(location.look);
+
+    window.dispatchEvent(new CustomEvent('ch-location-changed', {
+      detail: { id, label: location.label },
+    }));
+    return lit;
   }
 
   /** The lighting looks on offer, each a place or a situation. */
