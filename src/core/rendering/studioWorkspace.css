@@ -97,8 +97,22 @@
 .studio-look-status { font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); margin: 0; }
 .studio-move-buttons button[aria-pressed="true"] { border-color: var(--accent-cyan); color: var(--accent-cyan); }
 .studio-move-buttons button:disabled { opacity: .5; cursor: progress; }
-.studio-move-group { display: flex; flex-direction: column; gap: 4px; }
-.studio-move-group > span { font: 10px/1.4 Inter, sans-serif; color: var(--text-muted); }
+/* A group is a question, not a list: closed until someone asks it. */
+.studio-move-group { border-top: 1px solid var(--border-color); }
+.studio-move-group > summary {
+  font: 11px/1.4 Inter, sans-serif; color: var(--text-secondary);
+  min-height: 32px; display: flex; align-items: center; cursor: pointer;
+  list-style: none; user-select: none;
+}
+.studio-move-group > summary::-webkit-details-marker { display: none; }
+.studio-move-group > summary::before {
+  content: '▸'; margin-right: 6px; color: var(--text-muted);
+  transition: transform .12s ease;
+}
+.studio-move-group[open] > summary::before { transform: rotate(90deg); }
+.studio-move-group[open] > summary { color: var(--text-primary); }
+.studio-move-group > summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.studio-move-group .studio-move-buttons { padding-bottom: 6px; }
 .studio-move-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
 .studio-move-buttons button {
   flex: 1 1 calc(50% - 4px); min-height: 34px; padding: 0 8px;

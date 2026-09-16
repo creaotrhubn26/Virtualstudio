@@ -44,7 +44,10 @@ Two consequences follow, and both are load-bearing:
 Three layers, in this order. A user should be able to stop at any one of them
 and still have done something real.
 
-1. **Name it.** One button: a place, a move, a look. No numbers.
+1. **Name it.** One button: a place, a move, a look. No numbers. When there
+   are more than a handful, group them behind summaries and open only the one
+   the scene is already in — a panel should open as a few questions, not as a
+   wall of buttons with a scrollbar.
 2. **Time it and weigh it.** A length slider, a start time, on/off. Still no
    photographic vocabulary.
 3. **Take it apart.** The light panel, the timeline, the keyframe editor. Real

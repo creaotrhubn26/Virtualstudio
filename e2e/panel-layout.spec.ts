@@ -54,9 +54,15 @@ test('the panels never cover each other', async ({ page }) => {
     expect(overlaps.hits, size.name).toEqual([]);
     expect(overlaps.above, size.name).toEqual([]);
 
-    // And every move button is reachable, scrolling the panel if it must.
-    await page.locator('.studio-sequence-panel button[data-look]').first().scrollIntoViewIfNeeded();
-    await expect(page.locator('.studio-sequence-panel button[data-look]').first()).toBeVisible();
+    // And what the panel offers at rest — a summary per group — is reachable
+    // at every width, scrolling the panel if it must.
+    const groups = page.locator('.studio-sequence-panel .studio-move-group > summary');
+    const count = await groups.count();
+    expect(count, size.name).toBeGreaterThanOrEqual(6);
+    for (let i = 0; i < count; i++) {
+      await groups.nth(i).scrollIntoViewIfNeeded();
+      await expect(groups.nth(i), `${size.name} group ${i}`).toBeVisible();
+    }
   }
 
   expect(errors).toEqual([]);

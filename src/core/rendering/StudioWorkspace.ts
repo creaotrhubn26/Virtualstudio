@@ -446,8 +446,8 @@ export class StudioWorkspace {
       <label for="studioMoveLength">Lengde</label>
       <input type="range" id="studioMoveLength" min="0.5" max="10" step="0.5" value="3">
       <p class="studio-move-length" role="status">3,0 sekunder</p>
-      <div class="studio-move-group" data-kind="camera"><span>Kamera</span><div class="studio-move-buttons"></div></div>
-      <div class="studio-move-group" data-kind="light"><span>Lys</span><div class="studio-move-buttons"></div></div>
+      <details class="studio-move-group" data-kind="camera" open><summary>Kamera</summary><div class="studio-move-buttons"></div></details>
+      <details class="studio-move-group" data-kind="light"><summary>Lys</summary><div class="studio-move-buttons"></div></details>
       <div class="studio-sequence-heading">SEKVENS</div>
       <ol class="studio-sequence-list"></ol>
       <p class="studio-sequence-empty">Ingen bevegelser ennå. Velg en over.</p>`;
@@ -519,10 +519,13 @@ export class StudioWorkspace {
       const inGroup = looks.filter(look => look.group === group);
       if (inGroup.length === 0) continue;
 
-      const section = document.createElement('div');
+      const section = document.createElement('details');
       section.className = 'studio-move-group';
       section.dataset.lookGroup = group;
-      const heading = document.createElement('span');
+      // Open where the scene already is, closed everywhere else: eleven places
+      // at once is a list to read, one summary each is a question to answer.
+      section.open = inGroup.some(look => look.id === this.characterControls.currentLook());
+      const heading = document.createElement('summary');
       heading.textContent = titles[group] ?? group;
       const buttons = document.createElement('div');
       buttons.className = 'studio-move-buttons';

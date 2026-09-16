@@ -260,9 +260,12 @@ behind — there are no locked presets.
   the scene's own animation format. Camera travel is a share of the shot
   distance, so one button suits a tight portrait and a hangar alike.
 - The panel in `StudioWorkspace` shows looks, moves and the resulting sequence
-  in the right-hand rail, above the camera preview. Every button carries a
-  plain explanation in its `title`, and the unit tests assert that none is
-  missing. [`.claude/skills/virtual-studio/SKILL.md`](.claude/skills/virtual-studio/SKILL.md)
+  in the right-hand rail, under the environment panel and the camera preview.
+  Every button carries a plain explanation in its `title`, and the unit tests
+  assert that none is missing. The groups are `<details>`: the panel opens as
+  six summaries rather than thirty-one buttons, with the group the scene is
+  already lit in standing open, and camera moves open because they are the
+  common case. [`.claude/skills/virtual-studio/SKILL.md`](.claude/skills/virtual-studio/SKILL.md)
   records the interface rules these follow.
 
 [`e2e/light-accuracy.spec.ts`](e2e/light-accuracy.spec.ts) is the reference scene: it places catalogue fixtures, asserts their output ratio in stops, checks the falloff and shadow settings, converts the shadow-map light-size ratio back to metres to confirm the penumbra is built from the modifier's real dimensions, verifies that shutter speed changes continuous exposure but not flash exposure, confirms the default rig still delivers the light its hand-tuned predecessor did, and checks that the clipping prompt offers a scope without touching the exposure.

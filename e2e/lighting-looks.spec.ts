@@ -67,7 +67,13 @@ test('lighting can be chosen as a place, and stays editable afterwards', async (
   // Daylight: red and blue within a hair of each other.
   expect(Math.abs(studio[0].warmth - 1)).toBeLessThan(0.35);
 
+  // The places are grouped behind summaries, and the group the scene is
+  // already in is the one that stands open.
+  await expect(panel.locator('.studio-move-group[data-look-group="studio"]')).toHaveAttribute('open', '');
+  await expect(panel.locator('button[data-look="kjokken-middag"]')).toBeHidden();
+
   // Asking for a kitchen at dinner replaces the rig, rather than adding to it.
+  await panel.locator('.studio-move-group[data-look-group="rom"] summary').click();
   await panel.locator('button[data-look="kjokken-middag"]').click();
   await expect(panel.locator('.studio-look-status')).toHaveText('Kjøkken · middag', { timeout: LOOK_TIMEOUT });
   await expect(panel.locator('button[data-look="kjokken-middag"]')).toHaveAttribute('aria-pressed', 'true');
@@ -87,6 +93,7 @@ test('lighting can be chosen as a place, and stays editable afterwards', async (
   await page.screenshot({ path: testInfo.outputPath('kitchen-dinner.png') });
 
   // A night street is darker again, and colder at the back.
+  await panel.locator('.studio-move-group[data-look-group="ute"] summary').click();
   await panel.locator('button[data-look="gate-natt"]').click();
   await expect(panel.locator('.studio-look-status')).toHaveText('Gate · natt', { timeout: LOOK_TIMEOUT });
   const street = await rig();

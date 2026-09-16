@@ -33,6 +33,9 @@ test('a named move becomes a beat in the sequence', async ({ page }, testInfo) =
   // word, which is the whole point of naming moves rather than keyframes.
   const buttons = panel.locator('.studio-move-buttons button');
   expect(await buttons.count()).toBeGreaterThanOrEqual(16);
+  // Camera moves are the common case and are open; everything else waits to
+  // be asked for, so the panel opens as a handful of questions, not a wall.
+  await expect(panel.locator('.studio-move-group[data-kind="camera"]')).toHaveAttribute('open', '');
   const withoutHint = await buttons.evaluateAll(all =>
     all.filter(button => !(button as HTMLElement).title || (button as HTMLElement).title.length < 9).length);
   expect(withoutHint).toBe(0);
@@ -56,7 +59,11 @@ test('a named move becomes a beat in the sequence', async ({ page }, testInfo) =
   });
   expect(played).toBeLessThan(before - 0.2);
 
-  // A second move joins the sequence rather than replacing the first.
+  // A second move joins the sequence rather than replacing the first. Light
+  // moves live behind their own summary, so opening it is part of the journey.
+  const lightGroup = panel.locator('.studio-move-group[data-kind="light"]');
+  await expect(lightGroup.getByRole('button', { name: 'Flimre', exact: true })).toBeHidden();
+  await lightGroup.locator('summary').click();
   await panel.getByRole('button', { name: 'Flimre', exact: true }).click();
   await expect(panel.locator('.studio-sequence-list li')).toHaveCount(2);
 
