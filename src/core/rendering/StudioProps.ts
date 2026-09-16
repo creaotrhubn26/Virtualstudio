@@ -71,6 +71,11 @@ export class StudioProps {
     return this.selectedId;
   }
 
+  /** The node a prop stands on, so the timeline can move it. */
+  nodeFor(id: string): TransformNode | null {
+    return this.placed.get(id)?.node ?? null;
+  }
+
   /**
    * Every studio-built object currently on set that could be claimed.
    *

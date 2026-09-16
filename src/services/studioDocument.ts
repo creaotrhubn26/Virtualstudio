@@ -23,6 +23,20 @@ const schema = z.object({
     ]),
     transform, visible: z.boolean(), locked: z.boolean(),
   }).passthrough()).optional(),
+  // Movement over time. A timeline that names a node this scene cannot supply
+  // is harmless -- it simply moves nothing -- but a keyframe with a broken
+  // time or value would throw whatever it addresses somewhere unreachable.
+  animation: z.object({
+    duration: finite.nonnegative(),
+    tracks: z.array(z.object({
+      id: z.string().min(1), nodeId: z.string().min(1),
+      type: z.enum(['position', 'rotation']),
+      keyframes: z.array(z.object({
+        time: finite.nonnegative(),
+        value: z.object({ x: finite, y: finite, z: finite }),
+      })),
+    }).passthrough()),
+  }).passthrough().optional(),
   cameraSettings: z.object({ aperture: finite.positive(), iso: finite.positive(), focalLength: finite.positive(),
     shutter: z.string().regex(/^(?:\d+(?:\.\d+)?|\d+\/\d+)$/), nd: finite }).passthrough(),
   environment: z.object({

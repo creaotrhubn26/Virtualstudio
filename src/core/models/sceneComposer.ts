@@ -174,6 +174,7 @@ export interface EnvironmentState {
 
 // Main scene composition interface
 import type { StudioProp } from '../../services/studioProps';
+import type { SceneAnimation } from '../../services/sceneAnimation';
 
 export interface SceneComposition {
   id: string;
@@ -193,6 +194,12 @@ export interface SceneComposition {
    * document written before props existed still reads.
    */
   studioProps?: StudioProp[];
+  /**
+   * Movement over time: keyframed position and rotation for anything in the
+   * scene. Optional for the same reason, and in radians like every other
+   * angle a document holds.
+   */
+  animation?: SceneAnimation;
   cameraSettings: CameraSettings; // Aperture, ISO, shutter, etc.
   
   // Composition

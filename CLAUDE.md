@@ -129,6 +129,18 @@ They are restored **after** the actors and after a few rendered frames, because 
 
 Room furniture is still merged into batched geometry for draw-call cost, so individual pieces carry no key yet and cannot be claimed. Giving them keys means keeping them as separate meshes, which is a deliberate trade against the batching `StudioRoom` does today.
 
+### Movement
+
+A scenario is rarely a still: something arrives, a door opens, a light is walked in. The timeline could already keyframe position and rotation, but only for a **light** — `applyAnimationAtTime` looked its target up in the light table and nothing else could be addressed — and none of it was written to the document, so a scene that depended on movement did not survive being reopened.
+
+A track now addresses a node by id and says nothing about what that node is. `VirtualStudio.animatedNode` resolves the id against lights, props and actors in turn, so all three are driven by the same code.
+
+Angles are **radians**, as everywhere else a document stores an angle. The light panel works in degrees and converts at its own edge. Keeping two units in the saved format would guarantee that something eventually turns by a factor of 57.
+
+[`src/services/sceneAnimation.ts`](src/services/sceneAnimation.ts) holds the sampling and is unit-tested. A track holds at its first and last keyframe rather than extrapolating — a helicopter that has landed should stay landed — and an empty track returns null so the caller leaves the node alone instead of moving it to the origin.
+
+The timeline is stored under `animation` in the document, optional and validated, and restored **before** the props it moves. The duration is never allowed to fall short of the last keyframe, or a saved timeline would cut its own movement off.
+
 ### Seated contact and chair
 
 [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts) creates the leather and chrome portrait chair only for `StudioSeated`:
@@ -170,6 +182,7 @@ The renderer is concentrated in a large legacy [`src/main.ts`](src/main.ts). Ext
 - [`src/core/rendering/StudioSeat.ts`](src/core/rendering/StudioSeat.ts): pose-derived portrait chair and body contact.
 - [`src/core/rendering/StudioProps.ts`](src/core/rendering/StudioProps.ts): objects the photographer can take hold of, claim, move and save.
 - [`src/services/studioProps.ts`](src/services/studioProps.ts): what a prop is in a document, and how one is read back.
+- [`src/services/sceneAnimation.ts`](src/services/sceneAnimation.ts): keyframes, interpolation and the timeline a document carries.
 - [`src/core/rendering/studioGeometry.ts`](src/core/rendering/studioGeometry.ts): focal length conversion, exposure calculation, cyclorama and grid.
 - [`src/core/rendering/photometry.ts`](src/core/rendering/photometry.ts): candela from fixture specs, inverse-square illuminance, ISO 2720 metering, modifier size and shadow-softness ratio.
 - [`src/core/rendering/poseRig.ts`](src/core/rendering/poseRig.ts): editable joints, their axes and their ranges of motion.
@@ -228,6 +241,7 @@ Version 2 documents retain the complete `SceneComposition`, including:
 
 - actor source path, height, transform, studio pose, joint edits and wardrobe;
 - claimed objects and imported props under `studioProps`;
+- the timeline under `animation`, in radians;
 - light fixture ID, position, aim, output, beam settings and enabled state;
 - taking-camera settings;
 - industrial room type, furnishings and practical-light switches.
@@ -246,7 +260,7 @@ PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build
 python3 scripts/characters/validate_studio_characters.py
 PLAYWRIGHT_SOFTWARE_GL=1 PATH=/opt/homebrew/opt/node@22/bin:$PATH \
   npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts e2e/pose-editing.spec.ts \
-    e2e/wardrobe.spec.ts e2e/studio-props.spec.ts --workers=1
+    e2e/wardrobe.spec.ts e2e/studio-props.spec.ts e2e/scene-animation.spec.ts --workers=1
 ```
 
 The character build is reproducible and takes about 11 seconds: the same sources produce byte-identical GLBs, so a changed hash means a changed input.
@@ -262,7 +276,7 @@ Work in this order unless the user changes priorities:
 1. **Photographic light accuracy.** *(Fixture output, falloff, shadow softness, the flash-versus-continuous exposure model and the default rig have landed; see "Light units and shadow softness".)* Remaining: measured penumbra comparisons, and bounce/soft-source approximation checked against reference renders rather than by eye.
 2. **Editable posing.** *(Landed: seventeen joints, swing-and-twist limits, and hand/foot targets solved by two-bone inverse kinematics; see "Editable posing".)* Remaining: an elliptical cone that knows a shoulder is less free across the body than away from it, and self-intersection between limbs and torso.
 3. **Broader real character variation.** *(Wardrobe is now a layer; see "Wardrobe as a layer".)* Remaining: body archetypes and the 50 figures built on them, using the pinned pack's 22 usable skins (six ethnicities across three ages), 10 hairstyles and 12 outfits. Garments are fitted per body shape, so a new archetype means refitting the wardrobe for it — keep the number of archetypes small and vary skin, hair, face and height freely on top. Add facial expression blend shapes only when the source and export path are verified.
-4. **Studio object editing.** *(The general prop system has landed; see "Objects on set".)* Remaining: give room furniture stable keys so individual pieces can be claimed, which means keeping them as separate meshes rather than batched; a panel for browsing and placing props; and animation tracks in the document, without which a scenario that depends on something moving does not survive saving.
+4. **Studio object editing.** *(The general prop system and the timeline have landed; see "Objects on set" and "Movement".)* Remaining: give room furniture stable keys so individual pieces can be claimed, which means keeping them as separate meshes rather than batched; a panel for browsing and placing props; and a way to author a track for something other than a light, which today means editing the timeline by hand.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
 6. **iPad prototype after the scene contract stabilizes.** Reuse the same source character data and scene schema, export USDZ offline, and test SwiftUI + RealityKit on a physical target iPad. Measure frame time, memory and sustained thermal behavior before choosing RealityKit alone or custom Metal rendering.
 
@@ -275,7 +289,7 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 - Seventeen joints can be posed within conventional ranges of motion, and hands and feet can be placed directly. The swing cone is circular, so a shoulder is allowed as far across the body as away from it, which a real shoulder is not. Limbs can still pass through the torso. Facial expressions remain future work.
 - Inverse kinematics covers the two bones of a limb only. The spine, the shoulder blade and the hips are not carried along, so a reach beyond the arm's own span stops at the shoulder rather than leaning the body into it.
 - Room furniture is batched geometry and cannot be claimed piece by piece yet. The portrait chair and imported models can.
-- The document stores no animation tracks, so a scenario that depends on something moving — a vehicle arriving — does not survive being saved.
+- The timeline moves anything in the scene and is saved, but only a light can be keyframed from the interface. A track for a prop has to be written by hand today.
 - Fixture output, falloff and shadow softness now follow published specifications, but this is still a real-time approximation, not measured photometry or an offline path tracer.
 - Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.
 - Backend-dependent workflows require a separately running service and verification.

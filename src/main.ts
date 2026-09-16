@@ -31,6 +31,7 @@ import { StudioSeat } from './core/rendering/StudioSeat';
 import { PoseEditor } from './core/rendering/PoseEditor';
 import { StudioProps } from './core/rendering/StudioProps';
 import { parseProps, type StudioProp } from './services/studioProps';
+import { animationDuration, parseAnimation, sampleTrack, upsertKeyframe } from './services/sceneAnimation';
 import { bodyIdFromModelUrl, defaultWardrobeFor, dressFigure, forgetFigure, garmentLabel, garmentsForBody,
   loadWardrobeCatalogue, resolveWardrobe, wornGarments, type WardrobeCatalogue } from './services/wardrobeService';
 import { EDITABLE_JOINTS, clampJointQuaternion, eulerFromQuat, quatFromEuler, unitVector } from './core/rendering/poseRig';
@@ -2051,6 +2052,14 @@ class VirtualStudio {
           visible: mesh.isEnabled() }];
         }),
 
+        // Movement over time. A scenario is rarely a still -- something
+        // arrives, a door opens -- and without this none of it survived
+        // being saved.
+        animation: {
+          duration: Math.max(this.animationState.duration, animationDuration(this.animationState.tracks)),
+          tracks: this.animationState.tracks,
+        },
+
         // Everything the photographer has taken hold of: claimed studio
         // objects keep only their key and transform, imported models keep
         // where they came from. A separate key from the older `props`, which
@@ -2243,6 +2252,13 @@ class VirtualStudio {
           }
         }
       }
+
+      // The timeline, restored before the props it moves so that nothing plays
+      // against a scene that is not built yet.
+      const animation = parseAnimation((preset as unknown as Record<string, unknown>).animation);
+      this.animationState.tracks = animation.tracks;
+      this.animationState.duration = animation.duration || this.animationState.duration;
+      this.animationState.currentTime = 0;
 
       // Objects the photographer had taken hold of, restored after the actors.
       // A claimed object may be one the studio derives from a figure -- the
@@ -31234,13 +31250,7 @@ class VirtualStudio {
       : { x: data.mesh.rotation.x * 180 / Math.PI, y: data.mesh.rotation.y * 180 / Math.PI, z: data.mesh.rotation.z * 180 / Math.PI };
 
     // Check if keyframe exists at current time
-    const existingIdx = track.keyframes.findIndex(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.01);
-    if (existingIdx >= 0) {
-      track.keyframes[existingIdx].value = value;
-    } else {
-      track.keyframes.push({ time: this.animationState.currentTime, value });
-      track.keyframes.sort((a, b) => a.time - b.time);
-    }
+    track.keyframes = upsertKeyframe(track.keyframes, this.animationState.currentTime, value);
 
     this.updateTimelineUI(false);
     this.renderTimelineTracks();
@@ -31273,17 +31283,13 @@ class VirtualStudio {
       const axisVal = axis === 'x' ? data.mesh.position.x : axis === 'y' ? data.mesh.position.y : data.mesh.position.z;
       value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
     } else {
-      const axisVal = axis === 'x' ? data.mesh.rotation.x * 180 / Math.PI : axis === 'y' ? data.mesh.rotation.y * 180 / Math.PI : data.mesh.rotation.z * 180 / Math.PI;
+      // Radians: the document keeps one unit for angles, and the panel that
+      // shows degrees converts at its own edge.
+      const axisVal = axis === 'x' ? data.mesh.rotation.x : axis === 'y' ? data.mesh.rotation.y : data.mesh.rotation.z;
       value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
     }
 
-    const existingIdx = track.keyframes.findIndex(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.01);
-    if (existingIdx >= 0) {
-      track.keyframes[existingIdx].value = value;
-    } else {
-      track.keyframes.push({ time: this.animationState.currentTime, value });
-      track.keyframes.sort((a, b) => a.time - b.time);
-    }
+    track.keyframes = upsertKeyframe(track.keyframes, this.animationState.currentTime, value);
 
     this.updateTimelineUI(false);
     this.renderTimelineTracks();
@@ -31354,18 +31360,35 @@ class VirtualStudio {
     this.applyAnimationAtTime(0);
   }
 
+  /**
+   * Whatever a track addresses: a light, a prop, or an actor.
+   *
+   * The timeline used to look only in the light table, so nothing else in the
+   * scene could be made to move -- an arriving vehicle was not expressible.
+   */
+  private animatedNode(nodeId: string): BABYLON.TransformNode | null {
+    const light = this.lights.get(nodeId);
+    if (light) return light.mesh;
+    const prop = this.props?.nodeFor(nodeId);
+    if (prop) return prop;
+    return this.resolveMeshForNodeId(nodeId);
+  }
+
   private applyAnimationAtTime(time: number): void {
     for (const track of this.animationState.tracks) {
-      const data = this.lights.get(track.nodeId);
-      if (!data) continue;
+      const node = this.animatedNode(track.nodeId);
+      if (!node) continue;
 
-      const value = this.interpolateKeyframes(track.keyframes, time);
+      const value = sampleTrack(track.keyframes, time);
       if (!value) continue;
 
       if (track.type === 'position') {
-        data.mesh.position.set(value.x, value.y, value.z);
+        node.position.set(value.x, value.y, value.z);
       } else {
-        data.mesh.rotation.set(value.x * Math.PI / 180, value.y * Math.PI / 180, value.z * Math.PI / 180);
+        // Radians, as everywhere else in a scene document. A quaternion left
+        // by a gizmo drag would otherwise win over the angles set here.
+        node.rotationQuaternion = null;
+        node.rotation.set(value.x, value.y, value.z);
       }
     }
 
