@@ -293,7 +293,7 @@ python3 scripts/characters/validate_studio_characters.py
 PLAYWRIGHT_SOFTWARE_GL=1 PATH=/opt/homebrew/opt/node@22/bin:$PATH \
   npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts e2e/pose-editing.spec.ts \
     e2e/wardrobe.spec.ts e2e/studio-props.spec.ts e2e/scene-animation.spec.ts \
-    e2e/lighting-looks.spec.ts e2e/move-panel.spec.ts --workers=1
+    e2e/lighting-looks.spec.ts e2e/move-panel.spec.ts e2e/panel-layout.spec.ts --workers=1
 ```
 
 The character build is reproducible and takes about 11 seconds: the same sources produce byte-identical GLBs, so a changed hash means a changed input.
@@ -323,6 +323,8 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 - Inverse kinematics covers the two bones of a limb only. The spine, the shoulder blade and the hips are not carried along, so a reach beyond the arm's own span stops at the shoulder rather than leaning the body into it.
 - Room furniture is batched geometry and cannot be claimed piece by piece yet. The portrait chair and imported models can.
 - The timeline moves anything in the scene and is saved, but only a light can be keyframed from the interface. A track for a prop has to be written by hand today.
+- Applying a lighting look rebuilds the whole rig: every fixture loads its stand and takes every mesh in the room as a shadow caster. It is a second or two on a GPU and much slower under software WebGL, so the panel disables its buttons and says what it is doing while it works.
+- A document does not record which look it came from. It keeps the fixtures themselves, which may have been edited since, so an opened scene reports the lighting as the document's own rather than claiming a look it may no longer be.
 - Fixture output, falloff and shadow softness now follow published specifications, but this is still a real-time approximation, not measured photometry or an offline path tracer.
 - Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.
 - Backend-dependent workflows require a separately running service and verification.

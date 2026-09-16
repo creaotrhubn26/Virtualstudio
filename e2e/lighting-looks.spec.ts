@@ -10,6 +10,15 @@ import { test, expect } from '@playwright/test';
  */
 test.use({ video: 'off' });
 
+/**
+ * Applying a look rebuilds the whole rig: four fixtures, each loading its
+ * stand and taking every mesh in the room as a shadow caster. Under software
+ * WebGL that is slow — it ran inside a minute on its own and needed longer as
+ * the fourth suite in a loaded run. This is a correctness suite, not a
+ * performance measurement, so it waits rather than reporting a false failure.
+ */
+const LOOK_TIMEOUT = 180_000;
+
 test('lighting can be chosen as a place, and stays editable afterwards', async ({ page }, testInfo) => {
   test.setTimeout(480_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -60,7 +69,7 @@ test('lighting can be chosen as a place, and stays editable afterwards', async (
 
   // Asking for a kitchen at dinner replaces the rig, rather than adding to it.
   await panel.locator('button[data-look="kjokken-middag"]').click();
-  await expect(panel.locator('.studio-look-status')).toHaveText('Kjøkken · middag', { timeout: 60_000 });
+  await expect(panel.locator('.studio-look-status')).toHaveText('Kjøkken · middag', { timeout: LOOK_TIMEOUT });
   await expect(panel.locator('button[data-look="kjokken-middag"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(panel.locator('button[data-look="studio-portrett"]')).toHaveAttribute('aria-pressed', 'false');
 
@@ -79,7 +88,7 @@ test('lighting can be chosen as a place, and stays editable afterwards', async (
 
   // A night street is darker again, and colder at the back.
   await panel.locator('button[data-look="gate-natt"]').click();
-  await expect(panel.locator('.studio-look-status')).toHaveText('Gate · natt', { timeout: 60_000 });
+  await expect(panel.locator('.studio-look-status')).toHaveText('Gate · natt', { timeout: LOOK_TIMEOUT });
   const street = await rig();
   expect(brightest(street)).toBeLessThan(brightest(studio));
   expect(Math.min(...street.map(l => l.warmth))).toBeLessThan(1);
@@ -100,7 +109,7 @@ test('lighting can be chosen as a place, and stays editable afterwards', async (
 
   // Going back is one button, and it restores the rig the studio started with.
   await panel.locator('button[data-look="studio-portrett"]').click();
-  await expect(panel.locator('.studio-look-status')).toHaveText('Studio · portrett', { timeout: 60_000 });
+  await expect(panel.locator('.studio-look-status')).toHaveText('Studio · portrett', { timeout: LOOK_TIMEOUT });
   const restored = await rig();
   expect(restored.map(l => l.name).sort()).toEqual(studio.map(l => l.name).sort());
   for (let i = 0; i < restored.length; i++) {

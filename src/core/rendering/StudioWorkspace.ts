@@ -208,6 +208,9 @@ export class StudioWorkspace {
       }, { signal: this.abort.signal });
     });
 
+    // The environment panel belongs to the right-hand rail too. Everything on
+    // that edge is one column, so nothing there can land on top of anything
+    // else however tall the contents grow.
     this.environmentPanel = document.createElement('section');
     this.environmentPanel.className = 'studio-model-panel studio-environment-panel';
     this.environmentPanel.setAttribute('aria-label', 'Omgivelser');
@@ -219,7 +222,7 @@ export class StudioWorkspace {
       <div class="studio-model-framing"><button type="button" data-document="save">Lagre oppsett</button><button type="button" data-document="open">Åpne oppsett</button></div>
       <input type="file" accept=".json,application/json" data-studio-document hidden>
       <p role="status" class="studio-document-status">Oppsett kan lagres lokalt</p>`;
-    container.append(this.environmentPanel);
+    rail.prepend(this.environmentPanel);
     const fileInput = this.environmentPanel.querySelector<HTMLInputElement>('[data-studio-document]')!;
     const documentStatus = this.environmentPanel.querySelector<HTMLElement>('.studio-document-status')!;
     this.environmentPanel.querySelector('[data-document="save"]')!.addEventListener('click', () => {
