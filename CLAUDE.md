@@ -233,6 +233,38 @@ The industrial room uses metres and occupies approximately x = -8…8 and z = -9
 - Camera exposure remains image processing only, and a fixture's physical output never moves with ISO, aperture, shutter or ND. The one exception is real: a flash is over before the shutter closes, so shutter speed does not change how a strobe exposes. The frame has a single image-processing exposure that carries the shutter term for continuous light, so `updateSceneBrightness` multiplies flash fixtures by `flashShutterCompensation` to cancel it again. Their rendered contribution then depends on aperture and ISO alone.
 - A strobe therefore sits several stops above a continuous fixture, and a mixed rig is correctly exposed for one of them at a time. That is the real photographic situation, not a bug. When the frame clips, `offerClippingScope` offers to open zebra or the histogram; it never changes the exposure or the lights. The photographer decides.
 
+### Lighting looks, camera moves and the sequence
+
+Three things are named rather than configured, so that someone who has never
+lit anything can still set a scene. All three leave ordinary editable objects
+behind — there are no locked presets.
+
+- [`src/services/lightingLooks.ts`](src/services/lightingLooks.ts) describes
+  lighting as a place: a kitchen at dinner, a street at night, a hospital room.
+  A look is specified in stops — `keyStops` from the studio portrait key, and
+  each fixture's `stops` below that key — never in scene units, so the ratios
+  survive any change to the scene calibration. `VirtualStudio.applyLook` clears
+  the rig and rebuilds it through `placeFixtureForIlluminance`, exactly as the
+  default rig is built; `setupDefaultLighting` is now the `studio-portrett`
+  look and delivers the readings it always did.
+- A fixture marked `motivating` is a source meant to be seen: a lamp, a window,
+  a candle. It is never relocated to make a level, because a table candle
+  cannot be moved two metres closer. Its `stops` is a ceiling, and it burns at
+  whatever it can give from where it stands. Practicals and atmospherics in the
+  catalogue put out 20–1800 lux at a metre; asking one to key a face would hang
+  it half a metre from the nose, which is what
+  [`src/services/lightingLooks.test.ts`](src/services/lightingLooks.test.ts)
+  asserts against.
+- [`src/services/movePresets.ts`](src/services/movePresets.ts) does the same
+  for motion: twelve camera moves and eight light moves, each building cues on
+  the scene's own animation format. Camera travel is a share of the shot
+  distance, so one button suits a tight portrait and a hangar alike.
+- The panel in `StudioWorkspace` shows looks, moves and the resulting sequence
+  in the right-hand rail, above the camera preview. Every button carries a
+  plain explanation in its `title`, and the unit tests assert that none is
+  missing. [`.claude/skills/virtual-studio/SKILL.md`](.claude/skills/virtual-studio/SKILL.md)
+  records the interface rules these follow.
+
 [`e2e/light-accuracy.spec.ts`](e2e/light-accuracy.spec.ts) is the reference scene: it places catalogue fixtures, asserts their output ratio in stops, checks the falloff and shadow settings, converts the shadow-map light-size ratio back to metres to confirm the penumbra is built from the modifier's real dimensions, verifies that shutter speed changes continuous exposure but not flash exposure, confirms the default rig still delivers the light its hand-tuned predecessor did, and checks that the clipping prompt offers a scope without touching the exposure.
 
 ## Local scene documents
@@ -260,7 +292,8 @@ PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build
 python3 scripts/characters/validate_studio_characters.py
 PLAYWRIGHT_SOFTWARE_GL=1 PATH=/opt/homebrew/opt/node@22/bin:$PATH \
   npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts e2e/pose-editing.spec.ts \
-    e2e/wardrobe.spec.ts e2e/studio-props.spec.ts e2e/scene-animation.spec.ts --workers=1
+    e2e/wardrobe.spec.ts e2e/studio-props.spec.ts e2e/scene-animation.spec.ts \
+    e2e/lighting-looks.spec.ts e2e/move-panel.spec.ts --workers=1
 ```
 
 The character build is reproducible and takes about 11 seconds: the same sources produce byte-identical GLBs, so a changed hash means a changed input.

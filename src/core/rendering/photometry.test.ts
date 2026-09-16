@@ -14,6 +14,8 @@ import {
   isFlashFixture,
   modifierSizeMetres,
   sceneIntensityFromCandela,
+  spotConeRadians,
+  MAX_SPOT_CONE_RAD,
   stopsBetween,
 } from './photometry';
 import { getLightById } from '../../data/lightFixtures';
@@ -211,5 +213,29 @@ describe('flash versus continuous', () => {
       expect(flashShutterCompensation(seconds) * (seconds * 125)).toBeCloseTo(1, 6);
     }
     for (const bad of [0, -1, NaN]) expect(() => flashShutterCompensation(bad)).toThrow();
+  });
+});
+
+describe('a published beam angle as a spot cone', () => {
+  it('passes an ordinary beam through unchanged', () => {
+    expect(spotConeRadians(55)).toBeCloseTo((55 * Math.PI) / 180, 12);
+    expect(spotConeRadians(120)).toBeCloseTo((120 * Math.PI) / 180, 12);
+  });
+
+  it('caps a bulb, a tube and a window below a half turn', () => {
+    // These are real catalogue values: a pendant is published at 360°, a tube
+    // at 180°. A cone cannot open that far, and the shadow-softness arithmetic
+    // refuses anything at or past π outright.
+    for (const published of [180, 200, 360]) {
+      const cone = spotConeRadians(published);
+      expect(cone).toBeLessThan(Math.PI);
+      expect(cone).toBe(MAX_SPOT_CONE_RAD);
+      expect(() => contactHardeningRatio(1, cone)).not.toThrow();
+    }
+  });
+
+  it('refuses an angle that is not one', () => {
+    expect(() => spotConeRadians(0)).toThrow(RangeError);
+    expect(() => spotConeRadians(Number.NaN)).toThrow(RangeError);
   });
 });

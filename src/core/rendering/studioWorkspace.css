@@ -28,12 +28,23 @@
 .studio-view-toolbar button:disabled { opacity: .4; cursor: default; }
 .studio-view-actions { border-left: 1px solid var(--border-color); padding-left: 9px; }
 .studio-view-toolbar button:focus-visible, .studio-preview-header button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.studio-camera-preview {
+.studio-right-rail {
   position: absolute;
   z-index: 90;
-  bottom: 20px;
   right: 18px;
+  bottom: 20px;
+  top: 72px;
   width: clamp(230px, 25%, 384px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  /* The rail only frames what is in it; the room behind stays draggable. */
+  pointer-events: none;
+}
+.studio-right-rail > * { pointer-events: auto; }
+.studio-camera-preview {
+  flex: 0 0 auto;
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: 10px;
@@ -52,6 +63,54 @@
 .studio-model-panel select { width: 100%; min-height: 38px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-input); color: var(--text-primary); padding: 7px; margin-bottom: 12px; font: 12px Inter, sans-serif; }
 .studio-model-framing { display: flex; gap: 6px; }
 .studio-model-framing button { flex: 1; min-height: 36px; border: 1px solid var(--border-color); border-radius: 5px; color: var(--text-primary); background: var(--bg-section); cursor: pointer; }
+/* The moves panel: named buttons over a plain list of what happens, and when. */
+.studio-sequence-panel {
+  /* In the right rail: takes what is left under the preview, never more. */
+  min-height: 0; flex: 0 1 auto; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px;
+  background: var(--bg-panel, rgba(17, 20, 26, .92)); border: 1px solid var(--border-color);
+  border-radius: 10px; backdrop-filter: blur(16px); z-index: 6;
+}
+.studio-sequence-heading { font: 600 10px/1.4 Inter, sans-serif; letter-spacing: .08em; color: var(--text-muted); }
+.studio-sequence-panel label { font: 10px/1.4 Inter, sans-serif; color: var(--text-muted); }
+.studio-sequence-panel input[type="range"] { width: 100%; accent-color: var(--focus-ring); }
+.studio-move-length { font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); margin: 0; }
+.studio-look-groups { display: flex; flex-direction: column; gap: 8px; }
+.studio-look-status { font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); margin: 0; }
+.studio-move-buttons button[aria-pressed="true"] { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.studio-move-buttons button:disabled { opacity: .5; cursor: progress; }
+.studio-move-group { display: flex; flex-direction: column; gap: 4px; }
+.studio-move-group > span { font: 10px/1.4 Inter, sans-serif; color: var(--text-muted); }
+.studio-move-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.studio-move-buttons button {
+  flex: 1 1 calc(50% - 4px); min-height: 34px; padding: 0 8px;
+  font: 11px/1.3 Inter, sans-serif; color: var(--text-primary);
+  background: var(--bg-section); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer;
+}
+.studio-move-buttons button:hover { background: var(--bg-hover, rgba(255,255,255,.08)); }
+.studio-sequence-list { list-style: decimal inside; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; }
+.studio-sequence-list li {
+  display: grid; grid-template-columns: 1fr 52px auto auto; align-items: center; gap: 4px;
+  font: 11px/1.4 Inter, sans-serif; color: var(--text-primary);
+}
+.studio-sequence-list li.muted { opacity: .45; }
+.studio-cue-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-sequence-list input[type="number"] {
+  width: 100%; min-height: 28px; padding: 0 4px; font: 11px Inter, sans-serif;
+  color: var(--text-primary); background: var(--bg-section);
+  border: 1px solid var(--border-color); border-radius: 4px;
+}
+.studio-sequence-list button {
+  min-height: 28px; padding: 0 7px; font: 10px Inter, sans-serif; color: var(--text-primary);
+  background: var(--bg-section); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer;
+}
+.studio-sequence-empty { font: 10px/1.5 Inter, sans-serif; color: var(--text-muted); margin: 0; }
+.studio-sequence-panel :is(button, input):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (max-width: 1050px) {
+  .studio-right-rail { width: 220px; }
+  .studio-move-buttons button { flex-basis: 100%; min-height: 40px; }
+}
+
 .studio-pose-edit { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 36px; font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); cursor: pointer; }
 .studio-pose-edit input { width: 16px; height: 16px; accent-color: var(--focus-ring); cursor: pointer; }
 .studio-model-panel p { font: 10px/1.5 Inter, sans-serif; color: var(--text-muted); margin-top: 12px; }

@@ -63,6 +63,29 @@ export function isFlashFixture(type?: string): boolean {
   return type !== undefined && FLASH_TYPES.has(type);
 }
 
+/**
+ * The widest cone a spot light can describe, just under a full hemisphere.
+ *
+ * Babylon's spot angle is a cone aperture, and a cone cannot open past π. A
+ * bare bulb, a tube or a window is published at 180° or 360°, which is a
+ * statement about how it spreads light, not a cone — handed straight to a spot
+ * it produces a light with no valid shadow arithmetic at all.
+ */
+export const MAX_SPOT_CONE_RAD = Math.PI * 0.98;
+
+/**
+ * A published beam angle as a spot cone, in radians.
+ *
+ * Only the cone is capped. A fixture's output still comes from its real
+ * published angle, because that is what its lumens are spread over.
+ */
+export function spotConeRadians(beamAngleDeg: number): number {
+  if (!Number.isFinite(beamAngleDeg) || beamAngleDeg <= 0) {
+    throw new RangeError('Beam angle must be a positive finite number of degrees');
+  }
+  return Math.min((beamAngleDeg * Math.PI) / 180, MAX_SPOT_CONE_RAD);
+}
+
 /** Solid angle of a cone in steradian: Ω = 2π(1 − cos(θ/2)). */
 export function coneSolidAngle(beamAngleDeg: number): number {
   if (!Number.isFinite(beamAngleDeg) || beamAngleDeg <= 0) {

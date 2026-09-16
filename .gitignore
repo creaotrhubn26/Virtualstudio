@@ -76,8 +76,11 @@ env/
 Thumbs.db
 .DS_Store
 
-# Claude Code local state
-.claude/
+# Claude Code local state, except the skills that belong to the project.
+# The directory itself cannot be excluded, or git never looks inside it to
+# find the exception.
+.claude/*
+!.claude/skills/
 
 # E2E probe output (screenshots + assembly dumps from scripts/*_probe.mjs)
 tmp-e2e-probe/

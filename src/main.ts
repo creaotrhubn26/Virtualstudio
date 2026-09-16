@@ -31,13 +31,17 @@ import { StudioSeat } from './core/rendering/StudioSeat';
 import { PoseEditor } from './core/rendering/PoseEditor';
 import { StudioProps } from './core/rendering/StudioProps';
 import { parseProps, type StudioProp } from './services/studioProps';
-import { animationDuration, parseAnimation, sampleTrack, upsertKeyframe } from './services/sceneAnimation';
+import { parseAnimation, sampleAnimation, sequenceDuration, upsertKeyframe,
+  type AnimationCue, type AnimationTrack, type Keyframe } from './services/sceneAnimation';
+import { ALL_MOVES, buildCameraMove, buildLightMove, type MoveDescription } from './services/movePresets';
+import { DEFAULT_LOOK_ID, LIGHTING_LOOKS, fixtureIlluminance, lookById,
+  type LightingLook, type LookFixture } from './services/lightingLooks';
 import { bodyIdFromModelUrl, defaultWardrobeFor, dressFigure, forgetFigure, garmentLabel, garmentsForBody,
   loadWardrobeCatalogue, resolveWardrobe, wornGarments, type WardrobeCatalogue } from './services/wardrobeService';
 import { EDITABLE_JOINTS, clampJointQuaternion, eulerFromQuat, quatFromEuler, unitVector } from './core/rendering/poseRig';
 import { StudioWorkspace } from './core/rendering/StudioWorkspace';
 import { createStudioBackdrop, createStudioGrid, studioExposure, shutterSeconds, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
-import { contactHardeningRatio, distanceForIlluminance, fixtureCandela, flashShutterCompensation, isFlashFixture, modifierSizeMetres, sceneIntensityFromCandela } from './core/rendering/photometry';
+import { contactHardeningRatio, distanceForIlluminance, fixtureCandela, flashShutterCompensation, isFlashFixture, modifierSizeMetres, sceneIntensityFromCandela, spotConeRadians } from './core/rendering/photometry';
 import { LightingPhysics } from './core/LightingPhysics';
 import type { SceneComposition } from './core/models/sceneComposer';
 import type { ShotList, CastingShot } from './core/models/production';
@@ -343,23 +347,16 @@ interface LightData {
   originalDiffuse?: BABYLON.Color3;
 }
 
-interface Keyframe {
-  time: number;
-  value: { x: number; y: number; z: number };
-}
-
-interface AnimationTrack {
-  id: string;
-  nodeId: string;
-  type: 'position' | 'rotation';
-  keyframes: Keyframe[];
-}
+// Keyframe and AnimationTrack come from the animation module, so the shape the
+// document is written in and the shape the studio edits are the same one.
 
 interface AnimationState {
   isPlaying: boolean;
   currentTime: number;
   duration: number;
   tracks: AnimationTrack[];
+  /** Named beats, each played when the photographer places it. */
+  cues: AnimationCue[];
 }
 
 interface CharacterLocomotionState {
@@ -856,7 +853,8 @@ class VirtualStudio {
     isPlaying: false,
     currentTime: 0,
     duration: 5,
-    tracks: []
+    tracks: [],
+    cues: []
   };
 
   private animationFrameId: number | null = null;
@@ -2056,8 +2054,9 @@ class VirtualStudio {
         // arrives, a door opens -- and without this none of it survived
         // being saved.
         animation: {
-          duration: Math.max(this.animationState.duration, animationDuration(this.animationState.tracks)),
+          duration: Math.max(this.animationState.duration, sequenceDuration(this.animationState)),
           tracks: this.animationState.tracks,
+          cues: this.animationState.cues,
         },
 
         // Everything the photographer has taken hold of: claimed studio
@@ -2257,6 +2256,7 @@ class VirtualStudio {
       // against a scene that is not built yet.
       const animation = parseAnimation((preset as unknown as Record<string, unknown>).animation);
       this.animationState.tracks = animation.tracks;
+      this.animationState.cues = animation.cues;
       this.animationState.duration = animation.duration || this.animationState.duration;
       this.animationState.currentTime = 0;
 
@@ -5467,6 +5467,15 @@ class VirtualStudio {
       wardrobe: () => this.getWardrobeOptions(),
       wearing: () => this.getCharacterWardrobe(),
       wear: items => this.setCharacterWardrobe(items),
+      moves: () => this.availableMoves(),
+      addMove: (move, options) => this.addMove(move, options),
+      sequence: () => this.sequence(),
+      setCueEnabled: (id, enabled) => this.setCueEnabled(id, enabled),
+      setCueStart: (id, start) => this.setCueStart(id, start),
+      removeCue: id => this.removeCue(id),
+      looks: () => this.availableLooks(),
+      applyLook: id => this.applyLook(id),
+      currentLook: () => this.currentLook(),
       frame: portrait => {
         const mesh = this.getPrimaryCharacterMesh();
         const position = mesh?.getAbsolutePosition() || BABYLON.Vector3.Zero();
@@ -5483,6 +5492,11 @@ class VirtualStudio {
       save: () => this.getCurrentSceneAsPreset(),
       load: async preset => {
         await this.applyScenePreset(preset);
+        // The document carries its own fixtures, which may be a look taken
+        // apart afterwards. Saying which look it was would be a lie, so the
+        // panel says what is true: this is the document's own lighting.
+        this.currentLookId = null;
+        window.dispatchEvent(new CustomEvent('ch-look-changed', { detail: { id: null, label: 'Lys fra dokumentet' } }));
         useAppStore.getState().selectNode(null);
         this.gizmoManager?.attachToMesh(null);
       },
@@ -6330,7 +6344,10 @@ class VirtualStudio {
       if (candela !== null) {
         lightConfig.intensity = sceneIntensityFromCandela(candela);
         lightConfig.cct = specFromDB.cct ?? lightConfig.cct;
-        lightConfig.beamAngle = realBeamAngleRad;
+        // A bare bulb, a tube or a window is published at 180° or more, which
+        // is not a cone. The published angle still sets the fixture's output
+        // above; only what the spot light is told is capped.
+        lightConfig.beamAngle = spotConeRadians((realBeamAngleRad * 180) / Math.PI);
         lightConfig.name = `${specFromDB.brand} ${specFromDB.model}`;
       }
     }
@@ -6837,86 +6854,126 @@ class VirtualStudio {
     };
   }
 
-  public async setupDefaultLighting(): Promise<void> {
-    const subjectCenter = new BABYLON.Vector3(0, 1.2, 0);
+  /**
+   * Stand one fixture of a look, and give it the level the look asks for.
+   *
+   * The fixture keeps its catalogue output; where it stands and how far its
+   * output is dialled back is what makes the ratio, exactly as on the floor.
+   */
+  private async buildLookFixture(look: LightingLook, spec: LookFixture): Promise<void> {
+    const aim = new BABYLON.Vector3(spec.aim.x, spec.aim.y, spec.aim.z);
+    const stand = new BABYLON.Vector3(spec.position.x, spec.position.y, spec.position.z);
+    // A lamp, a window or a candle is where it is. It gives what it can give
+    // from there; only a working light is walked in to make its level.
+    const placement = spec.motivating
+      ? { position: stand, powerMultiplier: this.motivatingOutput(spec, aim, fixtureIlluminance(look, spec)) }
+      : this.placeFixtureForIlluminance(spec.fixture, stand, aim, fixtureIlluminance(look, spec));
 
+    const id = await this.addLight(spec.fixture, placement.position);
+    const data = this.lights.get(id);
+    if (!data) return;
+
+    data.name = spec.name;
+    data.powerMultiplier = placement.powerMultiplier;
+    this.aimLightAt(id, aim);
+
+    const colour = this.cctToColor(spec.cct);
+    data.light.diffuse = colour;
+    data.light.specular = colour;
+    data.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+    if (data.light instanceof BABYLON.SpotLight) {
+      if (spec.beamDeg !== undefined) data.light.angle = (spec.beamDeg * Math.PI) / 180;
+      if (spec.exponent !== undefined) data.light.exponent = spec.exponent;
+    }
+    if (data.shadowGenerator) {
+      if (spec.bias !== undefined) data.shadowGenerator.bias = spec.bias;
+      if (spec.normalBias !== undefined) data.shadowGenerator.normalBias = spec.normalBias;
+      this.configureStudioShadowSoftness(data.shadowGenerator, data);
+    }
+  }
+
+  /**
+   * How far back a visible source is dialled, staying where it stands.
+   *
+   * Never above its own output: a practical that cannot reach the level asked
+   * for simply burns at full, which is what the real lamp would do.
+   */
+  private motivatingOutput(spec: LookFixture, aim: BABYLON.Vector3, wanted: number): number {
+    const catalogue = getLightById(spec.fixture);
+    const candela = catalogue
+      ? fixtureCandela({
+          type: catalogue.type,
+          guideNumber: catalogue.guideNumber,
+          lux1m: catalogue.lux1m,
+          lumens: catalogue.lumens,
+          beamAngleDeg: catalogue.beamAngle,
+        })
+      : null;
+    if (candela === null) return 1;
+
+    const output = sceneIntensityFromCandela(candela);
+    const distance = new BABYLON.Vector3(spec.position.x, spec.position.y, spec.position.z)
+      .subtract(aim).length();
+    return Math.min(1, (wanted * distance * distance) / output);
+  }
+
+  /** The lighting looks on offer, each a place or a situation. */
+  public availableLooks(): LightingLook[] {
+    return LIGHTING_LOOKS;
+  }
+
+  /** The look the rig currently stands in, if it was set from one. */
+  public currentLook(): string | null {
+    return this.currentLookId;
+  }
+
+  /**
+   * Light the scene the way a named place is lit.
+   *
+   * Everything on the stands goes first: a look is the whole rig, not another
+   * light added to whatever was there. Anyone who wants to move a single head
+   * afterwards still can — the look leaves ordinary fixtures behind, not a
+   * locked preset.
+   */
+  public async applyLook(id: string): Promise<boolean> {
+    const look = lookById(id);
+    if (!look) return false;
+
+    this.clearAllLights();
+    for (const fixture of look.fixtures) {
+      await this.buildLookFixture(look, fixture);
+    }
+    this.currentLookId = id;
+
+    this.scene.materials.forEach(material => {
+      if (material instanceof BABYLON.PBRMaterial || material instanceof BABYLON.StandardMaterial) {
+        material.maxSimultaneousLights = 8;
+      }
+    });
+    this.updateSceneBrightness();
+    this.updateSceneList();
+    // Same notice the default rig sends, so every panel that lists fixtures
+    // refreshes whether the rig came from a look or from setup.
+    window.dispatchEvent(new CustomEvent('lights-updated', {
+      detail: { action: 'look-applied', lightCount: this.lights.size },
+    }));
+    window.dispatchEvent(new CustomEvent('ch-look-changed', { detail: { id, label: look.label } }));
+    return true;
+  }
+
+  private currentLookId: string | null = null;
+
+  public async setupDefaultLighting(): Promise<void> {
     // Load the infinity cove backdrop immediately so colored lights have a surface to illuminate
     this.loadBackdrop('seamless-default', { receiveShadow: true });
 
-    // Neutral daylight key, fill and rim for judging materials and light
-    // placement. Each fixture keeps its catalogue output; the rig comes from
-    // where it stands and how far its output is dialled back.
-    const keyAim = new BABYLON.Vector3(0, 1.3, 0);
-    const keyPlacement = this.placeFixtureForIlluminance(
-      'aputure-300d', new BABYLON.Vector3(3.5, 3.2, -2), keyAim, VirtualStudio.RIG_KEY_ILLUMINANCE);
-    const keyLightId = await this.addLight('aputure-300d', keyPlacement.position);
-    const keyLight = this.lights.get(keyLightId);
-    if (keyLight) {
-      keyLight.name = 'Hovedlys · Softbox';
-      keyLight.powerMultiplier = keyPlacement.powerMultiplier;
-      this.aimLightAt(keyLightId, keyAim);
-      if (keyLight.light instanceof BABYLON.SpotLight) {
-        keyLight.light.angle = Math.PI / 3;
-        keyLight.light.exponent = 2.0;
-        keyLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        // 5600 K daylight
-        keyLight.light.diffuse  = this.cctToColor(5600);
-        keyLight.light.specular = this.cctToColor(5600);
-      }
-      if (keyLight.shadowGenerator) {
-        keyLight.shadowGenerator.bias = 0.00004;
-        keyLight.shadowGenerator.normalBias = 0.003;
-        this.configureStudioShadowSoftness(keyLight.shadowGenerator, keyLight);
-      }
+    // The studio portrait look: neutral daylight key, fill and rim for judging
+    // materials and light placement.
+    const look = lookById(DEFAULT_LOOK_ID)!;
+    for (const fixture of look.fixtures) {
+      await this.buildLookFixture(look, fixture);
     }
-
-    // Fill, one stop and a half under the key
-    const fillPlacement = this.placeFixtureForIlluminance(
-      'aputure-300d', new BABYLON.Vector3(-3.2, 2.2, -3), subjectCenter,
-      VirtualStudio.RIG_KEY_ILLUMINANCE / VirtualStudio.RIG_KEY_TO_FILL);
-    const fillLightId = await this.addLight('aputure-300d', fillPlacement.position);
-    const fillLight = this.lights.get(fillLightId);
-    if (fillLight) {
-      fillLight.name = 'Utfylling · Softbox';
-      fillLight.powerMultiplier = fillPlacement.powerMultiplier;
-      this.aimLightAt(fillLightId, subjectCenter);
-      if (fillLight.light instanceof BABYLON.SpotLight) {
-        fillLight.light.angle = Math.PI / 2.5;
-        fillLight.light.exponent = 1.5;
-        fillLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        // Match the key colour temperature
-        fillLight.light.diffuse  = this.cctToColor(5600);
-        fillLight.light.specular = this.cctToColor(5600);
-      }
-      if (fillLight.shadowGenerator) {
-        fillLight.shadowGenerator.bias = 0.00006;
-        fillLight.shadowGenerator.normalBias = 0.003;
-        this.configureStudioShadowSoftness(fillLight.shadowGenerator, fillLight);
-      }
-    }
-
-    // Rim, just under the key so it separates without reading as a second key
-    const rimAim = new BABYLON.Vector3(0, 1.5, 0);
-    const rimPlacement = this.placeFixtureForIlluminance(
-      'aputure-300d-strip', new BABYLON.Vector3(-2.5, 4, 3.5), rimAim,
-      VirtualStudio.RIG_KEY_ILLUMINANCE * VirtualStudio.RIG_RIM_TO_KEY);
-    const rimLightId = await this.addLight('aputure-300d-strip', rimPlacement.position);
-    const rimLight = this.lights.get(rimLightId);
-    if (rimLight) {
-      rimLight.name = 'Kantlys · Stripbox';
-      rimLight.powerMultiplier = rimPlacement.powerMultiplier;
-      this.aimLightAt(rimLightId, rimAim);
-      if (rimLight.light instanceof BABYLON.SpotLight) {
-        rimLight.light.angle = Math.PI / 5;
-        rimLight.light.exponent = 4.0;          // tighter centre hotspot → crisper edge light
-        rimLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        rimLight.light.diffuse = this.cctToColor(5600);
-        rimLight.light.specular = this.cctToColor(5600);
-      }
-      if (rimLight.shadowGenerator) {
-        this.configureStudioShadowSoftness(rimLight.shadowGenerator, rimLight);
-      }
-    }
+    this.currentLookId = look.id;
 
     // After all lights are created, patch every existing material to accept 8 lights
     this.scene.materials.forEach((mat) => {
@@ -31227,29 +31284,54 @@ class VirtualStudio {
     nextBtn?.addEventListener('click', () => this.jumpToNextKeyframe());
   }
 
-  private addKeyframe(type: 'position' | 'rotation'): void {
-    if (!this.selectedLightId) return;
-    const data = this.lights.get(this.selectedLightId);
-    if (!data) return;
+  /**
+   * What the photographer is keyframing, whatever kind of thing it is.
+   *
+   * Keyframing used to demand a selected light, which is why nothing else in
+   * the scene could be given a track from the interface even after the
+   * timeline learned to move anything. A prop takes precedence because
+   * claiming or picking one is the most recent explicit act.
+   */
+  private keyframeTarget(): { id: string; node: BABYLON.TransformNode } | null {
+    const propId = this.props?.selected;
+    if (propId) {
+      const node = this.props?.nodeFor(propId);
+      if (node) return { id: propId, node };
+    }
+    if (this.selectedLightId) {
+      const light = this.lights.get(this.selectedLightId);
+      if (light) return { id: this.selectedLightId, node: light.mesh };
+    }
+    const nodeId = useAppStore.getState().selectedNodeId;
+    if (nodeId) {
+      const mesh = this.resolveMeshForNodeId(nodeId);
+      if (mesh) return { id: nodeId, node: mesh };
+    }
+    return null;
+  }
 
-    const trackId = `${this.selectedLightId}_${type}`;
-    let track = this.animationState.tracks.find(t => t.id === trackId);
-
+  /** The track for one thing and one channel, created on first use. */
+  private trackFor(id: string, type: 'position' | 'rotation', suffix = ''): AnimationTrack {
+    const trackId = `${id}_${type}${suffix}`;
+    let track = this.animationState.tracks.find(candidate => candidate.id === trackId);
     if (!track) {
-      track = {
-        id: trackId,
-        nodeId: this.selectedLightId,
-        type: type,
-        keyframes: []
-      };
+      track = { id: trackId, nodeId: id, type, keyframes: [] };
       this.animationState.tracks.push(track);
     }
+    return track;
+  }
 
-    const value = type === 'position' 
-      ? { x: data.mesh.position.x, y: data.mesh.position.y, z: data.mesh.position.z }
-      : { x: data.mesh.rotation.x * 180 / Math.PI, y: data.mesh.rotation.y * 180 / Math.PI, z: data.mesh.rotation.z * 180 / Math.PI };
+  private addKeyframe(type: 'position' | 'rotation'): void {
+    const target = this.keyframeTarget();
+    if (!target) return;
+    const track = this.trackFor(target.id, type);
 
-    // Check if keyframe exists at current time
+    // Radians, like every other angle a document holds. This recorder stored
+    // degrees while the per-axis one stored radians, so keyframing all three
+    // axes at once meant something else entirely from keyframing them singly.
+    const source = type === 'position' ? target.node.position : target.node.rotation;
+    const value = { x: source.x, y: source.y, z: source.z };
+
     track.keyframes = upsertKeyframe(track.keyframes, this.animationState.currentTime, value);
 
     this.updateTimelineUI(false);
@@ -31261,33 +31343,19 @@ class VirtualStudio {
   }
 
   private addKeyframeForAxis(type: 'position' | 'rotation', axis: 'x' | 'y' | 'z'): void {
-    if (!this.selectedLightId) return;
-    const data = this.lights.get(this.selectedLightId);
-    if (!data) return;
+    const target = this.keyframeTarget();
+    if (!target) return;
+    const track = this.trackFor(target.id, type, `_${axis}`);
 
-    const trackId = `${this.selectedLightId}_${type}_${axis}`;
-    let track = this.animationState.tracks.find(t => t.id === trackId);
-
-    if (!track) {
-      track = {
-        id: trackId,
-        nodeId: this.selectedLightId,
-        type: type,
-        keyframes: []
-      };
-      this.animationState.tracks.push(track);
-    }
-
-    let value: { x: number; y: number; z: number };
-    if (type === 'position') {
-      const axisVal = axis === 'x' ? data.mesh.position.x : axis === 'y' ? data.mesh.position.y : data.mesh.position.z;
-      value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
-    } else {
-      // Radians: the document keeps one unit for angles, and the panel that
-      // shows degrees converts at its own edge.
-      const axisVal = axis === 'x' ? data.mesh.rotation.x : axis === 'y' ? data.mesh.rotation.y : data.mesh.rotation.z;
-      value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
-    }
+    // Radians for rotation, as above. The other two axes are left at zero:
+    // this track speaks for one axis only.
+    const source = type === 'position' ? target.node.position : target.node.rotation;
+    const axisValue = source[axis];
+    const value = {
+      x: axis === 'x' ? axisValue : 0,
+      y: axis === 'y' ? axisValue : 0,
+      z: axis === 'z' ? axisValue : 0,
+    };
 
     track.keyframes = upsertKeyframe(track.keyframes, this.animationState.currentTime, value);
 
@@ -31374,17 +31442,144 @@ class VirtualStudio {
     return this.resolveMeshForNodeId(nodeId);
   }
 
+  /** The id a track uses to address the taking camera. */
+  public static readonly CAMERA_NODE_ID = 'takingCamera';
+
+  private moveCounter = 0;
+
+  /** Every named move that can be added, for the panel to offer. */
+  public availableMoves(): MoveDescription[] {
+    return ALL_MOVES;
+  }
+
+  /** The sequence as it stands: what happens, and when. */
+  public sequence(): AnimationCue[] {
+    return [...this.animationState.cues].sort((a, b) => a.start - b.start);
+  }
+
+  /**
+   * Add a named move to the sequence, built from where the scene stands now.
+   *
+   * A camera move reads the shot it is starting from, so the same button suits
+   * a tight portrait and a wide hangar. A light move reads the fixture's own
+   * output, so dimming a weak lamp does not brighten it first.
+   */
+  public addMove(move: string, options?: { start?: number; duration?: number }): AnimationCue | null {
+    const description = ALL_MOVES.find(candidate => candidate.id === move);
+    if (!description) return null;
+    const start = options?.start ?? this.animationState.currentTime;
+    const duration = Math.max(0.1, options?.duration ?? 3);
+    const id = `${move}-${++this.moveCounter}`;
+
+    let cue: AnimationCue | null = null;
+    if (description.kind === 'camera') {
+      cue = buildCameraMove(move, {
+        id, start, duration,
+        cameraNodeId: VirtualStudio.CAMERA_NODE_ID,
+        camera: {
+          position: { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z },
+          target: { x: this.camera.target.x, y: this.camera.target.y, z: this.camera.target.z },
+        },
+      });
+    } else {
+      const lightId = this.selectedLightId ?? [...this.lights.keys()][0];
+      const light = lightId ? this.lights.get(lightId) : undefined;
+      // A light move needs a fixture to act on; there may be none on set yet.
+      if (!lightId || !light) return null;
+      cue = buildLightMove(move, {
+        id, start, duration,
+        lightNodeId: lightId,
+        intensity: light.powerMultiplier ?? 1,
+        color: { x: light.light.diffuse.r, y: light.light.diffuse.g, z: light.light.diffuse.b },
+      });
+    }
+    if (!cue) return null;
+
+    this.animationState.cues.push(cue);
+    this.animationState.duration = Math.max(this.animationState.duration, sequenceDuration(this.animationState));
+    this.sequenceChanged();
+    return cue;
+  }
+
+  /** Mute a beat while the rest is worked on, or bring it back. */
+  public setCueEnabled(id: string, enabled: boolean): boolean {
+    const cue = this.animationState.cues.find(candidate => candidate.id === id);
+    if (!cue) return false;
+    cue.enabled = enabled;
+    this.sequenceChanged();
+    return true;
+  }
+
+  /** Move a beat to another moment, carrying everything in it. */
+  public setCueStart(id: string, start: number): boolean {
+    const cue = this.animationState.cues.find(candidate => candidate.id === id);
+    if (!cue) return false;
+    cue.start = Math.max(0, start);
+    this.animationState.duration = Math.max(this.animationState.duration, sequenceDuration(this.animationState));
+    this.sequenceChanged();
+    return true;
+  }
+
+  public removeCue(id: string): boolean {
+    const before = this.animationState.cues.length;
+    this.animationState.cues = this.animationState.cues.filter(cue => cue.id !== id);
+    if (this.animationState.cues.length === before) return false;
+    this.sequenceChanged();
+    return true;
+  }
+
+  private sequenceChanged(): void {
+    this.applyAnimationAtTime(this.animationState.currentTime);
+    window.dispatchEvent(new CustomEvent('ch-sequence-changed', {
+      detail: { cues: this.sequence(), duration: this.animationState.duration },
+    }));
+  }
+
+  /**
+   * Put the scene where the sequence says it should be at `time`.
+   *
+   * Every channel a track can drive is applied here: where a thing stands, how
+   * it is turned, how brightly a fixture burns and what colour it is, and
+   * where the camera looks. Without the last three a flickering bulb, a police
+   * light and a moving shot were not expressible at all.
+   */
   private applyAnimationAtTime(time: number): void {
-    for (const track of this.animationState.tracks) {
-      const node = this.animatedNode(track.nodeId);
+    for (const { nodeId, channel, value } of sampleAnimation(this.animationState, time)) {
+      // The camera is not a mesh, and an arc-rotate camera recomputes its
+      // position from alpha, beta and radius every frame, so assigning
+      // position directly would be undone. setPosition and setTarget are the
+      // supported way in.
+      if (nodeId === VirtualStudio.CAMERA_NODE_ID) {
+        if (channel === 'position') this.camera.setPosition(new BABYLON.Vector3(value.x, value.y, value.z));
+        else if (channel === 'target') this.camera.setTarget(new BABYLON.Vector3(value.x, value.y, value.z));
+        continue;
+      }
+
+      const light = this.lights.get(nodeId);
+      if (light && (channel === 'intensity' || channel === 'color')) {
+        if (channel === 'intensity') {
+          // The fixture's own output, not its physical candela: the document
+          // keeps what the photographer dialled, and exposure stays separate.
+          light.powerMultiplier = Math.max(0, value.x);
+          light.baseIntensity ??= light.light.intensity;
+          light.light.intensity = light.baseIntensity * light.powerMultiplier;
+          light.intensity = light.light.intensity;
+          this.updateLightHeadGlow(light);
+        } else {
+          light.light.diffuse = new BABYLON.Color3(
+            Math.min(1, Math.max(0, value.x)),
+            Math.min(1, Math.max(0, value.y)),
+            Math.min(1, Math.max(0, value.z)));
+          light.useCustomColor = true;
+        }
+        continue;
+      }
+
+      const node = this.animatedNode(nodeId);
       if (!node) continue;
-
-      const value = sampleTrack(track.keyframes, time);
-      if (!value) continue;
-
-      if (track.type === 'position') {
+      if (channel === 'position') {
         node.position.set(value.x, value.y, value.z);
-      } else {
+      } else if (channel === 'rotation') {
         // Radians, as everywhere else in a scene document. A quaternion left
         // by a gizmo drag would otherwise win over the angles set here.
         node.rotationQuaternion = null;

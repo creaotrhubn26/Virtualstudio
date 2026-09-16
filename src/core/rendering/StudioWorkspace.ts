@@ -24,6 +24,7 @@ export class StudioWorkspace {
   private preview: HTMLElement;
   private previewCanvas: HTMLCanvasElement;
   private modelPanel: HTMLElement;
+  private sequencePanel!: HTMLElement;
   private environmentPanel: HTMLElement;
   private unsubscribeEnvironment: () => void;
   private previewCamera: FreeCamera;
@@ -48,6 +49,15 @@ export class StudioWorkspace {
       frame: (portrait: boolean) => void;
       editPose: (enabled: boolean) => boolean;
       wardrobe: () => { id: string; label: string; slot: string }[];
+      moves: () => { id: string; label: string; hint: string; kind: string }[];
+      addMove: (move: string, options: { duration: number }) => { id: string } | null;
+      sequence: () => { id: string; name: string; start: number; enabled: boolean }[];
+      setCueEnabled: (id: string, enabled: boolean) => boolean;
+      setCueStart: (id: string, start: number) => boolean;
+      removeCue: (id: string) => boolean;
+      looks: () => { id: string; label: string; hint: string; group: string }[];
+      applyLook: (id: string) => Promise<boolean>;
+      currentLook: () => string | null;
       wearing: () => string[];
       wear: (items: string[]) => Promise<string[]>;
     },
@@ -84,6 +94,12 @@ export class StudioWorkspace {
       </div>`;
     container.prepend(this.toolbar);
 
+    // The preview and the moves panel share the right-hand edge. Stacking them
+    // in one rail is what keeps the preview from sitting on top of the buttons.
+    const rail = document.createElement('div');
+    rail.className = 'studio-right-rail';
+    container.append(rail);
+
     this.preview = document.createElement('section');
     this.preview.className = 'studio-camera-preview';
     this.preview.setAttribute('aria-label', 'Kameraforhåndsvisning');
@@ -91,7 +107,7 @@ export class StudioWorkspace {
       <button type="button" title="Vis opptakskamera i hovedvinduet" aria-label="Åpne kameravisning">↗</button></div>
       <canvas width="384" height="216" aria-label="Lys og utsnitt fra opptakskameraet"></canvas>
       <div class="studio-preview-settings"></div><p>Lys og utsnitt · 16:9</p>`;
-    container.append(this.preview);
+    rail.append(this.preview);
     this.previewCanvas = this.preview.querySelector('canvas')!;
     this.preview.querySelector('button')!.addEventListener('click', () => this.setView('camera'), { signal: this.abort.signal });
 
@@ -111,6 +127,7 @@ export class StudioWorkspace {
       <label class="studio-pose-edit"><input type="checkbox" id="studioPoseEdit"> Juster ledd</label>
       <p role="status" class="studio-model-status">Anatomisk modell · hud, hår og klær</p>`;
     container.append(this.modelPanel);
+    this.buildSequencePanel(rail);
     const modelSelect = this.modelPanel.querySelector<HTMLSelectElement>('#studioModelSelect')!;
     const poseSelect = this.modelPanel.querySelector<HTMLSelectElement>('#studioPoseSelect')!;
     const poseEdit = this.modelPanel.querySelector<HTMLInputElement>('#studioPoseEdit')!;
@@ -405,6 +422,233 @@ export class StudioWorkspace {
     } finally { this.reading = false; }
   }
 
+  /**
+   * The moves panel: name what should happen, and when.
+   *
+   * Nobody should have to write keyframes to push the camera in or make a bulb
+   * fail. Each button is a move in the words a crew already uses, with a plain
+   * explanation for anyone who does not know the word, and each one adds a
+   * beat to the sequence that can be moved, muted or removed afterwards. The
+   * detailed timeline edits the very same thing.
+   */
+  private buildSequencePanel(container: HTMLElement): void {
+    this.sequencePanel = document.createElement('section');
+    this.sequencePanel.className = 'studio-sequence-panel';
+    this.sequencePanel.setAttribute('aria-label', 'Bevegelser og sekvens');
+    this.sequencePanel.innerHTML = `
+      <div class="studio-sequence-heading">LYSSETTING</div>
+      <div class="studio-look-groups"></div>
+      <p class="studio-look-status" role="status">Studio · portrett</p>
+      <div class="studio-sequence-heading">BEVEGELSE</div>
+      <label for="studioMoveLength">Lengde</label>
+      <input type="range" id="studioMoveLength" min="0.5" max="10" step="0.5" value="3">
+      <p class="studio-move-length" role="status">3,0 sekunder</p>
+      <div class="studio-move-group" data-kind="camera"><span>Kamera</span><div class="studio-move-buttons"></div></div>
+      <div class="studio-move-group" data-kind="light"><span>Lys</span><div class="studio-move-buttons"></div></div>
+      <div class="studio-sequence-heading">SEKVENS</div>
+      <ol class="studio-sequence-list"></ol>
+      <p class="studio-sequence-empty">Ingen bevegelser ennå. Velg en over.</p>`;
+    container.append(this.sequencePanel);
+
+    const length = this.sequencePanel.querySelector<HTMLInputElement>('#studioMoveLength')!;
+    const lengthLabel = this.sequencePanel.querySelector<HTMLElement>('.studio-move-length')!;
+    const list = this.sequencePanel.querySelector<HTMLOListElement>('.studio-sequence-list')!;
+    const empty = this.sequencePanel.querySelector<HTMLElement>('.studio-sequence-empty')!;
+
+    length.addEventListener('input', () => {
+      lengthLabel.textContent = `${Number(length.value).toFixed(1).replace('.', ',')} sekunder`;
+    }, { signal: this.abort.signal });
+
+    this.buildLookButtons();
+
+    for (const move of this.characterControls.moves()) {
+      const group = this.sequencePanel.querySelector<HTMLElement>(
+        `.studio-move-group[data-kind="${move.kind}"] .studio-move-buttons`);
+      if (!group) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.move = move.id;
+      button.textContent = move.label;
+      // The word is the crew's; the explanation is for everyone else.
+      button.title = move.hint;
+      button.addEventListener('click', () => {
+        const added = this.characterControls.addMove(move.id, { duration: Number(length.value) });
+        // A light move needs a fixture; there may be none on set yet.
+        if (!added) empty.textContent = 'Velg en lyskilde først for å bevege lyset.';
+        this.renderSequence();
+      }, { signal: this.abort.signal });
+      group.append(button);
+    }
+
+    list.addEventListener('click', event => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-cue]');
+      if (!button) return;
+      const id = button.dataset.cue!;
+      if (button.dataset.action === 'remove') this.characterControls.removeCue(id);
+      else this.characterControls.setCueEnabled(id, button.dataset.enabled !== 'true');
+    }, { signal: this.abort.signal });
+
+    list.addEventListener('change', event => {
+      const input = event.target as HTMLInputElement;
+      if (input.dataset.cueStart) this.characterControls.setCueStart(input.dataset.cueStart, Number(input.value));
+    }, { signal: this.abort.signal });
+
+    window.addEventListener('ch-sequence-changed', () => this.renderSequence(), { signal: this.abort.signal });
+    this.renderSequence();
+  }
+
+  /**
+   * The lighting looks: one button per place, not per fixture.
+   *
+   * Someone filming in a kitchen asks for a kitchen, not for a key at 45
+   * degrees. Each button lights the whole scene the way that place is lit, and
+   * leaves ordinary fixtures behind that the light panel can still edit. The
+   * groups keep eleven buttons readable: rooms, outdoors, mood, studio.
+   */
+  private buildLookButtons(): void {
+    const groups = this.sequencePanel.querySelector<HTMLElement>('.studio-look-groups')!;
+    const titles: Record<string, string> = {
+      rom: 'Innendørs', ute: 'Ute', stemning: 'Stemning', studio: 'Studio',
+    };
+    const looks = this.characterControls.looks();
+
+    for (const group of ['rom', 'ute', 'stemning', 'studio']) {
+      const inGroup = looks.filter(look => look.group === group);
+      if (inGroup.length === 0) continue;
+
+      const section = document.createElement('div');
+      section.className = 'studio-move-group';
+      section.dataset.lookGroup = group;
+      const heading = document.createElement('span');
+      heading.textContent = titles[group] ?? group;
+      const buttons = document.createElement('div');
+      buttons.className = 'studio-move-buttons';
+
+      for (const look of inGroup) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.look = look.id;
+        button.textContent = look.label;
+        button.title = look.hint;
+        button.setAttribute('aria-pressed', String(look.id === this.characterControls.currentLook()));
+        buttons.append(button);
+      }
+      section.append(heading, buttons);
+      groups.append(section);
+    }
+
+    const status = this.sequencePanel.querySelector<HTMLElement>('.studio-look-status')!;
+    groups.addEventListener('click', event => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-look]');
+      if (!button || button.disabled) return;
+      const look = looks.find(candidate => candidate.id === button.dataset.look);
+      if (!look) return;
+
+      // Rebuilding a rig takes a moment, and silence in that moment reads as a
+      // dead button, so the panel says what it is doing before it does it.
+      const all = [...groups.querySelectorAll<HTMLButtonElement>('button[data-look]')];
+      for (const other of all) other.disabled = true;
+      status.textContent = `Setter lys · ${look.label} …`;
+
+      const settle = (applied: boolean, message: string) => {
+        for (const other of all) {
+          other.disabled = false;
+          other.setAttribute('aria-pressed', String(applied && other === button));
+        }
+        status.textContent = message;
+      };
+      // A rig that fails halfway must not leave every button dead and the
+      // panel saying it is still working.
+      void this.characterControls.applyLook(look.id)
+        .then(applied => settle(applied, applied ? look.label : 'Fikk ikke satt lyset. Prøv et annet.'))
+        .catch(error => {
+          console.error('[StudioWorkspace] look failed', error);
+          settle(false, 'Fikk ikke satt lyset. Prøv et annet.');
+        });
+    }, { signal: this.abort.signal });
+
+    // An opened document brings its own fixtures, which belong to no look.
+    window.addEventListener('ch-look-changed', event => {
+      const detail = (event as CustomEvent<{ id: string | null; label: string }>).detail;
+      if (detail?.id) return;
+      for (const button of groups.querySelectorAll<HTMLButtonElement>('button[data-look]')) {
+        button.setAttribute('aria-pressed', 'false');
+      }
+      status.textContent = detail?.label ?? 'Egendefinert lys';
+    }, { signal: this.abort.signal });
+  }
+
+  /**
+   * Show the sequence as an ordered list: what happens, and when.
+   *
+   * Replacing the list blurs whatever was focused inside it, and a blurred
+   * number input fires `change`, which asks for another render — in the middle
+   * of the first one. Rendering once and remembering that another was asked
+   * for is what keeps the list from being edited while it is being built.
+   */
+  private renderSequence(): void {
+    if (this.renderingSequence) {
+      this.sequenceDirty = true;
+      return;
+    }
+    this.renderingSequence = true;
+    try {
+      this.renderSequenceOnce();
+    } finally {
+      this.renderingSequence = false;
+    }
+    if (this.sequenceDirty) {
+      this.sequenceDirty = false;
+      this.renderSequence();
+    }
+  }
+
+  private renderingSequence = false;
+  private sequenceDirty = false;
+
+  private renderSequenceOnce(): void {
+    const list = this.sequencePanel.querySelector<HTMLOListElement>('.studio-sequence-list')!;
+    const empty = this.sequencePanel.querySelector<HTMLElement>('.studio-sequence-empty')!;
+    const cues = this.characterControls.sequence();
+
+    list.replaceChildren(...cues.map(cue => {
+      const item = document.createElement('li');
+      item.dataset.cue = cue.id;
+      if (!cue.enabled) item.classList.add('muted');
+
+      const name = document.createElement('span');
+      name.className = 'studio-cue-name';
+      name.textContent = cue.name;
+
+      const start = document.createElement('input');
+      start.type = 'number';
+      start.min = '0';
+      start.step = '0.5';
+      start.value = String(cue.start);
+      start.dataset.cueStart = cue.id;
+      start.setAttribute('aria-label', `Starter etter, sekunder, ${cue.name}`);
+
+      const mute = document.createElement('button');
+      mute.type = 'button';
+      mute.dataset.cue = cue.id;
+      mute.dataset.enabled = String(cue.enabled);
+      mute.textContent = cue.enabled ? 'På' : 'Av';
+      mute.title = cue.enabled ? 'Slå av denne bevegelsen' : 'Slå på igjen';
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.dataset.cue = cue.id;
+      remove.dataset.action = 'remove';
+      remove.textContent = 'Fjern';
+
+      item.append(name, start, mute, remove);
+      return item;
+    }));
+
+    empty.hidden = cues.length > 0;
+    if (cues.length === 0) empty.textContent = 'Ingen bevegelser ennå. Velg en over.';
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
@@ -416,6 +660,7 @@ export class StudioWorkspace {
     this.pipeline?.removeCamera(this.navigationCamera);
     const index = this.scene.customRenderTargets.indexOf(this.previewTarget);
     if (index !== -1) this.scene.customRenderTargets.splice(index, 1);
+    this.sequencePanel?.remove();
     this.previewTarget.dispose(); this.previewCamera.dispose(); this.cameraMarker.dispose();
     this.navigationCamera.dispose();
     this.canvas.parentElement?.classList.remove('studio-workspace');

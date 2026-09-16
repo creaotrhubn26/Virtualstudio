@@ -28,7 +28,24 @@ export interface Keyframe {
   value: Vec3Value;
 }
 
-export type TrackChannel = 'position' | 'rotation';
+/**
+ * What a track drives.
+ *
+ * All four carry the same keyframe shape, which keeps one sampler and one
+ * document format:
+ *
+ * - `position`, `rotation` — metres and radians, xyz
+ * - `intensity` — the fixture's own output scale in `x`; y and z unused
+ * - `color`     — red, green and blue in xyz, each 0 to 1
+ * - `target`    — what a camera looks at, in metres
+ *
+ * Without intensity and colour a flickering bulb, a police light and a lamp
+ * dimmed through a scene are not expressible at all, which is most of what
+ * film lighting actually does.
+ */
+export type TrackChannel = 'position' | 'rotation' | 'intensity' | 'color' | 'target';
+
+export const TRACK_CHANNELS: TrackChannel[] = ['position', 'rotation', 'intensity', 'color', 'target'];
 
 export interface AnimationTrack {
   id: string;
@@ -38,13 +55,40 @@ export interface AnimationTrack {
   keyframes: Keyframe[];
 }
 
-export interface SceneAnimation {
-  /** Seconds. Never shorter than the last keyframe. */
-  duration: number;
+/**
+ * A named piece of the sequence, played when the photographer says.
+ *
+ * A scene is rarely one continuous move: the helicopter arrives, then the
+ * light fails, then the car pulls away. A cue holds its tracks in its own
+ * time, starting at zero, and `start` places it on the scene's clock. Moving
+ * a cue moves everything in it together, which is the point — otherwise
+ * retiming a beat means editing every keyframe in it.
+ */
+export interface AnimationCue {
+  id: string;
+  name: string;
+  /** Where the cue begins on the scene timeline, in seconds. */
+  start: number;
+  /**
+   * How long it plays, if it should stop before its tracks run out. Absent
+   * means it runs to its own last keyframe and then holds.
+   */
+  duration?: number;
+  enabled: boolean;
+  /** Keyframe times are relative to the cue, not to the scene. */
   tracks: AnimationTrack[];
 }
 
-export const EMPTY_ANIMATION: SceneAnimation = { duration: 0, tracks: [] };
+export interface SceneAnimation {
+  /** Seconds. Never shorter than the last thing that moves. */
+  duration: number;
+  /** Tracks on the scene's own clock. */
+  tracks: AnimationTrack[];
+  /** Cues, each on its own clock, placed by `start`. */
+  cues: AnimationCue[];
+}
+
+export const EMPTY_ANIMATION: SceneAnimation = { duration: 0, tracks: [], cues: [] };
 
 /** Two keyframes closer together than this are the same moment. */
 export const KEYFRAME_EPSILON = 0.01;
@@ -107,7 +151,7 @@ export function upsertKeyframe(keyframes: Keyframe[], time: number, value: Vec3V
   return sortKeyframes(next);
 }
 
-/** The moment the last thing stops moving. */
+/** The moment the last thing on these tracks stops moving. */
 export function animationDuration(tracks: AnimationTrack[]): number {
   let end = 0;
   for (const track of tracks) {
@@ -116,6 +160,71 @@ export function animationDuration(tracks: AnimationTrack[]): number {
     }
   }
   return end;
+}
+
+/** How long a cue runs: what it was given, or what its tracks need. */
+export function cueDuration(cue: AnimationCue): number {
+  const own = animationDuration(cue.tracks);
+  return cue.duration !== undefined ? Math.min(cue.duration, own) || cue.duration : own;
+}
+
+/** The moment the whole sequence, cues included, comes to rest. */
+export function sequenceDuration(animation: Pick<SceneAnimation, 'tracks' | 'cues'>): number {
+  let end = animationDuration(animation.tracks);
+  for (const cue of animation.cues ?? []) {
+    const finish = cue.start + cueDuration(cue);
+    if (finish > end) end = finish;
+  }
+  return end;
+}
+
+/** One value a scene should hold at a moment, for one thing and one channel. */
+export interface ChannelValue {
+  nodeId: string;
+  channel: TrackChannel;
+  value: Vec3Value;
+}
+
+/**
+ * Everything the scene should be showing at `time`.
+ *
+ * Scene tracks play throughout. A cue contributes only once it has started,
+ * and holds its last value afterwards rather than snapping back — a light
+ * dimmed by a cue stays dim until something else changes it. A disabled cue
+ * contributes nothing, which is how a beat is muted while the rest is worked
+ * on.
+ *
+ * Later cues win over earlier ones on the same thing and channel, so a
+ * sequence reads top to bottom like a cue sheet.
+ */
+export function sampleAnimation(
+  animation: Pick<SceneAnimation, 'tracks' | 'cues'>,
+  time: number,
+): ChannelValue[] {
+  const values = new Map<string, ChannelValue>();
+
+  const collect = (tracks: AnimationTrack[], localTime: number) => {
+    for (const track of tracks) {
+      const value = sampleTrack(track.keyframes, localTime);
+      if (!value) continue;
+      values.set(`${track.nodeId}:${track.type}`, { nodeId: track.nodeId, channel: track.type, value });
+    }
+  };
+
+  collect(animation.tracks, time);
+
+  const cues = [...(animation.cues ?? [])].sort((a, b) => a.start - b.start);
+  for (const cue of cues) {
+    if (!cue.enabled) continue;
+    const local = time - cue.start;
+    // Not yet: whatever it will do has not begun, so it must not reach back
+    // and move something before its moment.
+    if (local < 0) continue;
+    const length = cueDuration(cue);
+    collect(cue.tracks, cue.duration !== undefined ? Math.min(local, length) : local);
+  }
+
+  return [...values.values()];
 }
 
 /** Node ids a set of tracks needs the scene to provide. */
@@ -128,7 +237,7 @@ function parseTrack(raw: unknown): AnimationTrack | null {
   const value = raw as Record<string, unknown>;
   if (typeof value.id !== 'string' || !value.id) return null;
   if (typeof value.nodeId !== 'string' || !value.nodeId) return null;
-  if (value.type !== 'position' && value.type !== 'rotation') return null;
+  if (!TRACK_CHANNELS.includes(value.type as TrackChannel)) return null;
   if (!Array.isArray(value.keyframes)) return null;
 
   const keyframes: Keyframe[] = [];
@@ -143,29 +252,66 @@ function parseTrack(raw: unknown): AnimationTrack | null {
     keyframes.push({ time: frame.time, value: { x: v.x, y: v.y, z: v.z } });
   }
   if (keyframes.length === 0) return null;
-  return { id: value.id, nodeId: value.nodeId, type: value.type, keyframes: sortKeyframes(keyframes) };
+  return { id: value.id, nodeId: value.nodeId, type: value.type as TrackChannel, keyframes: sortKeyframes(keyframes) };
 }
 
-/**
- * Read a document's animation.
- *
- * Tracks that describe nothing playable are dropped rather than half-applied,
- * and the duration is never allowed to fall short of the last keyframe: a
- * timeline that ends before the movement does would cut it off.
- */
-export function parseAnimation(raw: unknown): SceneAnimation {
-  if (!raw || typeof raw !== 'object') return { ...EMPTY_ANIMATION, tracks: [] };
-  const value = raw as Record<string, unknown>;
+function parseTracks(raw: unknown): AnimationTrack[] {
   const seen = new Set<string>();
   const tracks: AnimationTrack[] = [];
-  for (const entry of Array.isArray(value.tracks) ? value.tracks : []) {
+  for (const entry of Array.isArray(raw) ? raw : []) {
     const track = parseTrack(entry);
     if (!track || seen.has(track.id)) continue;
     seen.add(track.id);
     tracks.push(track);
   }
+  return tracks;
+}
+
+function parseCue(raw: unknown): AnimationCue | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.id !== 'string' || !value.id) return null;
+  const tracks = parseTracks(value.tracks);
+  // A cue with nothing in it would occupy the sequence without doing anything.
+  if (tracks.length === 0) return null;
+  const start = typeof value.start === 'number' && Number.isFinite(value.start) ? Math.max(0, value.start) : 0;
+  const duration = typeof value.duration === 'number' && Number.isFinite(value.duration) && value.duration > 0
+    ? value.duration
+    : undefined;
+  return {
+    id: value.id,
+    name: typeof value.name === 'string' && value.name ? value.name : value.id,
+    start,
+    ...(duration !== undefined ? { duration } : {}),
+    enabled: value.enabled !== false,
+    tracks,
+  };
+}
+
+/**
+ * Read a document's sequence.
+ *
+ * Tracks and cues that describe nothing playable are dropped rather than
+ * half-applied, and the duration is never allowed to fall short of the last
+ * thing that moves: a timeline that ends before its own movement would cut it
+ * off.
+ */
+export function parseAnimation(raw: unknown): SceneAnimation {
+  if (!raw || typeof raw !== 'object') return { duration: 0, tracks: [], cues: [] };
+  const value = raw as Record<string, unknown>;
+  const tracks = parseTracks(value.tracks);
+
+  const seenCues = new Set<string>();
+  const cues: AnimationCue[] = [];
+  for (const entry of Array.isArray(value.cues) ? value.cues : []) {
+    const cue = parseCue(entry);
+    if (!cue || seenCues.has(cue.id)) continue;
+    seenCues.add(cue.id);
+    cues.push(cue);
+  }
+
   const stated = typeof value.duration === 'number' && Number.isFinite(value.duration) && value.duration > 0
     ? value.duration
     : 0;
-  return { duration: Math.max(stated, animationDuration(tracks)), tracks };
+  return { duration: Math.max(stated, sequenceDuration({ tracks, cues })), tracks, cues };
 }

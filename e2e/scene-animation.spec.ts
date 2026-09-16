@@ -70,6 +70,69 @@ test('anything in the scene can be keyframed, and the timeline is saved', async 
   // Past the end it holds, rather than carrying on through the wall.
   expect(setup.beyond.position).toEqual(setup.end.position);
 
+  // Keyframing from the interface used to demand a selected light, so nothing
+  // else could be given a track even after the timeline learned to move
+  // anything. Pressing it with a prop selected has to record that prop.
+  const recorded = await page.evaluate(async () => {
+    const s = (window as any).virtualStudio;
+    const settle = () => new Promise(r => s.scene.onAfterRenderObservable.addOnce(() => r(null)));
+    const props = s.studioProps();
+    const propId = props.props[0].id;
+    const node = props.nodeFor(propId);
+
+    s.animationState.tracks = [];
+    s.animationState.currentTime = 0;
+    props.select(propId);
+    s.selectedLightId = null;
+
+    node.position.set(-2, 0, -1);
+    node.rotation.set(0, Math.PI / 3, 0);
+    s.addKeyframe('position');
+    s.addKeyframe('rotation');
+
+    s.animationState.currentTime = 4;
+    node.position.set(1, 0, 2);
+    s.addKeyframe('position');
+    await settle();
+
+    const tracks = s.animationState.tracks;
+    // The rotation keyframe has to be in radians, like the rest of the scene:
+    // this recorder stored degrees while the per-axis one stored radians.
+    const rotation = tracks.find((t: any) => t.type === 'rotation');
+    const position = tracks.find((t: any) => t.type === 'position');
+    return {
+      nodeIds: [...new Set(tracks.map((t: any) => t.nodeId))],
+      propId,
+      rotationY: rotation.keyframes[0].value.y,
+      positionTimes: position.keyframes.map((k: any) => k.time),
+      positionEnd: position.keyframes[1].value.x,
+    };
+  });
+  expect(recorded.nodeIds).toEqual([recorded.propId]);
+  expect(recorded.rotationY).toBeCloseTo(Math.PI / 3, 9);
+  expect(recorded.positionTimes).toEqual([0, 4]);
+  expect(recorded.positionEnd).toBeCloseTo(1, 9);
+
+  // Put the hand-written track back for the round trip below.
+  await page.evaluate((propId: string) => {
+    const s = (window as any).virtualStudio;
+    s.animationState.currentTime = 0;
+    s.animationState.duration = 5;
+    s.animationState.tracks = [{
+      id: 'chair-position', nodeId: propId, type: 'position',
+      keyframes: [
+        { time: 0, value: { x: -4, y: 0, z: -3 } },
+        { time: 5, value: { x: 0.5, y: 0, z: 1 } },
+      ],
+    }, {
+      id: 'chair-rotation', nodeId: propId, type: 'rotation',
+      keyframes: [
+        { time: 0, value: { x: 0, y: 0, z: 0 } },
+        { time: 5, value: { x: 0, y: Math.PI / 2, z: 0 } },
+      ],
+    }];
+  }, recorded.propId);
+
   // The timeline travels with the document, and moves the same object when it
   // comes back.
   const roundTrip = await page.evaluate(async () => {
