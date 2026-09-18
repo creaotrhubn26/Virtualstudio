@@ -25,7 +25,7 @@ Do not reintroduce the missing avatar files or the old catalogue of fifty labels
 
 ## How the figures are built
 
-The character solution follows the asset-building approach already used by the local Campfire Games project: prepare anatomical assets offline, export a game-engine skeleton and ship self-contained runtime models.
+The character solution follows the asset-building approach already used by the local Campfire Games project — the one in `~/Documents/campfire-games`, not the hello-world skeleton of the same name in the home directory: prepare anatomical assets offline, export a game-engine skeleton and ship self-contained runtime models. What that project solved that Virtualstudio has not, including a USD path that needs no Blender scene and a shadow technique that needs no depth buffer, is in [`docs/campfire-precedent.md`](docs/campfire-precedent.md).
 
 The implementation is in [`scripts/characters/build_studio_characters.py`](scripts/characters/build_studio_characters.py). It does not call MakeHuman or MPFB application code. It consumes MakeHuman Community **data** distributed under CC0:
 

@@ -151,7 +151,15 @@ Delete both entries from the export panel, or write a real exporter. Do not
 leave an iPad plan resting on an export path that does not exist. This is a
 small change and it comes first, because everything downstream reads USD.
 
-### And then: no USD at all
+### And then: no USD at all — a conclusion since contradicted
+
+**Read [`campfire-precedent.md`](campfire-precedent.md) before acting on this
+section.** The reasoning below is sound and its premise is incomplete: USD can be
+written directly with the `pxr` API, in the same Blender Python this builder
+already runs in, and the Campfire Games project next door has been doing exactly
+that for eight characters. That path hands RealityKit the skinning and the
+materials, which is where `FigureMesh` is currently stuck on both the hair and the
+eyes. The decision is open again.
 
 The paragraph that stood here said to extend `build_studio_characters.py` to call
 `bpy.ops.wm.usd_export` from the same morphed, rigged, posed Blender scene that

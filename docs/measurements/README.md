@@ -138,7 +138,17 @@ type=2 (.type2D)  samples=1        colour usage=5
 Same size as the colour texture, declared readable, not multisampled, not an
 array. By its own description it should read.
 
-**So this is most likely a simulator limitation rather than an API one**, and it
+**It is not a simulator limitation.** The Campfire Games project hit the same wall
+and wrote the answer into a shader comment — "without reading RealityRenderer's
+inaccessible internal depth texture" — and works around it by rendering the scene a
+second time through a `CustomMaterial` surface shader that writes camera-space
+depth into emissive colour. A surface shader is handed
+`params.geometry().world_position()` for every fragment, which is more than this
+pass was ever going to reconstruct from a depth buffer. See
+[`../campfire-precedent.md`](../campfire-precedent.md).
+
+What stood here said this was most likely a simulator limitation rather than an
+API one, and it
 is exactly the kind of thing the plan says a simulator cannot answer. The next
 step is not more shader work: it is to run the same build on the physical M5 iPad
 and see whether the depth texture reads there. Everything needed for that is in
@@ -180,7 +190,14 @@ and the same cloth is worn by every body cut for it.
 app asks for: two figures, the clothes they open in, and **13 of the texture
 directory's files**. The directory is 76 MB; the app carries 40.
 
-Skin and cloth are right. **Hair and eyes are not**: the hair does not draw at
+Skin and cloth are right. **Hair and eyes are not** — and the reason is now known
+rather than guessed. A cutout has to be told where its opacity comes from;
+`opacityThreshold` alone does not establish it. Campfire connects `opacity` to the
+texture's alpha channel in USD and sets the threshold separately, and does the same
+comparison by hand in its own shader because "CustomMaterial does not apply
+opacityThreshold automatically". See [`../campfire-precedent.md`](../campfire-precedent.md).
+
+As it stands: the hair does not draw at
 all, and the eye reads as a red patch. The reader resolves both correctly — a test
 asserts each surface names its own file and that hair alone is marked as a cutout
 — so the fault is in how the material is configured against RealityKit, not in
