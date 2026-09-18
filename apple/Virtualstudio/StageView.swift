@@ -74,7 +74,7 @@ struct StageView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            StudioView(stage: stage, report: report)
+            StudioView(stage: stage, report: report, softShadows: softShadows)
                 .ignoresSafeArea()
                 .task {
                     // The rig first, so there is something to see while the figure's

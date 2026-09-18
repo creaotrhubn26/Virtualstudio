@@ -3,6 +3,7 @@ import Metal
 import MetalKit
 import RealityKit
 import SwiftUI
+import UIKit
 
 /// The studio, rendered by hand instead of by `RealityView`.
 ///
@@ -30,7 +31,12 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
     private var composite: (any MTLRenderPipelineState)?
     private var last = CACurrentMediaTime()
 
-    init?(stage: StudioStage, report: DeviceReport) {
+    /// `--hard-shadows` leaves RealityKit's own shadow alone and skips both extra
+    /// passes, which is how their cost is measured rather than guessed.
+    private let softShadows: Bool
+
+    init?(stage: StudioStage, report: DeviceReport, softShadows: Bool) {
+        self.softShadows = softShadows
         guard let device = MTLCreateSystemDefaultDevice(),
               let queue = device.makeCommandQueue(),
               let renderer = try? RealityRenderer() else { return nil }
@@ -46,10 +52,10 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
         // composite traces from those positions to the light and darkens what cannot
         // see it. Neither is possible against `RealityView`, which is why the studio
         // is rendered by hand.
-        if #available(iOS 18.0, *) {
+        if #available(iOS 18.0, *), softShadows {
             positions = StudioPositionPass(source: stage.root, camera: stage.camera, device: device)
         }
-        if let library = device.makeDefaultLibrary() {
+        if softShadows, let library = device.makeDefaultLibrary() {
             let descriptor = MTLRenderPipelineDescriptor()
             descriptor.vertexFunction = library.makeFunction(name: "fullScreenTriangle")
             descriptor.fragmentFunction = library.makeFunction(name: "softShadow")
@@ -116,6 +122,12 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
             blit.copy(from: colour, to: drawable.texture)
             blit.endEncoding()
         }
+        // What the frame actually cost the GPU, as opposed to when the next
+        // callback happened to arrive.
+        buffer.addCompletedHandler { [report] finished in
+            let cost = finished.gpuEndTime - finished.gpuStartTime
+            Task { @MainActor in report.recordGPU(seconds: cost) }
+        }
         buffer.present(drawable)
         buffer.commit()
     }
@@ -133,9 +145,10 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
 struct StudioView: UIViewRepresentable {
     let stage: StudioStage
     let report: DeviceReport
+    let softShadows: Bool
 
     func makeCoordinator() -> StudioRenderer? {
-        StudioRenderer(stage: stage, report: report)
+        StudioRenderer(stage: stage, report: report, softShadows: softShadows)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -147,8 +160,20 @@ struct StudioView: UIViewRepresentable {
         view.colorPixelFormat = .rgba16Float
         view.framebufferOnly = false
         view.isOpaque = true
-        view.preferredFramesPerSecond = 60
+        // The display's own maximum, not a cap of ours: an iPad Pro runs at 120 Hz,
+        // and a frame time pinned to 16.67 ms says only that the renderer met a
+        // limit somebody else set. What is being measured is how long a frame
+        // actually costs.
+        // 120, not 60 and not 0: an iPad Pro's display runs at 120 Hz, a frame time
+        // pinned to 16.67 ms says only that the renderer met a limit somebody else
+        // set, and zero stops MTKView drawing altogether rather than meaning "as
+        // fast as it can".
+        view.preferredFramesPerSecond = 120
         view.delegate = context.coordinator
+        // A studio on a stand does not fall asleep between two lighting decisions.
+        // The seventeen-minute measurement was interrupted twice by the screen
+        // locking, which is what a photographer setting up a shot would get too.
+        UIApplication.shared.isIdleTimerDisabled = true
         context.coordinator?.mtkView(view, drawableSizeWillChange: view.drawableSize)
         return view
     }

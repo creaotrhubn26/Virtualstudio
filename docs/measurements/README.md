@@ -267,6 +267,64 @@ the picture rather than papered over with an opaque helmet.
 Also still missing: normals that follow the pose rather than the rest stance,
 which needs the renderer's own skinning rather than the processor's.
 
+## 6. On the device
+
+*iPad Pro 13-inch (M5), iPadOS 27. Seventeen minutes of rendering.*
+
+| State | Duration | Frame time: min / median / p95 / max |
+|---|---|---|
+| `nominal` | 489 s | 9.69 / **13.83** / 14.54 / 35.27 ms |
+| `fair` | 103 s | 13.70 / **14.02** / 14.98 / 19.19 ms |
+
+**It gets warm and it costs nothing.** The thermal state reached `fair` after
+sixteen minutes of drawing and never went past it. The median frame moved from
+13.83 ms to 14.02 — two hundredths. That is the answer to the question that
+matters on location: the preview does not quietly stop matching what was set.
+
+**Sixty frames a second with room, not a hundred and twenty.** Capped at 60 it
+holds 16.67 ms exactly, worst frame 16.8. Uncapped it settles at 13.8 ms where the
+budget for 120 Hz is 8.33 — about seventy frames a second.
+
+**Memory: 892–905 MB used, headroom never below 4214 MB.** That is
+`os_proc_available_memory`, which the simulator reports as zero. Nowhere near
+jetsam, but 900 MB for two figures and a rig is heavy — the textures are large PNGs
+and they are decompressed.
+
+### Where the time goes
+
+The GPU's own clock agrees with the wall clock almost exactly — median 13.65 ms
+against 13.60 — so the cost is work rather than scheduling. Run the same frame with
+the shadow passes switched off:
+
+| | GPU frame | GPU worst |
+|---|---|---|
+| with the shadow pass | 13.96 ms | 22.03 ms |
+| without it | **0.99 ms** | 2.44 ms |
+
+**The scene is free and the shadow is the whole frame.** Two figures, a room, three
+shadow-casting lights and the taking camera cost one millisecond on an M5. The soft
+shadow costs thirteen — a second full render of the scene for the position pass,
+and a composite that traces twenty-four rays against four occluders for every one
+of 5.7 million pixels.
+
+That is not a reason to give the shadow up; it is the product. It is a reason to
+spend the next hour on that composite rather than anywhere else, and the obvious
+lever is the one Campfire already documents: the pass does not have to run at the
+colour resolution.
+
+### Two things the measurement found on its own
+
+**The iPad went to sleep twice**, 229 seconds each time, in the middle of the run.
+The app kept its process and came back at 10.7 ms, but a studio on a stand should
+not fall asleep between two lighting decisions. `isIdleTimerDisabled` is one line
+and it is in.
+
+**The reporting was in the frame it was reporting on.** A steady 23.5 ms worst
+frame looked like a cost on a clock, so the log line was moved off the render
+thread — no change — and then the `task_info` memory walk was moved off as well —
+no change either. Both hypotheses were wrong and both are recorded as wrong: the
+23 ms is real GPU work, and the GPU clock says so.
+
 ## What is still unmeasured
 
 Everything that needs the hardware: sustained frame time, `thermalState` over a
