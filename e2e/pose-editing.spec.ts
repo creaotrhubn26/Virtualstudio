@@ -23,7 +23,10 @@ test('joints move within their range, stay grounded and survive a round trip', a
   }
   await page.waitForFunction(() => {
     const s = (window as any).virtualStudio;
-    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked;
+    // The studio is ready when the figure is posed *and* the rig is up:
+    // lighting is built around the subject, so it comes after her.
+    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked
+      && s.lights.size >= 3;
   }, undefined, { timeout: 120_000 });
 
   // Joint limits are expressed as Rz·Ry·Rx, so read them back the same way;

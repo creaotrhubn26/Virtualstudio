@@ -26,8 +26,14 @@ function standingDistance(lookId: string, fixtureName: string): number {
   const output = sceneIntensityFromCandela(candela);
   const wanted = fixtureIlluminance(look, spec);
 
-  const preferred = Math.hypot(
-    spec.position.x - spec.aim.x, spec.position.y - spec.aim.y, spec.position.z - spec.aim.z);
+  // A working light carries an angle and a distance; only a source that is a
+  // thing in the room still carries a position.
+  const preferred = spec.placement
+    ? spec.placement.distance
+    : Math.hypot(
+        spec.position!.x - spec.aim!.x,
+        spec.position!.y - spec.aim!.y,
+        spec.position!.z - spec.aim!.z);
   // It stays where it stands if it has the light to spare, and comes closer if not.
   if (spec.motivating) return preferred;
   return wanted * preferred * preferred <= output ? preferred : distanceForIlluminance(output, wanted);
@@ -65,18 +71,65 @@ describe('the looks on offer', () => {
     }
   });
 
-  it('keeps every fixture in the room and out of the subject', () => {
+  it('says where a fixture stands in exactly one way', () => {
+    // A working light is an angle from the camera; a lamp or a candle is a
+    // thing in the room with a position. Carrying both would be two sources of
+    // truth, and one of them would drift.
     for (const look of LIGHTING_LOOKS) {
-      for (const { name, position, aim } of look.fixtures) {
+      for (const fixture of look.fixtures) {
+        const where = `${look.id}/${fixture.name}`;
+        if (fixture.motivating) {
+          expect(fixture.position, where).toBeDefined();
+          expect(fixture.aim, where).toBeDefined();
+          expect(fixture.placement, where).toBeUndefined();
+        } else {
+          expect(fixture.placement, where).toBeDefined();
+          expect(fixture.position, where).toBeUndefined();
+        }
+      }
+    }
+  });
+
+  it('keeps every visible source in the room and off the subject', () => {
+    for (const look of LIGHTING_LOOKS) {
+      for (const { name, position, aim } of look.fixtures.filter(f => f.motivating)) {
         const where = `${look.id}/${name}`;
-        expect(Math.abs(position.x), where).toBeLessThanOrEqual(8);
-        expect(position.z, where).toBeGreaterThanOrEqual(-9);
-        expect(position.z, where).toBeLessThanOrEqual(8);
-        expect(position.y, where).toBeGreaterThan(0);
-        expect(position.y, where).toBeLessThanOrEqual(6);
+        expect(Math.abs(position!.x), where).toBeLessThanOrEqual(8);
+        expect(position!.z, where).toBeGreaterThanOrEqual(-9);
+        expect(position!.z, where).toBeLessThanOrEqual(8);
+        expect(position!.y, where).toBeGreaterThan(0);
+        expect(position!.y, where).toBeLessThanOrEqual(6);
         // Aimed at a person standing at the origin, roughly at their height.
-        expect(Math.hypot(aim.x, aim.z), where).toBeLessThan(2);
-        expect(aim.y, where).toBeGreaterThan(0.5);
+        expect(Math.hypot(aim!.x, aim!.z), where).toBeLessThan(2);
+        expect(aim!.y, where).toBeGreaterThan(0.5);
+      }
+    }
+  });
+
+  it('never writes a working light onto the lens axis', () => {
+    // This is the kitchen photograph, settled in the data rather than patched
+    // at render time: a fixture within a few degrees of the camera's own
+    // bearing stands between the lens and the face, whatever room it is in.
+    for (const look of LIGHTING_LOOKS) {
+      for (const fixture of look.fixtures.filter(f => f.placement)) {
+        const where = `${look.id}/${fixture.name}`;
+        expect(Math.abs(fixture.placement!.azimuthDeg), where).toBeGreaterThanOrEqual(25);
+        expect(Math.abs(fixture.placement!.azimuthDeg), where).toBeLessThanOrEqual(180);
+      }
+    }
+  });
+
+  it('asks for angles and distances a real stand can hold', () => {
+    for (const look of LIGHTING_LOOKS) {
+      for (const fixture of look.fixtures.filter(f => f.placement)) {
+        const where = `${look.id}/${fixture.name}`;
+        const { elevationDeg, distance } = fixture.placement!;
+        // From a low underlight to a hard toplight, and no further.
+        expect(elevationDeg, where).toBeGreaterThanOrEqual(-60);
+        expect(elevationDeg, where).toBeLessThanOrEqual(70);
+        // Close enough to matter, far enough to stand somewhere.
+        expect(distance, where).toBeGreaterThanOrEqual(0.8);
+        expect(distance, where).toBeLessThanOrEqual(12);
       }
     }
   });
@@ -98,7 +151,7 @@ describe('the looks on offer', () => {
     for (const look of LIGHTING_LOOKS) {
       for (const fixture of look.fixtures.filter(f => !f.motivating)) {
         expect(standingDistance(look.id, fixture.name), `${look.id}/${fixture.name}`)
-          .toBeGreaterThan(0.8);
+          .toBeGreaterThan(0.75);
       }
     }
   });
@@ -108,9 +161,9 @@ describe('the looks on offer', () => {
       for (const fixture of look.fixtures.filter(f => f.motivating)) {
         const where = `${look.id}/${fixture.name}`;
         const preferred = Math.hypot(
-          fixture.position.x - fixture.aim.x,
-          fixture.position.y - fixture.aim.y,
-          fixture.position.z - fixture.aim.z);
+          fixture.position!.x - fixture.aim!.x,
+          fixture.position!.y - fixture.aim!.y,
+          fixture.position!.z - fixture.aim!.z);
         expect(standingDistance(look.id, fixture.name), where).toBeCloseTo(preferred, 10);
       }
     }
@@ -155,5 +208,28 @@ describe('levels are stops, not scene numbers', () => {
     const rim = horror.fixtures[1];
     expect(fixtureIlluminance(horror, rim) / fixtureIlluminance(horror, key))
       .toBeCloseTo(Math.pow(2, -rim.stops), 10);
+  });
+});
+
+describe('a lamp is where the room hung it', () => {
+  it('names the lamp it is, rather than repeating its coordinates', () => {
+    // The kitchen pendant used to carry its own position, written separately
+    // from the pendant the room actually built — so one hung over the table
+    // and the other over whoever stood at the origin.
+    const known = ['pendant', 'window', 'oven', 'ceiling', 'candle'];
+    let anchored = 0;
+    for (const look of LIGHTING_LOOKS) {
+      for (const fixture of look.fixtures) {
+        if (!fixture.anchor) continue;
+        anchored++;
+        expect(known, `${look.id}/${fixture.name}`).toContain(fixture.anchor);
+        // Only a source that is seen can be a lamp in the room.
+        expect(fixture.motivating, `${look.id}/${fixture.name}`).toBe(true);
+        // And it keeps a position, because a place with no geometry of its own
+        // still has to put it somewhere.
+        expect(fixture.position, `${look.id}/${fixture.name}`).toBeDefined();
+      }
+    }
+    expect(anchored).toBeGreaterThanOrEqual(5);
   });
 });

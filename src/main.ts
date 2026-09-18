@@ -36,8 +36,9 @@ import { parseAnimation, sampleAnimation, sequenceDuration, upsertKeyframe,
 import { ALL_MOVES, buildCameraMove, buildLightMove, type MoveDescription } from './services/movePresets';
 import { DEFAULT_LOOK_ID, LIGHTING_LOOKS, fixtureIlluminance, lookById,
   type LightingLook, type LookFixture } from './services/lightingLooks';
-import { STUDIO_LOCATIONS, insideRoom, locationById, locationForRoom,
-  type StudioLocation } from './services/studioLocations';
+import { STUDIO_LOCATIONS, clearOfCamera, facingFor, garmentForRole, insideRoom, locationById, locationForRoom,
+  resolvePlacement, type StudioLocation, type StudioMark, type StudioRole } from './services/studioLocations';
+import { ROLE_UNIFORM, StudioUniform } from './core/rendering/StudioUniform';
 import { DEFAULT_BRAND, normaliseBrand, type StudioBrand } from './services/studioBranding';
 import { bodyIdFromModelUrl, defaultWardrobeFor, dressFigure, forgetFigure, garmentLabel, garmentsForBody,
   loadWardrobeCatalogue, resolveWardrobe, wornGarments, type WardrobeCatalogue } from './services/wardrobeService';
@@ -1125,12 +1126,21 @@ class VirtualStudio {
       this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
       this.focusPeakingEffect = new FocusPeakingEffect(this.scene, this.camera);
       this.physicsBasedDOF = new PhysicsBasedDOF(this.scene, this.camera);
+      // The post-process auto-enables itself by reading window.virtualStudio,
+      // which is not assigned until this constructor has finished — so the
+      // startup check always found nothing, and a camera set to f/2.8 rendered
+      // the far wall as sharply as the face. Tell it what the aperture is.
+      this.applyApertureToDepthOfField();
       this.setupAutoFocusUI();
       this.setupFocusPeakingUI();
 
       console.log('[VirtualStudio] Starting addDefaultMannequin...');
       this.addDefaultMannequin();
       console.log('[VirtualStudio] Setup complete!');
+      // Again at the end: the rendering pipeline is configured after the
+      // post-process is created, and it turns depth of field off on its way
+      // past. Whatever ran last used to win, and it was not the aperture.
+      this.applyApertureToDepthOfField();
 
       // Auto-save every 30 seconds to localStorage
       this.setupAutoSave();
@@ -1584,14 +1594,21 @@ class VirtualStudio {
       console.log('[Shadow] Shadow maps updated');
     }
 
+    /**
+     * Recompute the ambient fill after the surroundings change.
+     *
+     * This used to set the intensity itself, from the volume of the scene's
+     * bounding box: a big room got 0.8, a small one 0.3. Two things were wrong
+     * with that. Room size is not a lighting model — a cathedral at night is
+     * darker than a cupboard with a lamp in it — and because this ran last, it
+     * overrode the fill that had been dimmed against the rig. An evening
+     * pizzeria was rendered with the ambient of a sixteen-metre studio, and
+     * every ratio the look was built to give was flattened at the last step.
+     *
+     * The rig decides the fill now, and this only asks for it to be redone.
+     */
     public recalculateAmbientLighting(): void {
-      const bounds = this.getSceneBounds();
-      const volume = (bounds.max.x - bounds.min.x) * (bounds.max.y - bounds.min.y) * (bounds.max.z - bounds.min.z);
-      const targetIntensity = Math.max(0.3, Math.min(0.8, volume / 1000));
-      if (this.ambientLight) {
-        this.ambientLight.intensity = targetIntensity;
-      }
-      console.log('[Ambient] Lighting recalculated. Intensity:', targetIntensity.toFixed(2));
+      this.updateAmbientLightIntensity();
     }
 
     // Get bounding box of all visible scene geometry
@@ -1988,7 +2005,12 @@ class VirtualStudio {
     /**
      * Phase 4.3: Serialize current scene state to SceneComposition format
      */
-    public getCurrentSceneAsPreset(): SceneComposition {
+    /** The scene graph as the application sees it, for a test that needs to look. */
+  public sceneNodes(): { id: string; type: string; name: string }[] {
+    return useAppStore.getState().scene.map(node => ({ id: node.id, type: node.type, name: node.name }));
+  }
+
+  public getCurrentSceneAsPreset(): SceneComposition {
       const envState = environmentService.getState();
       const renderState = useRenderingStore.getState();
 
@@ -2223,7 +2245,7 @@ class VirtualStudio {
                 // Joint edits sit on top of the clip, so they are replayed
                 // after it, once the clip has written every rotation.
                 const joints = data.jointRotations as Record<string, { x: number; y: number; z: number }> | undefined;
-                if (joints) this.scene.onAfterRenderObservable.addOnce(() => this.applyJointRotations(mesh, joints));
+                if (joints) this.afterNextFrame(() => this.applyJointRotations(mesh, joints));
                 const restore = () => {
                   mesh.position.copyFromFloats(...actorData.transform.position);
                   mesh.rotation.copyFromFloats(...actorData.transform.rotation);
@@ -2233,7 +2255,7 @@ class VirtualStudio {
                   this.syncCharacterNodeTransform(mesh, true);
                 };
                 restore();
-                this.scene.onAfterRenderObservable.addOnce(restore);
+                this.afterNextFrame(restore);
               }
               continue;
             }
@@ -5446,13 +5468,14 @@ class VirtualStudio {
 
     // Default 3-point lighting setup with Aputure 300D lights
     // IMPORTANT: Must await this to ensure lights are fully loaded before continuing
-    await this.setupDefaultLighting();
+    // The rig is built once the default figure is on set; see addDefaultMannequin.
 
     console.log('[VirtualStudio] Default lighting setup complete. Lights loaded:', this.lights.size);
 
       // Initialize and subscribe to environment service for wall/floor/ambient lighting sync
       this.studioRoom = new StudioRoom(this.scene, () => [...this.lights.values()].flatMap(data => data.shadowGenerator ? [data.shadowGenerator] : []));
       this.scene.onDisposeObservable.addOnce(() => this.studioRoom?.clear());
+      this.startIdleBreathing();
       environmentService.initializeDefaults();
       environmentService.subscribe((state) => {
         // Update scene walls, floors, and lighting when environment changes
@@ -5481,9 +5504,30 @@ class VirtualStudio {
       setBrand: brand => this.setBrand(brand),
       applyLocation: id => this.applyLocation(id),
       currentLocation: () => this.currentLocation(),
+      marks: () => this.availableMarks(),
+      rigVisible: () => this.isRigVisible(),
+      showRig: visible => this.setRigVisible(visible),
+      standOn: id => this.standOnMark(id),
+      staff: () => this.staffLocation(),
       looks: () => this.availableLooks(),
       applyLook: id => this.applyLook(id),
       currentLook: () => this.currentLook(),
+      /**
+       * Stand up, or sit down again.
+       *
+       * The pose menu could always reach both, but "Sitt på portrettstol" is
+       * a setting and standing up is an action. From a chair this is the only
+       * move there is, so it gets its own button.
+       */
+      stand: () => {
+        const mesh = this.getPrimaryCharacterMesh();
+        const seated = mesh?.metadata?.studioPose === 'StudioSeated';
+        this.seatedWalkNoticed = false;
+        const next = seated ? (this.lastStandingPose ?? 'StudioStand') : 'StudioSeated';
+        if (!seated) this.lastStandingPose = (mesh?.metadata?.studioPose as string) ?? 'StudioStand';
+        return this.applyStudioPose(next as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
+      },
+      seated: () => this.getPrimaryCharacterMesh()?.metadata?.studioPose === 'StudioSeated',
       frame: portrait => {
         const mesh = this.getPrimaryCharacterMesh();
         const position = mesh?.getAbsolutePosition() || BABYLON.Vector3.Zero();
@@ -6868,23 +6912,408 @@ class VirtualStudio {
    * The fixture keeps its catalogue output; where it stands and how far its
    * output is dialled back is what makes the ratio, exactly as on the floor.
    */
-  private async buildLookFixture(look: LightingLook, spec: LookFixture): Promise<void> {
-    const aim = new BABYLON.Vector3(spec.aim.x, spec.aim.y, spec.aim.z);
-    // A look is written for a studio with room to back a light into. In a
-    // kitchen the same stand would be through the wall, so it is walked in
-    // along its own aim line — same direction, same modelling, less distance.
+  /**
+   * The small motion that separates a person from a statue.
+   *
+   * A figure holding a pose clip is perfectly still, and a room full of
+   * perfectly still people reads as mannequins however good the geometry is.
+   * Breathing and a slow weight shift cost almost nothing and are the first
+   * thing the eye believes.
+   *
+   * It is deliberately tiny — a centimetre of rise, a degree and a half of
+   * sway — and it is added on top of whatever the pose left, never instead of
+   * it. Joint editing switches it off, because a handle that drifts under the
+   * cursor is worse than a still figure.
+   */
+  private idleBreathObserver: BABYLON.Nullable<BABYLON.Observer<BABYLON.Scene>> = null;
+  private idleBreathing = true;
+
+  public setIdleBreathing(enabled: boolean): void {
+    this.idleBreathing = enabled;
+    if (!enabled) {
+      // Put everybody back facing where their pose left them, or the last
+      // sway becomes the direction they were posed in.
+      for (const figure of this.scene.meshes) {
+        const restYaw = figure.metadata?.idleRestYaw as number | undefined;
+        if (restYaw !== undefined) figure.rotation.y = restYaw;
+      }
+    }
+  }
+
+  /**
+   * The figures the breath moves, kept rather than searched for.
+   *
+   * The first version filtered the whole scene every frame looking for
+   * anything with a pose on it. In a furnished room with a crew in it that is
+   * thousands of meshes, sixty times a second, allocating a new array each
+   * time — it made the studio slow enough that the browser suites went from
+   * three minutes to nineteen and timed out. The list is short and changes
+   * rarely; keeping it is free.
+   */
+  private breathingFigures = new Set<BABYLON.AbstractMesh>();
+  private breathScanDue = 0;
+
+  private startIdleBreathing(): void {
+    if (this.idleBreathObserver) return;
+    this.idleBreathObserver = this.scene.onBeforeRenderObservable.add(() => {
+      if (!this.idleBreathing) return;
+      const now = performance.now();
+      const seconds = now / 1000;
+
+      // Re-read who is on set a few times a second, not every frame.
+      if (now >= this.breathScanDue) {
+        this.breathScanDue = now + 500;
+        this.breathingFigures.clear();
+        for (const mesh of this.scene.meshes) {
+          if (mesh.metadata?.studioPose && !mesh.isDisposed()) this.breathingFigures.add(mesh);
+        }
+      }
+      if (this.breathingFigures.size === 0) return;
+
+      const figures = [...this.breathingFigures];
+      for (const [index, figure] of figures.entries()) {
+        if (figure.isDisposed()) { this.breathingFigures.delete(figure); continue; }
+        // Out of step with each other, or a crowd sways together like one
+        // animal rather than like several people.
+        const offset = index * 1.37;
+        // No vertical bob. A person breathing keeps their feet on the floor and
+        // expands their chest; lifting the whole figure is a float on water,
+        // and it made every measurement of ground contact wobble by more than
+        // the contact itself — a seated figure's shoes drifted 6 mm off the
+        // height they had been grounded to. The weight shift below is the part
+        // that reads as life, and it turns rather than lifts.
+        const restYaw = figure.metadata?.idleRestYaw as number | undefined;
+        const baseYaw = restYaw ?? figure.rotation.y;
+        if (restYaw === undefined && figure.metadata) figure.metadata.idleRestYaw = baseYaw;
+        // A slow shift of weight, far slower than the breath.
+        figure.rotation.y = baseYaw + Math.sin((seconds * 0.07 + offset) * Math.PI * 2) * 0.026;
+      }
+    });
+  }
+
+  /**
+   * Forget which way a figure was facing, so the next mark becomes the new rest.
+   *
+   * Without this the sway would keep turning around the direction the figure
+   * faced before it was moved.
+   */
+  private resetIdleRest(figure: BABYLON.AbstractMesh): void {
+    if (!figure.metadata) return;
+    delete figure.metadata.idleRestYaw;
+  }
+
+  /**
+   * Let the aperture change the picture, not only the exposure.
+   *
+   * Depth of field is what separates a photograph of a restaurant from a
+   * rendering of one: the face sharp, the room behind it soft. The f-number
+   * already drives the exposure; this is the other half of what it means.
+   */
+  private applyApertureToDepthOfField(): void {
+    const aperture = this.cameraSettings?.aperture;
+    if (!this.physicsBasedDOF || !aperture || !Number.isFinite(aperture)) return;
+    this.physicsBasedDOF.setAperture(aperture);
+    // Wide open it is visible and wanted; stopped down there is nothing to
+    // show, and the extra pass is not worth paying for.
+    this.physicsBasedDOF.setEnabled(aperture <= 5.6);
+  }
+
+  /**
+   * Lower a seated figure onto a seat that is already there.
+   *
+   * The seated clip was authored for the portrait stool, and grounding puts
+   * the shoes on the floor — which for a seated pose leaves the body hovering
+   * at whatever height the clip happened to sit at. Reading where the pelvis
+   * actually is and moving the figure so that lands on the chair is the same
+   * measurement `StudioSeat` makes to raise its pedestal, used the other way
+   * round.
+   */
+  private sitOnExistingSeat(mesh: BABYLON.AbstractMesh, seatHeight: number): void {
+    const hips = mesh.getChildTransformNodes().find(node => node.name === 'mixamorigHips');
+    if (!hips) return;
+    mesh.computeWorldMatrix(true);
+
+    // The underside of the pelvis, which is what rests on a chair.
+    const pelvis = hips.getAbsolutePosition().y - 0.095;
+    const drop = pelvis - seatHeight;
+    if (!Number.isFinite(drop) || Math.abs(drop) > 1.2) return;
+    mesh.position.y -= drop;
+    mesh.computeWorldMatrix(true);
+    this.resetIdleRest(mesh);
+  }
+
+  /**
+   * Take the lighting rig out of the picture, without turning it off.
+   *
+   * A softbox standing in a pizzeria is correct for previsualization — you are
+   * meant to see your lights — and wrong for the one question the photographer
+   * actually wants to answer: does this look like a restaurant? The stands go,
+   * the light they give stays exactly as it was, so the judgement is about the
+   * picture rather than about the gear in it.
+   */
+  public setRigVisible(visible: boolean): void {
+    this.rigVisible = visible;
+    for (const data of this.lights.values()) {
+      data.mesh.setEnabled(visible);
+      // Only the body goes; the light itself is untouched.
+      data.mesh.getChildMeshes().forEach(child => child.setEnabled(visible));
+      data.beamVisualization?.setEnabled(visible);
+    }
+    window.dispatchEvent(new CustomEvent('ch-rig-visibility-changed', { detail: { visible } }));
+  }
+
+  public isRigVisible(): boolean {
+    return this.rigVisible;
+  }
+
+  private rigVisible = true;
+
+  /** The marks this place offers, or none when it has nowhere in particular. */
+  public availableMarks(): StudioMark[] {
+    return locationById(this.currentLocation() ?? '')?.marks ?? [];
+  }
+
+  /**
+   * Put a figure where somebody would actually stand.
+   *
+   * Dragging a person around with the keyboard and hoping is not how anybody
+   * decides where they should stand: in a kitchen you stand at the counter, at
+   * the table or by the window, and that is the list. The room built the
+   * counter, so the room knows where that is.
+   */
+  public standOnMark(markId: string, mesh?: BABYLON.AbstractMesh): boolean {
+    const mark = this.availableMarks().find(candidate => candidate.id === markId);
+    const figure = mesh ?? this.getPrimaryCharacterMesh();
+    if (!mark || !figure) return false;
+
+    figure.position.x = mark.x;
+    figure.position.z = mark.z;
+    this.resetIdleRest(figure);
+    // People in a room are oriented to each other, not to north: a waiter faces
+    // the table, two guests face each other, and a few degrees of offset is
+    // the difference between talking and confronting.
+    const facing = facingFor(mark, this.availableMarks());
+    this.alignMeshToDirection(figure, new BABYLON.Vector3(Math.sin(facing), 0, -Math.cos(facing)));
+    this.syncCharacterNodeTransform(figure, true);
+
+    // Sitting is a state, so a mark that is a chair applies the pose rather
+    // than leaving somebody standing inside the seat.
+    figure.metadata = { ...figure.metadata, studioSeatHeight: mark.seated ? mark.seatHeight : undefined };
+    const seatedNow = figure.metadata?.studioPose === 'StudioSeated';
+    if (mark.seated !== seatedNow) this.applyStudioPose(mark.seated ? 'StudioSeated' : 'StudioStand', figure);
+
+    // Sitting down is the last word, not the first. Applying a pose queues
+    // grounding a frame later, loading a figure queues another, and a lift
+    // performed before either of those runs is simply undone — which left
+    // guests hovering a third of a metre under their chairs. This settles
+    // after the rest of it has finished arguing.
+    if (mark.seated && mark.seatHeight !== undefined) {
+      window.setTimeout(() => {
+        if (!figure.isDisposed()) this.sitOnExistingSeat(figure, mark.seatHeight!);
+      }, 420);
+    }
+    else this.afterNextFrame(() => { if (!figure.isDisposed()) this.groundCharacterSurfaces(figure); });
+
+    // A role is the other half of a mark: the baker at the oven wears work
+    // clothes, the person at the pass is front of house. Without it a staffed
+    // restaurant is one model copied four times.
+    if (mark.role) void this.dressForRole(figure, mark.role);
+
+    window.dispatchEvent(new CustomEvent('ch-character-mark-applied', {
+      detail: { markId, label: mark.label, role: mark.role ?? null },
+    }));
+    return true;
+  }
+
+  /**
+   * Put a figure in the clothes their role would wear.
+   *
+   * Chosen from what this body's wardrobe actually holds rather than by naming
+   * a file, so a body with a different set of clothes still dresses as close
+   * to the role as it can instead of arriving undressed.
+   */
+  private async dressForRole(figure: BABYLON.AbstractMesh, role: StudioRole): Promise<void> {
+    const modelUrl = figure.metadata?.sourceModelUrl as string | undefined;
+    const body = modelUrl ? bodyIdFromModelUrl(modelUrl) : null;
+    if (!modelUrl || !body) return;
+
+    try {
+      this.wardrobeCatalogue ??= await loadWardrobeCatalogue();
+    } catch {
+      return; // dressStudioCharacter reports this; a role is not worth a second warning.
+    }
+
+    const owned = garmentsForBody(this.wardrobeCatalogue, body);
+    const outfit = garmentForRole(role, owned.filter(g => g.slot === 'outfit').map(g => g.id));
+    const shoes = owned.find(g => g.slot === 'shoes')?.id;
+    await this.dressStudioCharacter(figure, modelUrl, [outfit, shoes].filter(Boolean) as string[]);
+    this.wearUniform(figure, role);
+  }
+
+  /**
+   * Put the workwear on: apron, cap and gloves, with the brand on them.
+   *
+   * The catalogue has no apron, no cap and no gloves — it is twelve ordinary
+   * garments — so these are built on the rig instead, and their fronts are
+   * drawn from the brand exactly as the sign over the door is. A pizzeria's
+   * crew can carry the name of the pizzeria without anybody modelling
+   * anything.
+   */
+  private wearUniform(figure: BABYLON.AbstractMesh, role: StudioRole): void {
+    this.studioUniforms.get(figure.uniqueId)?.dispose();
+    this.studioUniforms.delete(figure.uniqueId);
+
+    const kit = ROLE_UNIFORM[role] ?? {};
+    const skeleton = this.skeletonForCharacter(figure);
+    if (!skeleton) return;
+
+    const uniform = StudioUniform.dress(this.scene, figure, skeleton, this.currentBrand(), kit);
+    if (!uniform) return;
+    this.studioUniforms.set(figure.uniqueId, uniform);
+
+    // Workwear casts shadows like anything else a light can see.
+    for (const data of this.lights.values()) {
+      if (!data.shadowGenerator) continue;
+      uniform.meshes().forEach(mesh => data.shadowGenerator!.addShadowCaster(mesh, false));
+    }
+  }
+
+  /** The rig a figure's garments hang on, whichever mesh carries it. */
+  private skeletonForCharacter(figure: BABYLON.AbstractMesh): BABYLON.Skeleton | null {
+    if (figure.skeleton) return figure.skeleton;
+    for (const child of figure.getChildMeshes()) {
+      if (child.skeleton) return child.skeleton;
+    }
+    return null;
+  }
+
+  private studioUniforms = new Map<number, StudioUniform>();
+
+  /**
+   * Put somebody on every mark this place has.
+   *
+   * A restaurant with one person standing in it is a room with one person
+   * standing in it. The scene a photographer is actually planning has a baker
+   * at the oven, somebody at the pass and a guest at a table — and each of
+   * them takes light, casts a shadow and blocks a sightline.
+   */
+  public async staffLocation(): Promise<number> {
+    const marks = this.availableMarks();
+    if (marks.length === 0) return 0;
+
+    const standing = [...this.scene.meshes].filter(mesh => mesh.metadata?.studioPose);
+    let placed = 0;
+    for (const [index, mark] of marks.entries()) {
+      let figure = standing[index];
+      if (!figure) {
+        // Alternating, so a crew does not read as one person copied.
+        const model = index % 2 === 0 ? 'woman' : 'man';
+        const height = model === 'woman' ? 1.72 : 1.82;
+        await this.loadCharacterModel(
+          `/models/avatars/studio/studio-${model}.glb`,
+          `${mark.label}`, '', height / 1.7, { additive: placed > 0 || standing.length > 0 });
+        figure = this.characterMesh as BABYLON.AbstractMesh;
+        this.applyStudioPose('StudioStand', figure);
+      }
+      if (figure && this.standOnMark(mark.id, figure)) placed++;
+    }
+    return placed;
+  }
+
+  /**
+   * Show or hide the studio's own parked equipment.
+   *
+   * The photo and video camera bodies belong to the studio floor. Standing
+   * them in somebody's kitchen puts two cameras in the shot that have nothing
+   * to do with the one actually filming.
+   */
+  private setStudioGearVisible(visible: boolean): void {
+    for (const mesh of this.scene.meshes) {
+      if (!/^physical-(photo|video)-camera/.test(mesh.name)) continue;
+      mesh.setEnabled(visible);
+    }
+  }
+
+  /**
+   * Keep a walking figure inside the walls of whatever room this is.
+   *
+   * Without it the figure walks straight through the front of a pizzeria and
+   * keeps going into nothing, which is a strange thing for a previsualization
+   * of a room to let you do. The margin keeps the body off the wall rather
+   * than in it.
+   */
+  private keepInsideRoom(position: BABYLON.Vector3): void {
     const bounds = locationById(this.currentLocation() ?? '')?.bounds;
-    const wanted = bounds ? insideRoom(spec.position, spec.aim, bounds) : spec.position;
+    if (!bounds) return;
+    const limitX = Math.max(0.2, bounds.halfWidth - 0.4);
+    const limitZ = Math.max(0.2, bounds.halfDepth - 0.4);
+    position.x = BABYLON.Scalar.Clamp(position.x, -limitX, limitX);
+    position.z = BABYLON.Scalar.Clamp(position.z, -limitZ, limitZ);
+  }
+
+  /**
+   * Where the subject actually is, and where their eyes actually are.
+   *
+   * Every angle in a look is measured from here. Reading it off the figure
+   * rather than assuming 1.3 m is what lets the same rig light an adult and a
+   * child correctly — and it is why a look aimed at a fixed height lit a small
+   * child over the top of the head.
+   */
+  private subjectStand(): { x: number; z: number; eyeHeight: number } {
+    const mesh = this.getPrimaryCharacterMesh();
+    if (!mesh) return { x: 0, z: 0, eyeHeight: 1.45 };
+    const position = mesh.getAbsolutePosition();
+    const bounds = mesh.getHierarchyBoundingVectors(true);
+    const top = Number.isFinite(bounds.max.y) ? bounds.max.y : position.y + 1.6;
+    // Eyes sit about eleven centimetres below the top of the head, standing or
+    // sitting, which is close enough to aim a light at.
+    return { x: position.x, z: position.z, eyeHeight: Math.max(0.4, top - 0.11) };
+  }
+
+  private async buildLookFixture(look: LightingLook, spec: LookFixture): Promise<void> {
+    const subject = this.subjectStand();
+    const bounds = locationById(this.currentLocation() ?? '')?.bounds;
+    const shot = { x: this.camera.position.x, z: this.camera.position.z };
+
+    // A working light is placed by angle from the camera; a lamp or a candle
+    // is a thing in the room and stays where the room put it.
+    // A visible source is the lamp the room built, if the room built one by
+    // that name. Otherwise it falls back to the position it was written with,
+    // which is what a place with no geometry of its own has.
+    const anchored = spec.anchor ? this.studioRoom?.anchor(spec.anchor) : undefined;
+    const resolved = anchored
+      ? {
+          position: { x: anchored.position.x, y: anchored.position.y, z: anchored.position.z },
+          aim: { x: anchored.aim.x, y: anchored.aim.y, z: anchored.aim.z },
+        }
+      : spec.placement
+        ? resolvePlacement(spec.placement, subject, shot)
+        : {
+            position: spec.position ?? { x: 0, y: subject.eyeHeight + 1, z: -2 },
+            aim: spec.aim ?? { x: subject.x, y: subject.eyeHeight, z: subject.z },
+          };
+
+    const aim = new BABYLON.Vector3(resolved.aim.x, resolved.aim.y, resolved.aim.z);
+    // Two rules a small room adds, and neither changes the angle the look was
+    // written at unless it has to: stay inside the walls, and stay out of the
+    // shot. The second is what kept a softbox standing over the dining table,
+    // between the lens and the face.
+    let wanted = resolved.position;
+    if (!spec.motivating) wanted = clearOfCamera(wanted, resolved.aim, { ...shot, y: subject.eyeHeight });
+    if (bounds) wanted = insideRoom(wanted, resolved.aim, bounds);
     const stand = new BABYLON.Vector3(wanted.x, wanted.y, wanted.z);
-    // A lamp, a window or a candle is where it is. It gives what it can give
-    // from there; only a working light is walked in to make its level.
+
     const placement = spec.motivating
       ? { position: stand, powerMultiplier: this.motivatingOutput(spec, aim, fixtureIlluminance(look, spec), stand) }
       : this.placeFixtureForIlluminance(spec.fixture, stand, aim, fixtureIlluminance(look, spec));
     // Walking a light closer to make its reading must not push it through a
-    // wall either.
+    // wall, or back into the shot, either.
+    if (!spec.motivating) {
+      const clear = clearOfCamera(placement.position, resolved.aim, { ...shot, y: subject.eyeHeight });
+      placement.position.set(clear.x, clear.y, clear.z);
+    }
     if (bounds) {
-      const kept = insideRoom(placement.position, spec.aim, bounds);
+      const kept = insideRoom(placement.position, resolved.aim, bounds);
       placement.position.set(kept.x, kept.y, kept.z);
     }
 
@@ -6931,8 +7360,10 @@ class VirtualStudio {
     if (candela === null) return 1;
 
     const output = sceneIntensityFromCandela(candela);
-    const distance = (stand ?? new BABYLON.Vector3(spec.position.x, spec.position.y, spec.position.z))
-      .subtract(aim).length();
+    const where = stand ?? (spec.position
+      ? new BABYLON.Vector3(spec.position.x, spec.position.y, spec.position.z)
+      : aim.add(new BABYLON.Vector3(0, 1, 0)));
+    const distance = where.subtract(aim).length();
     return Math.min(1, (wanted * distance * distance) / output);
   }
 
@@ -6980,14 +7411,25 @@ class VirtualStudio {
   public async applyLocation(id: string): Promise<boolean> {
     const location = locationById(id);
     if (!location) return false;
+    return this.queueSceneWork(() => this.buildLocation(id, location));
+  }
+
+  private async buildLocation(id: string, location: StudioLocation): Promise<boolean> {
 
     // The seamless paper belongs to the studio. In a kitchen it stands in the
     // middle of the room, behind the figure, being a cyclorama.
-    if (location.room === 'industrial' || location.room === 'none') {
+    const inStudio = location.room === 'industrial' || location.room === 'none';
+    if (inStudio) {
       if (!this.currentBackdropMesh) this.loadBackdrop('seamless-default', { receiveShadow: true });
     } else {
       this.removeBackdrop();
     }
+
+    // So do the two camera bodies that stand on the floor. They are studio
+    // gear parked at z = 2.5, which in a 4.6-metre kitchen is through the back
+    // wall and in the shot — three camera bodies in a scene with one taking
+    // camera. They go with the paper.
+    this.setStudioGearVisible(inStudio);
 
     environmentService.setStudioRoom({
       type: location.room,
@@ -6996,10 +7438,40 @@ class VirtualStudio {
     });
     // The room is rebuilt from the service's notification, so the fixtures are
     // placed against the walls that are actually up.
-    await new Promise<void>(resolve => this.scene.onAfterRenderObservable.addOnce(() => resolve()));
+    //
+    // A frame is the natural signal that it has landed, but a browser stops
+    // rendering a tab nobody is looking at, and waiting for a frame that never
+    // comes leaves the panel saying "working" with every button disabled, for
+    // good. The clock is the fallback; a promise that has settled cannot
+    // settle twice, so whichever arrives first wins.
+    await new Promise<void>(resolve => {
+      const observer = this.scene.onAfterRenderObservable.addOnce(() => resolve());
+      setTimeout(() => {
+        this.scene.onAfterRenderObservable.remove(observer);
+        resolve();
+      }, 250);
+    });
+    // The camera has to be in the room as well. A studio shot backs off five
+    // metres, which in a six-metre room puts the lens outside the front wall,
+    // filming the back of it — the frame goes black and the place looks
+    // broken. The shot direction is kept and the distance is shortened, the
+    // same way the lights are walked in.
+    if (location.bounds) {
+      const target = this.camera.target;
+      const kept = insideRoom(
+        { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z },
+        { x: target.x, y: target.y, z: target.z },
+        location.bounds,
+        0.5,
+      );
+      this.camera.setPosition(new BABYLON.Vector3(kept.x, kept.y, kept.z));
+      this.camera.setTarget(target.clone());
+    }
+
     // A place that arrives unlit is half a place, so its lighting decides
     // whether the move succeeded.
-    const lit = await this.applyLook(location.look);
+    const lookForPlace = lookById(location.look);
+    const lit = lookForPlace ? await this.buildLook(location.look, lookForPlace) : false;
 
     window.dispatchEvent(new CustomEvent('ch-location-changed', {
       detail: { id, label: location.label },
@@ -7029,10 +7501,44 @@ class VirtualStudio {
     const look = lookById(id);
     if (!look) return false;
 
-    this.clearAllLights();
+    return this.queueSceneWork(() => this.buildLook(id, look));
+  }
+
+  /**
+   * Run scene rebuilds one at a time, in the order they were asked for.
+   *
+   * Setting a place rebuilds the room and its rig, and both are long enough
+   * that a person can ask for the next one before the last has finished.
+   * Overlapping rebuilds each took their own snapshot of "the old rig" and
+   * each missed what the other had added, so two quick presses left two rigs
+   * standing with their shadow generators — and every change after that made
+   * it worse until the renderer stopped keeping up.
+   *
+   * Public entry points queue; the work itself calls the unqueued builders, so
+   * setting a place — which sets a look — cannot wait on itself.
+   */
+  private sceneWork: Promise<unknown> = Promise.resolve();
+
+  private queueSceneWork<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.sceneWork.then(work, work);
+    // The chain must survive a failed rebuild, or one error would stop every
+    // later change from ever running.
+    this.sceneWork = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
+  private async buildLook(id: string, look: LightingLook): Promise<boolean> {
+
+    // Build the new rig before taking the old one down. Clearing first left
+    // the scene with no lights at all for the seconds it takes to load three
+    // stands — the studio went black on every change of place or look, and
+    // anything that saved, measured or photographed in that window recorded an
+    // unlit scene with an empty light list.
+    const previous = [...this.lights.keys()];
     for (const fixture of look.fixtures) {
       await this.buildLookFixture(look, fixture);
     }
+    for (const lightId of previous) this.removeLight(lightId);
     this.currentLookId = id;
 
     this.scene.materials.forEach(material => {
@@ -7041,6 +7547,12 @@ class VirtualStudio {
       }
     });
     this.updateSceneBrightness();
+    // The ambient fill is dimmed against however much studio light is burning,
+    // and clearing the rig recomputed it against an empty room. Without this
+    // the fill stays at its full value over the new rig and flattens every
+    // ratio the look was built to give: an evening pizzeria renders as a grey
+    // room in daylight.
+    this.updateAmbientLightIntensity();
     this.updateSceneList();
     // Same notice the default rig sends, so every panel that lists fixtures
     // refreshes whether the rig came from a look or from setup.
@@ -7052,6 +7564,10 @@ class VirtualStudio {
   }
 
   private currentLookId: string | null = null;
+  /** Said once per figure: a warning repeated every frame is noise, not help. */
+  private seatedWalkNoticed = false;
+  /** The pose to come back to when the figure stands up again. */
+  private lastStandingPose: string | null = null;
 
   public async setupDefaultLighting(): Promise<void> {
     // Load the infinity cove backdrop immediately so colored lights have a surface to illuminate
@@ -17628,6 +18144,20 @@ class VirtualStudio {
       return;
     }
 
+    // Sitting is a state, not a decoration. Walking out of it was possible
+    // because a movement key simply cleared the pose lock below, so a seated
+    // figure slid across the floor with its chair still tracking it. From a
+    // chair the only move is to stand up.
+    if (mesh.metadata?.studioPose === 'StudioSeated') {
+      if (!this.seatedWalkNoticed) {
+        this.seatedWalkNoticed = true;
+        window.dispatchEvent(new CustomEvent('ch-character-seated-blocked', {
+          detail: { message: 'Figuren sitter. Trykk «Reis deg» for å gå.' },
+        }));
+      }
+      return;
+    }
+
     if (state.poseLocked && state.rigId) {
       const store = useSkeletalAnimationStore.getState();
       this.forceStopCharacterAnimations(mesh, state.rigId);
@@ -17693,6 +18223,12 @@ class VirtualStudio {
     if (isMoving) {
       motionWorldPosition.x += movementDirection.x * travel;
       motionWorldPosition.z += movementDirection.z * travel;
+
+      // Stop at the walls of whatever room this is. Without it the figure
+      // walks straight through the front of a pizzeria and keeps going into
+      // nothing, which is a strange thing for a previsualization of a room to
+      // let you do. A margin keeps the body off the wall rather than in it.
+      this.keepInsideRoom(motionWorldPosition);
       this.setMeshYaw(motionMesh, profile, desiredFacingYaw, Math.min(1, dt * 9));
     }
     const facingYaw = this.getMeshYaw(motionMesh, profile);
@@ -18242,6 +18778,14 @@ class VirtualStudio {
       return;
     }
 
+    // A seated figure does not walk to a mark either. The keyboard path
+    // refuses this already; this is the other way in, and both have to agree
+    // or the chair is left behind by whichever one nobody checked.
+    if (mesh.metadata?.studioPose === 'StudioSeated') {
+      this.activeCharacterLocomotion = null;
+      return;
+    }
+
     let motionWorldPosition = this.getMotionNodeWorldPosition(motionMesh);
     const dt = Math.max(0.001, Math.min(0.1, this.engine.getDeltaTime() / 1000));
     const toTarget = locomotion.target.subtract(motionWorldPosition);
@@ -18283,6 +18827,7 @@ class VirtualStudio {
 
     motionWorldPosition.x += direction.x * travel;
     motionWorldPosition.z += direction.z * travel;
+    this.keepInsideRoom(motionWorldPosition);
 
     if (locomotion.snapToGround) {
       const now = performance.now();
@@ -18552,8 +19097,19 @@ class VirtualStudio {
   /**
    * Add a default avatar model to the scene for focus target testing
    */
+  /**
+   * Bring the default figure in, and light the studio around her.
+   *
+   * The order matters. A look is written as angles around the subject's eye
+   * line, so lighting an empty stage aims the rig at an assumed height and the
+   * figure who arrives afterwards stands slightly outside it. Relighting once
+   * she appeared was the obvious repair and the wrong one: it tore the rig
+   * down and rebuilt it while the scene was live, which left the studio dark
+   * for several seconds and raced anything else that was loading. Waiting for
+   * her first costs nothing and needs no repair.
+   */
   private addDefaultMannequin(): void {
-    this.loadDefaultAvatar();
+    void this.loadDefaultAvatar().then(() => this.setupDefaultLighting());
   }
 
   /**
@@ -18639,9 +19195,45 @@ class VirtualStudio {
       }), boneAxis);
       node.rotationQuaternion = new BABYLON.Quaternion(clamped.x, clamped.y, clamped.z, clamped.w);
     }
-    this.scene.onAfterRenderObservable.addOnce(() => {
+    this.afterNextFrame(() => {
       if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
     });
+  }
+
+  /**
+   * Run `work` after the next rendered frame, or shortly after either way.
+   *
+   * Skin matrices are only right once a frame has been drawn, so grounding a
+   * figure, building the portrait chair and reading a skinned bounding box all
+   * wait for one. A browser stops rendering a tab nobody is looking at, and
+   * the work then never happens at all — the figure is left floating in the
+   * pose it was struck in, with no chair under it, which is exactly what a
+   * photographer finds when they come back to the tab.
+   *
+   * The frame is still preferred; the clock only catches the case where no
+   * frame is coming. Whichever arrives first runs the work, once.
+   *
+   * The wait is deliberately long. At 250 ms the clock started winning races
+   * it was never meant to enter: under software rendering a frame can take
+   * half a second, so work that depended on being *after* a render ran before
+   * one, and a document restored its actors into a scene that had not drawn
+   * them yet — they came back as meshes nobody had registered. Two seconds is
+   * far longer than any frame a rendering tab takes, and still instant next to
+   * a tab that has stopped rendering altogether, which is the only case this
+   * exists for.
+   */
+  private afterNextFrame(work: () => void, fallbackMs = 2000): void {
+    let done = false;
+    const run = () => {
+      if (done) return;
+      done = true;
+      work();
+    };
+    const observer = this.scene.onAfterRenderObservable.addOnce(run);
+    setTimeout(() => {
+      this.scene.onAfterRenderObservable.remove(observer);
+      run();
+    }, fallbackMs);
   }
 
   /**
@@ -18717,7 +19309,7 @@ class VirtualStudio {
     if (!props) return;
 
     for (let frame = 0; frame < 3; frame++) {
-      await new Promise<void>(resolve => this.scene.onAfterRenderObservable.addOnce(() => resolve()));
+      await new Promise<void>(resolve => this.afterNextFrame(() => resolve()));
     }
     const { missing } = await props.restore(saved, key => this.releaseStudioObject(key));
     if (missing.length > 0) {
@@ -18771,7 +19363,17 @@ class VirtualStudio {
     requested?: string[],
   ): Promise<void> {
     const body = bodyIdFromModelUrl(modelUrl);
-    if (!body) return;
+    if (!body) {
+      // Every other way of leaving this function undressed says so. This one
+      // did not, and a figure that came back naked from a saved document gave
+      // no clue why — the wardrobe was in the file, the catalogue was loaded,
+      // and nothing was logged. An import that is not a studio body is normal
+      // and silent; a studio body that fails to resolve is not.
+      if (/studio-(woman|man)/.test(modelUrl)) {
+        console.warn('[wardrobe] Studio body not recognised from its url; figure stays undressed', modelUrl);
+      }
+      return;
+    }
 
     try {
       this.wardrobeCatalogue ??= await loadWardrobeCatalogue();
@@ -18791,6 +19393,11 @@ class VirtualStudio {
 
     const wanted = requested ?? defaultWardrobeFor(this.wardrobeCatalogue, body);
     const garments = resolveWardrobe(this.wardrobeCatalogue, body, wanted);
+    if (wanted.length > 0 && garments.length === 0) {
+      // Asked for clothes this body does not own: worth saying, because the
+      // figure will stand there in nothing and look like a loading failure.
+      console.warn('[wardrobe] None of the requested garments fit this body', { body, wanted });
+    }
     await dressFigure({
       scene: this.scene,
       characterRoot: mesh,
@@ -18818,7 +19425,7 @@ class VirtualStudio {
     if (!mesh || !modelUrl) return [];
     await this.dressStudioCharacter(mesh, modelUrl, items);
     // Clothes change the silhouette, so the figure may need setting down again.
-    this.scene.onAfterRenderObservable.addOnce(() => {
+    this.afterNextFrame(() => {
       if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
     });
     return wornGarments(mesh);
@@ -18851,6 +19458,10 @@ class VirtualStudio {
     const mesh = this.getPrimaryCharacterMesh();
     if (!mesh) return false;
 
+    // A handle that drifts under the cursor is worse than a still figure, so
+    // the breath stops while joints are being placed by hand.
+    this.setIdleBreathing(!enabled);
+
     if (this.poseEditor && this.poseEditor.characterId !== mesh.uniqueId) {
       this.poseEditor.dispose();
       this.poseEditor = null;
@@ -18864,7 +19475,7 @@ class VirtualStudio {
         // frame is enough however long the drag lasts.
         if (this.poseGroundingPending) return;
         this.poseGroundingPending = true;
-        this.scene.onAfterRenderObservable.addOnce(() => {
+        this.afterNextFrame(() => {
           this.poseGroundingPending = false;
           if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
         });
@@ -18886,8 +19497,13 @@ class VirtualStudio {
     return this.poseEditor;
   }
 
-  public applyStudioPose(name: 'StudioStand' | 'StudioPortrait' | 'StudioSeated'): boolean {
-    const mesh = this.getPrimaryCharacterMesh();
+  public applyStudioPose(
+    name: 'StudioStand' | 'StudioPortrait' | 'StudioSeated',
+    // A scene with a crew in it has more than one figure to pose, so the one
+    // being posed can be named rather than assumed to be the primary.
+    target?: BABYLON.AbstractMesh,
+  ): boolean {
+    const mesh = target ?? this.getPrimaryCharacterMesh();
     if (!mesh) return false;
     const groups = this.getAnimationGroupsForMesh(mesh) || [];
     const pose = groups.find(group => group.name === name);
@@ -18904,15 +19520,24 @@ class VirtualStudio {
     mesh.metadata = { ...mesh.metadata, studioPose: name };
     // Linked glTF joints reach the skin matrices during the next render. Ground
     // the posed surfaces afterwards; rest-pose bounds would leave seated feet in the air.
-    this.scene.onAfterRenderObservable.addOnce(() => {
+    this.afterNextFrame(() => {
       if (mesh.isDisposed() || mesh.metadata?.studioPose !== name) return;
       this.groundCharacterSurfaces(mesh);
       this.studioSeats.get(mesh.uniqueId)?.dispose();
       this.studioSeats.delete(mesh.uniqueId);
       if (name === 'StudioSeated') {
-        const chair = new StudioSeat(this.scene, mesh, () => [...this.lights.values()].flatMap(light => light.shadowGenerator ? [light.shadowGenerator] : []));
-        this.studioSeats.set(mesh.uniqueId, chair);
-        mesh.onDisposeObservable.addOnce(() => this.studioSeats.delete(mesh.uniqueId));
+        // A room with chairs in it already has somewhere to sit. Building the
+        // portrait stool as well puts a stool on top of a dining chair, which
+        // is not sitting down — so the body comes down to the chair the room
+        // built instead.
+        const seatHeight = mesh.metadata?.studioSeatHeight as number | undefined;
+        if (seatHeight !== undefined) {
+          this.sitOnExistingSeat(mesh, seatHeight);
+        } else {
+          const chair = new StudioSeat(this.scene, mesh, () => [...this.lights.values()].flatMap(light => light.shadowGenerator ? [light.shadowGenerator] : []));
+          this.studioSeats.set(mesh.uniqueId, chair);
+          mesh.onDisposeObservable.addOnce(() => this.studioSeats.delete(mesh.uniqueId));
+        }
       }
       this.syncCharacterNodeTransform(mesh, true);
       window.dispatchEvent(new CustomEvent('ch-character-pose-applied', { detail: { poseId: name } }));
@@ -19767,6 +20392,12 @@ class VirtualStudio {
   }
 
   private removeCharacterModel(): void {
+    // Workwear hangs on the rig, so it has to come off before the rig goes.
+    for (const [id, uniform] of this.studioUniforms) {
+      uniform.dispose();
+      this.studioUniforms.delete(id);
+    }
+
     this.stopCharacterWalk(false);
     this.stopCharacterKeyboardControl(false);
     this.clearCharacterKeyboardInput();

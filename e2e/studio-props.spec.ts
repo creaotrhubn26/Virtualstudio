@@ -22,7 +22,10 @@ test('a studio object can be claimed, moved and saved', async ({ page }, testInf
   }
   await page.waitForFunction(() => {
     const s = (window as any).virtualStudio;
-    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked;
+    // The studio is ready when the figure is posed *and* the rig is up:
+    // lighting is built around the subject, so it comes after her.
+    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked
+      && s.lights.size >= 3;
   }, undefined, { timeout: 120_000 });
 
   // Sitting the figure down is what makes the studio derive a chair.

@@ -31,6 +31,18 @@ export class StudioRoom {
   private roof: TransformNode | null = null;
   private materials: PBRMaterial[] = [];
   private practicals: SpotLight[] = [];
+  /**
+   * Where the room actually hung its lamps.
+   *
+   * A visible source in a look used to carry its own coordinates, written
+   * separately from the geometry — so the kitchen pendant hung over the
+   * subject's head while the pendant the room built hung over the table. The
+   * room is the one that knows; a look asks it by name.
+   */
+  private anchors = new Map<string, { position: Vector3; aim: Vector3 }>();
+  /** Lights that are fire, and the steady level each of them flickers around. */
+  private flames: { light: SpotLight; base: number; seed: number }[] = [];
+  private flameObserver: ReturnType<Scene['onBeforeRenderObservable']['add']> | null = null;
   private options: StudioRoomOptions = { type: 'none', furnishings: true, practicals: true };
   private brand: StudioBrand = DEFAULT_BRAND;
 
@@ -59,6 +71,19 @@ export class StudioRoom {
   }
 
   getState(): StudioRoomOptions { return { ...this.options }; }
+
+  /** Where this room put a named lamp, window or fire, if it has one. */
+  anchor(name: string): { position: Vector3; aim: Vector3 } | undefined {
+    const found = this.anchors.get(name);
+    return found ? { position: found.position.clone(), aim: found.aim.clone() } : undefined;
+  }
+
+  private setAnchor(name: string, position: number[], aim: number[]): void {
+    this.anchors.set(name, {
+      position: Vector3.FromArray(position),
+      aim: Vector3.FromArray(aim),
+    });
+  }
 
   private material(name: string, colour: string, roughness = .65, metallic = 0, texture?: string): PBRMaterial {
     const m = new PBRMaterial(`studioRoom_${name}`, this.scene);
@@ -354,6 +379,10 @@ export class StudioRoom {
       { radius: .16, tessellation: 20, sideOrientation: Mesh.DOUBLESIDE }, this.scene), warm, roof);
     glow.position.set(0, 1.73, -.7); glow.rotation.x = Math.PI / 2;
 
+    this.setAnchor('pendant', [0, 1.84, -.7], [0, .8, -.7]);
+    this.setAnchor('window', [-2.6, 1.45, .2], [0, 1.3, 0]);
+    this.setAnchor('ceiling', [0, 2.45, .6], [0, 1, 0]);
+
     const pendant = new SpotLight('studioRoom_practical_pendant',
       new Vector3(0, 1.72, -.7), new Vector3(0, -1, 0), Math.PI / 1.6, 1.4, this.scene);
     pendant.diffuse = new Color3(1, .78, .54); pendant.specular = pendant.diffuse.clone();
@@ -435,6 +464,7 @@ export class StudioRoom {
     }
 
     // Basin by the door, and the tube lighting that makes ward light flat.
+    this.setAnchor('ceiling', [0, 2.58, -1.2], [0, 1.3, 0]);
     this.box('wardBasin', [.5, .18, .38], [2.1, .85, -1.6], linen);
     this.rod('wardTap', [2.1, .94, -1.42], [2.1, 1.16, -1.42], .014, steel);
     this.box('wardDispenser', [.12, .22, .08], [2.1, 1.45, -1.78], linen);
@@ -473,52 +503,65 @@ export class StudioRoom {
     fire.emissiveColor = new Color3(1, .42, .1);
     const bulb = this.material('pizzeriaBulb', '#ffe2b0', .3);
     bulb.emissiveColor = new Color3(1, .68, .34);
+    const crust = this.material('pizzaCrust', '#c98f42', .74);
+    const sauce = this.material('pizzaSauce', '#a8301c', .6);
+    const glassware = this.material('pizzeriaGlass', '#cfd8dc', .12, .1);
+    const linen = this.material('pizzeriaLinen', '#e6e1d6', .9);
 
-    this.shell(7, 6, 3, plaster, ceiling);
+    this.shell(9, 8, 3.2, plaster, ceiling);
     // The back wall is brick, because that is the wall the oven is built into.
     const backBrick = this.attach(MeshBuilder.CreatePlane('studioRoom_pizzeriaBrickWall',
-      { width: 7, height: 3 }, this.scene), brick);
-    backBrick.position.set(0, 1.5, 2.96);
+      { width: 9, height: 3.2 }, this.scene), brick);
+    backBrick.position.set(0, 1.6, 3.96);
 
     // The oven: a brick dome on a plinth, with a live mouth and a flue.
-    const plinth = this.box('ovenPlinth', [2, 1, 1.5], [2.1, .5, 2.1], brick);
+    const plinth = this.box('ovenPlinth', [2, 1, 1.5], [2.8, .5, 3.1], brick);
     plinth.metadata = { ...plinth.metadata, studioObjectKey: 'pizzeriaOven' };
     const dome = this.attach(MeshBuilder.CreateSphere('studioRoom_ovenDome',
       { diameter: 1.9, segments: 22, slice: .5 }, this.scene), brick);
-    dome.position.set(2.1, 1, 2.1); dome.scaling.z = .82;
-    this.box('ovenArch', [1.1, .62, .18], [2.1, 1.28, 1.36], dark);
+    dome.position.set(2.8, 1, 3.1); dome.scaling.z = .82;
+    this.box('ovenArch', [1.1, .62, .18], [2.8, 1.28, 2.36], dark);
     const mouth = this.attach(MeshBuilder.CreatePlane('studioRoom_ovenMouth',
       { width: .82, height: .46 }, this.scene), fire);
-    mouth.position.set(2.1, 1.26, 1.26); mouth.rotation.y = Math.PI;
+    mouth.position.set(2.8, 1.26, 2.26); mouth.rotation.y = Math.PI;
     // Embers on the oven floor, visible through the mouth.
     const embers = this.attach(MeshBuilder.CreatePlane('studioRoom_ovenEmbers',
       { width: .8, height: .7, sideOrientation: Mesh.DOUBLESIDE }, this.scene), fire);
-    embers.position.set(2.1, 1.02, 1.75); embers.rotation.x = -Math.PI / 2;
-    this.rod('ovenFlue', [2.1, 1.9, 2.1], [2.1, 3, 2.1], .12, dark, roof);
+    embers.position.set(2.8, 1.02, 2.75); embers.rotation.x = -Math.PI / 2;
+    this.rod('ovenFlue', [2.8, 1.9, 3.1], [2.8, 3.2, 3.1], .12, dark, roof);
     for (let i = 0; i < 3; i++) {
-      this.rod('ovenLogEdge', [1.35, .04 + i * .16, -.1], [1.35, .04 + i * .16, .4], .07, wood, furniture);
+      this.rod('ovenLogEdge', [1.95, .04 + i * .16, 2.2], [1.95, .04 + i * .16, 2.7], .07, wood, furniture);
     }
 
     // The pass: marble top, wooden front, peels hung on the wall beside it.
-    this.box('passBody', [3, .95, .7], [-1.8, .475, 2.3], wood);
-    this.box('passTop', [3.1, .06, .78], [-1.8, .98, 2.28], marble);
-    this.box('passRail', [3, .04, .3], [-1.8, 1.32, 2.05], steel);
+    this.box('passBody', [3.6, .95, .7], [-2.2, .475, 3.3], wood);
+    this.box('passTop', [3.7, .06, .78], [-2.2, .98, 3.28], marble);
+    this.box('passRail', [3.6, .04, .3], [-2.2, 1.32, 3.05], steel);
     for (let i = 0; i < 3; i++) {
-      const x = -3 + i * .28;
-      this.rod('peelHandle', [x, 1.55, 2.9], [x, 2.35, 2.9], .018, wood);
-      this.box('peelBlade', [.26, .3, .015], [x, 1.42, 2.9], steel);
+      const x = -3.8 + i * .28;
+      this.rod('peelHandle', [x, 1.55, 3.9], [x, 2.35, 3.9], .018, wood);
+      this.box('peelBlade', [.26, .3, .015], [x, 1.42, 3.9], steel);
     }
-    this.box('chalkboard', [1.5, .9, .05], [.2, 2.15, 2.92], dark);
+    // One going out, on the pass.
+    const served = this.attach(MeshBuilder.CreateCylinder('studioRoom_passPlate',
+      { diameterTop: .3, diameterBottom: .24, height: .02, tessellation: 28 }, this.scene), marble);
+    served.position.set(-1.1, 1.02, 3.2);
+    const passPizza = this.box('passPizza', [.27, .03, .21], [-1.1, 1.04, 3.2], crust);
+    passPizza.rotation.y = -.12;
+    this.box('passPizzaTop', [.2, .006, .15], [-1.1, 1.057, 3.2], sauce);
+
+    this.box('chalkboard', [1.5, .9, .05], [.4, 2.25, 3.92], dark);
     // Bottles on a shelf above the pass: small, but it reads as a restaurant.
-    this.box('bottleShelf', [2.4, .05, .26], [-1.8, 1.75, 2.85], wood);
+    this.box('bottleShelf', [2.4, .05, .26], [-2.2, 1.75, 3.85], wood);
     for (let i = 0; i < 9; i++) {
       const bottle = this.attach(MeshBuilder.CreateCylinder('studioRoom_bottle',
         { diameterTop: .05, diameterBottom: .09, height: .3, tessellation: 12 }, this.scene), i % 3 ? dark : wood);
-      bottle.position.set(-2.85 + i * .26, 1.93, 2.85);
+      bottle.position.set(-3.25 + i * .26, 1.93, 3.85);
     }
 
     // Tables, under their own pendants, at the front where the camera is.
-    for (const [tx, tz] of [[-1.9, -1.5], [1.6, -1.9], [-.3, .4]]) {
+    let laid = 0;
+    for (const [tx, tz] of [[-2.7, -1.9], [-.3, -1.1], [2.4, -1.8], [-2.6, 1.1], [2.5, .9]]) {
       const top = this.attach(MeshBuilder.CreateCylinder('studioRoom_pizzeriaTable',
         { diameter: .92, height: .06, tessellation: 32 }, this.scene), marble, furniture);
       top.position.set(tx, .74, tz);
@@ -554,6 +597,37 @@ export class StudioRoom {
         { radius: .13, tessellation: 18, sideOrientation: Mesh.DOUBLESIDE }, this.scene), bulb, roof);
       lens.position.set(tx, 1.78, tz); lens.rotation.x = Math.PI / 2;
 
+      // What is on the table is what tells you the place is open. Three of the
+      // five are laid; an empty one reads as a table waiting, which a working
+      // restaurant also has.
+      if (laid < 3) {
+        laid++;
+        const plate = this.attach(MeshBuilder.CreateCylinder('studioRoom_plate',
+          { diameterTop: .27, diameterBottom: .22, height: .018, tessellation: 28 }, this.scene), marble, furniture);
+        plate.position.set(tx - .12, .785, tz + .06);
+
+        // Detroit style: a rectangle with caramelised edges, which is the one
+        // thing this pizzeria is actually named for.
+        const pizza = this.box('pizza', [.24, .028, .19], [tx - .12, .8, tz + .06], crust, furniture);
+        pizza.rotation.y = .18;
+        for (let slice = 0; slice < 3; slice++) {
+          this.box('pizzaTopping', [.055, .006, .17], [tx - .19 + slice * .07, .816, tz + .06], sauce, furniture);
+        }
+
+        const glass = this.attach(MeshBuilder.CreateCylinder('studioRoom_glass',
+          { diameterTop: .072, diameterBottom: .055, height: .125, tessellation: 18 }, this.scene), glassware, furniture);
+        glass.position.set(tx + .17, .833, tz - .1);
+        const second = this.attach(MeshBuilder.CreateCylinder('studioRoom_glass',
+          { diameterTop: .072, diameterBottom: .055, height: .125, tessellation: 18 }, this.scene), glassware, furniture);
+        second.position.set(tx + .1, .833, tz + .17);
+
+        for (const offset of [-.02, .02]) {
+          this.box('cutlery', [.012, .004, .15], [tx + .06, .78, tz + .06 + offset], steel, furniture);
+        }
+        const napkin = this.box('napkin', [.11, .006, .11], [tx - .05, .776, tz - .16], linen, furniture);
+        napkin.rotation.y = .3;
+      }
+
       const pendant = new SpotLight(`studioRoom_practical_pizzeria_${tx}_${tz}`,
         new Vector3(tx, 1.77, tz), new Vector3(0, -1, 0), Math.PI / 1.7, 1.5, this.scene);
       pendant.diffuse = new Color3(1, .74, .46); pendant.specular = pendant.diffuse.clone();
@@ -563,13 +637,21 @@ export class StudioRoom {
 
     this.brandPizzeria();
 
+    this.setAnchor('oven', [2.8, 1.24, 2.3], [0, 1.3, 0]);
+    this.setAnchor('pendant', [-.3, 1.78, -1.1], [-.3, .8, -1.1]);
+    this.setAnchor('candle', [-.1, .91, -1.1], [0, 1.3, 0]);
+
     // The fire itself, throwing light forward out of the mouth. Low, warm and
     // directional, the way an oven actually lights a room.
     const oven = new SpotLight('studioRoom_practical_oven',
-      new Vector3(2.1, 1.24, 1.3), new Vector3(-.35, -.12, -1).normalize(), Math.PI / 1.9, 1.6, this.scene);
+      new Vector3(2.8, 1.24, 2.3), new Vector3(-.4, -.12, -1).normalize(), Math.PI / 1.9, 1.6, this.scene);
     oven.diffuse = new Color3(1, .48, .18); oven.specular = oven.diffuse.clone();
     oven.intensity = 40; oven.falloffType = Light.FALLOFF_PHYSICAL;
     this.practicals.push(oven);
+    // A wood fire is never steady, and a steady one is the first thing that
+    // tells the eye a flame is painted on.
+    this.flames.push({ light: oven, base: oven.intensity, seed: 0 });
+    this.startFlicker();
   }
 
   /**
@@ -594,40 +676,63 @@ export class StudioRoom {
     this.materials.push(signMaterial, logoMaterial, boardMaterial, posterMaterial);
 
     // The band over the pass, in its own casing so it reads as a lit box.
-    this.box('signCasing', [3.4, .72, .12], [-1.8, 2.35, 2.9], dark);
+    this.box('signCasing', [3.4, .72, .12], [-2.2, 2.5, 3.9], dark);
     const band = this.attach(MeshBuilder.CreatePlane('studioRoom_brandSign',
       { width: 3.2, height: .56 }, this.scene), signMaterial);
-    band.position.set(-1.8, 2.35, 2.83);
+    band.position.set(-2.2, 2.5, 3.83);
 
     // The round mark, on the brick beside the oven.
     const markPlate = this.attach(MeshBuilder.CreateCylinder('studioRoom_brandMarkPlate',
       { diameter: .96, height: .07, tessellation: 40 }, this.scene), dark);
-    markPlate.position.set(.75, 2.25, 2.9); markPlate.rotation.x = Math.PI / 2;
+    markPlate.position.set(1.1, 2.4, 3.9); markPlate.rotation.x = Math.PI / 2;
     const mark = this.attach(MeshBuilder.CreatePlane('studioRoom_brandLogo',
       { width: .88, height: .88 }, this.scene), logoMaterial);
-    mark.position.set(.75, 2.25, 2.84);
+    mark.position.set(1.1, 2.4, 3.84);
 
     // The poster, framed, on the left wall where a menu hangs.
-    this.box('posterFrame', [.06, 1.08, .78], [-3.46, 1.6, -.4], dark);
+    this.box('posterFrame', [.06, 1.08, .78], [-4.46, 1.6, -.4], dark);
     const poster = this.attach(MeshBuilder.CreatePlane('studioRoom_brandPoster',
       { width: .7, height: 1 }, this.scene), posterMaterial);
-    poster.position.set(-3.43, 1.6, -.4); poster.rotation.y = -Math.PI / 2;
+    poster.position.set(-4.43, 1.6, -.4); poster.rotation.y = -Math.PI / 2;
 
     // The board by the door, the one that stands on the pavement.
-    this.box('boardBody', [.66, 1.36, .14], [-2.9, .68, -2.2], dark, furniture);
-    this.box('boardFoot', [.8, .08, .38], [-2.9, .04, -2.2], dark, furniture);
+    this.box('boardBody', [.66, 1.36, .14], [-3.6, .68, -3.2], dark, furniture);
+    this.box('boardFoot', [.8, .08, .38], [-3.6, .04, -3.2], dark, furniture);
     const board = this.attach(MeshBuilder.CreatePlane('studioRoom_brandBoard',
       { width: .56, height: 1.16 }, this.scene), boardMaterial, furniture);
-    board.position.set(-2.9, .74, -2.28); board.rotation.y = Math.PI;
+    board.position.set(-3.6, .74, -3.28); board.rotation.y = Math.PI;
 
     // What the sign throws back into the room. Weak, wide and the brand's own
     // colour: a sign is a source, just a modest one.
     const glow = new SpotLight('studioRoom_practical_sign',
-      new Vector3(-1.8, 2.3, 2.7), new Vector3(0, -.35, -1).normalize(), Math.PI / 1.5, 1.1, this.scene);
+      new Vector3(-2.2, 2.45, 3.7), new Vector3(0, -.35, -1).normalize(), Math.PI / 1.5, 1.1, this.scene);
     glow.diffuse = Color3.FromHexString(brand.accent).scale(.6).add(new Color3(.4, .32, .26));
     glow.specular = glow.diffuse.clone();
     glow.intensity = 5; glow.falloffType = Light.FALLOFF_PHYSICAL;
     this.practicals.push(glow);
+  }
+
+  /**
+   * Make the fires move.
+   *
+   * Two slow waves and a faster one, out of phase, give something closer to a
+   * fire than a sine does: mostly steady with occasional deeper dips, the way
+   * a log settles. It stays within a fifth of the level either way, so it
+   * flickers without changing the exposure the room was lit for.
+   */
+  private startFlicker(): void {
+    if (this.flameObserver) return;
+    this.flameObserver = this.scene.onBeforeRenderObservable.add(() => {
+      const seconds = performance.now() / 1000;
+      for (const flame of this.flames) {
+        if (!flame.light.isEnabled()) continue;
+        const wave =
+          Math.sin((seconds * 2.7 + flame.seed) * Math.PI * 2) * 0.55 +
+          Math.sin((seconds * 4.3 + flame.seed * 1.7) * Math.PI * 2) * 0.3 +
+          Math.sin((seconds * 9.1 + flame.seed * 2.3) * Math.PI * 2) * 0.15;
+        flame.light.intensity = flame.base * (1 + wave * 0.18);
+      }
+    });
   }
 
   /** Batching, roof layer and shadow casting, whichever place was built. */
@@ -653,6 +758,12 @@ export class StudioRoom {
     const meshes = this.root.getChildMeshes();
     this.shadows().forEach(generator => meshes.forEach(mesh => generator.removeShadowCaster(mesh, false)));
     this.practicals.forEach(light => light.dispose()); this.practicals = [];
+    this.anchors.clear();
+    if (this.flameObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.flameObserver);
+      this.flameObserver = null;
+    }
+    this.flames = [];
     this.root.dispose(false, false); this.root = this.furniture = this.roof = null;
     this.materials.forEach(material => material.dispose(true, true)); this.materials = [];
   }

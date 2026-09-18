@@ -243,6 +243,29 @@ export function sceneIntensityFromCandela(candela: number): number {
  * ponytail: single-axis approximation. Split into per-axis penumbra only if
  * rim shadows from strip sources read wrong against a reference render.
  */
+/**
+ * The modifier's actual width and height in metres, not its equal-area square.
+ *
+ * `modifierSizeMetres` collapses a rectangle to the square that softens the
+ * same way, which is right for shadow arithmetic and wrong for drawing the
+ * thing: a 30 × 120 stripbox and a 60 × 60 softbox have the same mean and look
+ * nothing alike. What is drawn should be the modifier the maths is using, so
+ * both come from the same label.
+ */
+export function modifierRectangleMetres(label: string, glbFile?: string): { width: number; height: number } {
+  const text = label ?? '';
+
+  const cmPair = text.match(/(\d+(?:[.,]\d+)?)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*cm/i);
+  if (cmPair) return { width: num(cmPair[1]) / 100, height: num(cmPair[2]) / 100 };
+
+  const ftPair = text.match(/(\d+(?:[.,]\d+)?)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*ft/i);
+  if (ftPair) return { width: num(ftPair[1]) * 0.3048, height: num(ftPair[2]) * 0.3048 };
+
+  // Anything that names one measurement is round or square at that size.
+  const side = modifierSizeMetres(label, glbFile);
+  return { width: side, height: side };
+}
+
 export function modifierSizeMetres(label: string, glbFile?: string): number {
   const text = label ?? '';
 

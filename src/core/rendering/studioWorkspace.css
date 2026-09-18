@@ -97,6 +97,17 @@
 .studio-look-status,
 .studio-location-status { font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); margin: 0; }
 .studio-location-buttons { margin-bottom: 2px; }
+.studio-mark-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.studio-mark-group > span { font: 10px/1.4 Inter, sans-serif; color: var(--text-muted); }
+.studio-mark-group[hidden] { display: none; }
+.studio-staff-button {
+  width: 100%; min-height: 32px; cursor: pointer;
+  border: 1px solid var(--accent-cyan); border-radius: 5px;
+  background: var(--bg-section); color: var(--accent-cyan);
+  font: 11px/1.4 Inter, sans-serif;
+}
+.studio-staff-button:disabled { opacity: .55; cursor: progress; }
+.studio-rig-toggle { font: 10px/1.4 Inter, sans-serif; color: var(--text-secondary); margin-top: 2px; }
 .studio-brand-fields { display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; }
 .studio-brand-fields label { font: 10px/1.4 Inter, sans-serif; color: var(--text-muted); }
 .studio-brand-fields :is(input[type="text"], textarea) {
@@ -160,6 +171,13 @@
   .studio-move-buttons button { flex-basis: 100%; min-height: 40px; }
 }
 
+.studio-stand-toggle {
+  width: 100%; min-height: 36px; margin-top: 8px; cursor: pointer;
+  border: 1px solid var(--border-color); border-radius: 5px;
+  background: var(--bg-section); color: var(--text-primary);
+  font: 12px/1.4 Inter, sans-serif;
+}
+.studio-stand-toggle:hover { background: var(--bg-hover, rgba(255,255,255,.08)); }
 .studio-pose-edit { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 36px; font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); cursor: pointer; }
 .studio-pose-edit input { width: 16px; height: 16px; accent-color: var(--focus-ring); cursor: pointer; }
 .studio-model-panel p { font: 10px/1.5 Inter, sans-serif; color: var(--text-muted); margin-top: 12px; }

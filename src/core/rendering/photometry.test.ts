@@ -15,6 +15,7 @@ import {
   modifierSizeMetres,
   sceneIntensityFromCandela,
   spotConeRadians,
+  modifierRectangleMetres,
   MAX_SPOT_CONE_RAD,
   stopsBetween,
 } from './photometry';
@@ -237,5 +238,38 @@ describe('a published beam angle as a spot cone', () => {
   it('refuses an angle that is not one', () => {
     expect(() => spotConeRadians(0)).toThrow(RangeError);
     expect(() => spotConeRadians(Number.NaN)).toThrow(RangeError);
+  });
+});
+
+describe('the modifier that is drawn is the modifier that is metered', () => {
+  it('keeps a rectangle a rectangle', () => {
+    // The equal-area square is right for softness and wrong for drawing: a
+    // stripbox and a square softbox can share a mean and look nothing alike.
+    const strip = modifierRectangleMetres('Stripboks 30×120 cm');
+    expect(strip.width).toBeCloseTo(0.3, 10);
+    expect(strip.height).toBeCloseTo(1.2, 10);
+    expect(modifierSizeMetres('Stripboks 30×120 cm')).toBeCloseTo(Math.sqrt(0.3 * 1.2), 10);
+  });
+
+  it('reads feet as well as centimetres', () => {
+    const chimera = modifierRectangleMetres('Chimera 90×120 cm (3×4 ft)');
+    expect(chimera.width).toBeCloseTo(0.9, 10);
+    expect(chimera.height).toBeCloseTo(1.2, 10);
+    const frame = modifierRectangleMetres('Diffusjonsramme 6×6 ft');
+    expect(frame.width).toBeCloseTo(6 * 0.3048, 10);
+  });
+
+  it('treats one measurement as round or square', () => {
+    const octa = modifierRectangleMetres('Oktaboks 95 cm');
+    expect(octa.width).toBeCloseTo(0.95, 10);
+    expect(octa.width).toBeCloseTo(octa.height, 10);
+  });
+
+  it('never returns a modifier of no size', () => {
+    for (const label of ['', 'Aputure 300D', 'noe helt annet']) {
+      const rect = modifierRectangleMetres(label);
+      expect(rect.width, label).toBeGreaterThan(0);
+      expect(rect.height, label).toBeGreaterThan(0);
+    }
   });
 });

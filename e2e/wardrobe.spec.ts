@@ -21,7 +21,10 @@ test('a figure dresses, changes clothes and keeps them through a pose', async ({
   }
   await page.waitForFunction(() => {
     const s = (window as any).virtualStudio;
-    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked;
+    // The studio is ready when the figure is posed *and* the rig is up:
+    // lighting is built around the subject, so it comes after her.
+    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked
+      && s.lights.size >= 3;
   }, undefined, { timeout: 120_000 });
   await page.waitForFunction(() => (window as any).virtualStudio.getCharacterWardrobe().length >= 2,
     undefined, { timeout: 60_000 });

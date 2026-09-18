@@ -4,7 +4,11 @@ import { readFile } from 'node:fs/promises';
 test.use({ video: 'off' });
 
 test('anatomical studio models, posing, navigation, exposure and camera export', async ({ page }, testInfo) => {
-  test.setTimeout(480_000);
+  // Longer than it used to need: choosing a room now names a place, and a
+  // place rebuilds its lighting rig, so the two room changes in this test are
+  // two full rig builds that did not happen before. These suites are a
+  // correctness check under software WebGL, not a performance measurement.
+  test.setTimeout(700_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   const errors: string[] = [];
   page.on('pageerror', error => { errors.push(error.message); console.log('Browser error:', error.message); });
@@ -16,9 +20,14 @@ test('anatomical studio models, posing, navigation, exposure and camera export',
   }
   await page.waitForFunction(() => {
     const s = (window as any).virtualStudio;
-    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked;
+    // The studio is ready when the figure is posed *and* the rig is up:
+    // lighting is built around the subject, so it comes after her.
+    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked
+      && s.lights.size >= 3;
   }, undefined, { timeout: 120_000 });
-  await expect(page.locator('#studioRoomSelect')).toHaveValue('industrial');
+  // The room list names places now — a studio, a kitchen, a pizzeria — rather
+  // than the geometry type behind them.
+  await expect(page.locator('#studioRoomSelect')).toHaveValue('studio');
   const roomMeshes = await page.evaluate(() => (window as any).virtualStudio.scene.meshes.filter((m: any) => m.metadata?.studioRoom).length);
   expect(roomMeshes).toBeGreaterThan(10);
   expect(roomMeshes).toBeLessThan(40); // static geometry is batched by material
@@ -26,9 +35,14 @@ test('anatomical studio models, posing, navigation, exposure and camera export',
   expect(await page.evaluate(() => (window as any).virtualStudio.scene.getTransformNodeByName('studioRoom_furnishings').isEnabled())).toBe(false);
   await page.locator('#studioPracticals').uncheck();
   expect(await page.evaluate(() => (window as any).virtualStudio.scene.lights.filter((l: any) => l.name.startsWith('studioRoom_practical')).every((l: any) => !l.isEnabled()))).toBe(true);
-  await page.locator('#studioRoomSelect').selectOption('none');
+  // Choosing a place rebuilds the room and its lighting, so the studio says
+  // when it has arrived. The furnishing switches belong to a room and stay
+  // disabled until there is one, exactly as they do for a person.
+  await page.locator('#studioRoomSelect').selectOption('tomt');
+  await expect(page.locator('.studio-location-status')).toHaveText('Åpent område', { timeout: 180_000 });
   expect(await page.evaluate(() => (window as any).virtualStudio.scene.meshes.filter((m: any) => m.metadata?.studioRoom).length)).toBe(0);
-  await page.locator('#studioRoomSelect').selectOption('industrial');
+  await page.locator('#studioRoomSelect').selectOption('studio');
+  await expect(page.locator('.studio-location-status')).toHaveText('Studio', { timeout: 180_000 });
   await page.locator('#studioFurnishings').check();
   await page.locator('#studioPracticals').check();
   expect(await page.evaluate(() => (window as any).virtualStudio.scene.meshes.filter((m: any) => m.metadata?.studioRoom).length)).toBe(roomMeshes);
@@ -166,13 +180,15 @@ test('anatomical studio models, posing, navigation, exposure and camera export',
   });
   expect(failure).toEqual({ rejected: true, retained: true });
   await page.locator('button[data-studio-view="studio"]').click();
+  // Taken before the preview is measured, so a failure leaves a picture of the
+  // studio as it actually stood rather than only a pixel count.
+  await page.screenshot({ path: testInfo.outputPath('studio-workspace.png') });
   await expect.poll(async () => page.locator('.studio-camera-preview canvas').evaluate(c => {
     const pixels = (c as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, 384, 216).data;
     let lit = 0;
     for (let i = 0; i < pixels.length; i += 4) if (pixels[i] + pixels[i + 1] + pixels[i + 2] > 90) lit++;
     return lit;
   }), { timeout: 30_000 }).toBeGreaterThan(1000);
-  await page.screenshot({ path: testInfo.outputPath('studio-workspace.png') });
   // Snapshot always uses the taking camera, even while arranging the studio.
   const downloadPromise = page.waitForEvent('download', { timeout: 90_000 });
   await page.evaluate(() => (window as any).virtualStudio.takeScreenshot());
@@ -195,7 +211,8 @@ test('anatomical studio models, posing, navigation, exposure and camera export',
   const saved = await documentDownload;
   const documentPath = testInfo.outputPath('studio-oppsett.json');
   await saved.saveAs(documentPath);
-  await page.locator('#studioRoomSelect').selectOption('none');
+  await page.locator('#studioRoomSelect').selectOption('tomt');
+  await expect(page.locator('.studio-location-status')).toHaveText('Åpent område', { timeout: 180_000 });
   await page.locator('[data-studio-document]').setInputFiles(documentPath);
   await expect(page.locator('.studio-document-status')).toHaveText('Oppsettet er åpnet', { timeout: 120_000 });
   await expect(page.locator('#studioRoomSelect')).toHaveValue('industrial');

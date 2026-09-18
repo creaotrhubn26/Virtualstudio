@@ -224,6 +224,84 @@ export function posterTexture(scene: Scene, brand: StudioBrand): DynamicTexture 
 }
 
 /**
+ * The front of an apron: the mark, big, on the brand's own dark ground.
+ *
+ * Workwear is where a brand is worn rather than displayed, so this is the
+ * plainest of the four — the mark, a rule, and nothing else competing with it.
+ */
+export function apronTexture(scene: Scene, brand: StudioBrand): DynamicTexture {
+  const texture = surface(scene, 'apron', 512, 768);
+  const context = texture.getContext() as unknown as CanvasRenderingContext2D;
+
+  context.fillStyle = brand.surface;
+  context.fillRect(0, 0, 512, 768);
+  const ink = readableOn(brand.surface);
+
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+
+  // A ring and the name, sized to sit on a chest rather than fill a wall.
+  context.strokeStyle = ink;
+  context.lineWidth = 7;
+  context.beginPath();
+  context.arc(256, 300, 122, 0, Math.PI * 2);
+  context.stroke();
+
+  const words = brand.name.toUpperCase().split(/\s+/).filter(Boolean);
+  const lines = words.length >= 2 ? [words[0], words.slice(1).join(' ')] : words;
+  const longest = lines.reduce((a, b) => (a.length >= b.length ? a : b), '');
+  const size = fittedFont(context, longest, 180, 52);
+  context.fillStyle = ink;
+  if (size < 22) {
+    context.font = `700 76px ${FACE}`;
+    context.fillText(brandInitials(brand.name), 256, 300);
+  } else {
+    context.font = `700 ${size}px ${FACE}`;
+    lines.forEach((line, index) => {
+      context.fillText(line, 256, 300 + (index - (lines.length - 1) / 2) * size * 1.15);
+    });
+  }
+
+  context.fillStyle = brand.accent;
+  context.fillRect(206, 452, 100, 7);
+
+  // A waist tie, drawn rather than modelled: at this size nobody can tell.
+  context.fillStyle = ink;
+  context.globalAlpha = 0.18;
+  context.fillRect(0, 520, 512, 26);
+  context.globalAlpha = 1;
+
+  texture.update();
+  if (brand.logoUrl) overlayLogo(texture, brand.logoUrl, 136, 180, 240);
+  return texture;
+}
+
+/** A cap front: the mark, small, the way a cap carries one. */
+export function capTexture(scene: Scene, brand: StudioBrand): DynamicTexture {
+  const texture = surface(scene, 'cap', 512, 256);
+  const context = texture.getContext() as unknown as CanvasRenderingContext2D;
+
+  context.fillStyle = brand.surface;
+  context.fillRect(0, 0, 512, 256);
+
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillStyle = readableOn(brand.surface);
+  const name = brand.name.toUpperCase();
+  const size = fittedFont(context, name, 380, 64);
+  context.font = `700 ${size}px ${FACE}`;
+  context.letterSpacing = '2px';
+  context.fillText(name, 256, 112);
+
+  context.fillStyle = brand.accent;
+  context.fillRect(206, 168, 100, 6);
+
+  texture.update();
+  if (brand.logoUrl) overlayLogo(texture, brand.logoUrl, 196, 20, 120);
+  return texture;
+}
+
+/**
  * A material for a surface that is lit from within, like every shop sign.
  *
  * `glow` decides how much of it reaches the scene: the band over the door is

@@ -47,6 +47,8 @@ export class StudioWorkspace {
       load: (model: 'woman' | 'man') => Promise<void>;
       pose: (pose: 'StudioStand' | 'StudioPortrait' | 'StudioSeated') => boolean;
       frame: (portrait: boolean) => void;
+      stand: () => boolean;
+      seated: () => boolean;
       editPose: (enabled: boolean) => boolean;
       wardrobe: () => { id: string; label: string; slot: string }[];
       moves: () => { id: string; label: string; hint: string; kind: string }[];
@@ -61,6 +63,11 @@ export class StudioWorkspace {
         => { name: string; tagline: string; slogan: string; accent: string; surface: string };
       applyLocation: (id: string) => Promise<boolean>;
       currentLocation: () => string | null;
+      marks: () => { id: string; label: string; hint: string }[];
+      rigVisible: () => boolean;
+      showRig: (visible: boolean) => void;
+      standOn: (id: string) => boolean;
+      staff: () => Promise<number>;
       looks: () => { id: string; label: string; hint: string; group: string }[];
       applyLook: (id: string) => Promise<boolean>;
       currentLook: () => string | null;
@@ -126,6 +133,7 @@ export class StudioWorkspace {
       <label for="studioPoseSelect">Posering</label>
       <select id="studioPoseSelect"><option value="StudioStand">Avslappet stående</option><option value="StudioPortrait">Portrett · dreid hode</option><option value="StudioSeated">Sitt på portrettstol</option></select>
       <div class="studio-model-framing"><button type="button" data-frame="portrait">Portrett</button><button type="button" data-frame="full">Hel figur</button></div>
+      <button type="button" class="studio-stand-toggle" data-stand>Sett deg</button>
       <label for="studioOutfitSelect">Antrekk</label>
       <select id="studioOutfitSelect"></select>
       <label for="studioShoesSelect">Sko</label>
@@ -207,6 +215,29 @@ export class StudioWorkspace {
       const pose = (event as CustomEvent<{ poseId: string }>).detail.poseId;
       if (['StudioStand', 'StudioPortrait', 'StudioSeated'].includes(pose)) poseSelect.value = pose;
     }, { signal: this.abort.signal });
+    // Standing up is an action, not a setting: while the figure is on a chair
+    // it is the only move there is, and walking is refused until it is taken.
+    const standToggle = this.modelPanel.querySelector<HTMLButtonElement>('[data-stand]')!;
+    const showStance = () => {
+      const seated = this.characterControls.seated();
+      standToggle.textContent = seated ? 'Reis deg' : 'Sett deg';
+      standToggle.title = seated
+        ? 'Figuren reiser seg fra stolen og kan gå igjen'
+        : 'Figuren setter seg på portrettstolen';
+    };
+    standToggle.addEventListener('click', () => {
+      this.characterControls.stand();
+      showStance();
+    }, { signal: this.abort.signal });
+    window.addEventListener('ch-character-pose-applied', showStance, { signal: this.abort.signal });
+    window.addEventListener('ch-character-seated-blocked', event => {
+      const message = (event as CustomEvent<{ message: string }>).detail?.message;
+      const status = this.modelPanel.querySelector<HTMLElement>('.studio-model-status');
+      if (status && message) status.textContent = message;
+      showStance();
+    }, { signal: this.abort.signal });
+    showStance();
+
     this.modelPanel.querySelectorAll<HTMLButtonElement>('[data-frame]').forEach(button => {
       button.addEventListener('click', () => {
         this.characterControls.frame(button.dataset.frame === 'portrait');
@@ -274,9 +305,14 @@ export class StudioWorkspace {
     practicals.addEventListener('change', () => environmentService.setStudioRoom({ practicals: practicals.checked }), { signal: this.abort.signal });
     const syncRoom = () => {
       const room = environmentService.getState().room;
-      roomSelect.value = room?.type || 'none';
+      // The list names places; the service stores the geometry behind them.
+      // Writing the geometry type straight into the select left it on no
+      // option at all — 'industrial' is not a place, 'Studio' is — and it ran
+      // after everything else, so it silently undid every other writer.
+      const place = this.characterControls.currentLocation();
+      if (place) roomSelect.value = place;
       furnishings.checked = room?.furnishings ?? true; practicals.checked = room?.practicals ?? true;
-      furnishings.disabled = practicals.disabled = roomSelect.value === 'none';
+      furnishings.disabled = practicals.disabled = (room?.type ?? 'none') === 'none';
     };
     this.unsubscribeEnvironment = environmentService.subscribe(syncRoom);
     syncRoom();
@@ -308,6 +344,46 @@ export class StudioWorkspace {
     lens.layerMask = HELPER_LAYER;
     lens.metadata = { studioHelper: true };
     lens.isPickable = false;
+
+    /*
+     * The photographer, and the tripod under the camera.
+     *
+     * The shot was a floating eye: nothing showed that a person stands behind
+     * it, taking up room. In a five-metre kitchen that person is a real
+     * constraint — they need space behind the camera, and a light cannot go
+     * where they are. Drawing them makes the constraint visible, and it is the
+     * reason the rig keeps a wide berth of the lens axis.
+     *
+     * Helper layer, like the camera marker: seen while working, never in shot.
+     */
+    const helper = (mesh: Mesh) => {
+      mesh.layerMask = HELPER_LAYER;
+      mesh.metadata = { studioHelper: true };
+      mesh.isPickable = false;
+      mesh.parent = this.cameraMarker;
+      return mesh;
+    };
+    for (const angle of [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3]) {
+      const leg = helper(MeshBuilder.CreateCylinder(`studioTripodLeg_${angle.toFixed(2)}`,
+        { diameter: 0.035, height: 1.05 }, scene));
+      leg.position.set(Math.cos(angle) * 0.17, -0.62, Math.sin(angle) * 0.17);
+      leg.rotation.x = Math.sin(angle) * 0.3;
+      leg.rotation.z = -Math.cos(angle) * 0.3;
+    }
+    // Head and shoulders a step behind the camera, at the height of somebody
+    // standing at the eyepiece.
+    const head = helper(MeshBuilder.CreateSphere('studioPhotographerHead', { diameter: 0.21, segments: 12 }, scene));
+    head.position.set(0, 0.28, -0.46);
+    const shoulders = helper(MeshBuilder.CreateCylinder('studioPhotographerBody',
+      { diameterTop: 0.3, diameterBottom: 0.38, height: 0.62 }, scene));
+    shoulders.position.set(0, -0.14, -0.5);
+    for (const side of [-1, 1]) {
+      const arm = helper(MeshBuilder.CreateCylinder(`studioPhotographerArm_${side}`,
+        { diameter: 0.075, height: 0.44 }, scene));
+      arm.position.set(side * 0.16, -0.05, -0.28);
+      arm.rotation.x = 0.7;
+    }
+    this.cameraMarker.getChildMeshes().forEach(child => child.enableEdgesRendering());
 
     this.toolbar.addEventListener('click', event => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -462,6 +538,12 @@ export class StudioWorkspace {
       <div class="studio-sequence-heading">STED</div>
       <div class="studio-move-buttons studio-location-buttons"></div>
       <p class="studio-location-status" role="status">Studio</p>
+      <div class="studio-mark-group" hidden>
+        <span>Hvor skal folk stå?</span>
+        <div class="studio-move-buttons studio-mark-buttons"></div>
+        <button type="button" class="studio-staff-button" data-staff>Bemann stedet</button>
+        <label class="studio-room-toggle studio-rig-toggle"><input type="checkbox" data-rig checked> Vis lysriggen</label>
+      </div>
       <details class="studio-move-group studio-brand-group"><summary>Merke</summary>
         <div class="studio-brand-fields">
           <label for="studioBrandName">Navn på stedet</label>
@@ -605,6 +687,63 @@ export class StudioWorkspace {
         });
     }, { signal: this.abort.signal });
 
+    // Where a person stands is a property of the place, so the marks are
+    // rebuilt whenever the place changes.
+    const markGroup = this.sequencePanel.querySelector<HTMLElement>('.studio-mark-group')!;
+    const markButtons = this.sequencePanel.querySelector<HTMLElement>('.studio-mark-buttons')!;
+    const staffButton = this.sequencePanel.querySelector<HTMLButtonElement>('[data-staff]')!;
+
+    const showMarks = () => {
+      const marks = this.characterControls.marks();
+      markGroup.hidden = marks.length === 0;
+      markButtons.replaceChildren(...marks.map(mark => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.mark = mark.id;
+        button.textContent = mark.label;
+        button.title = mark.hint;
+        return button;
+      }));
+      staffButton.textContent = marks.length > 0 ? `Bemann stedet · ${marks.length}` : 'Bemann stedet';
+      staffButton.title = 'Setter en person på hvert sted i rommet';
+    };
+
+    markButtons.addEventListener('click', event => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-mark]');
+      if (!button) return;
+      const applied = this.characterControls.standOn(button.dataset.mark!);
+      for (const other of markButtons.querySelectorAll<HTMLButtonElement>('button[data-mark]')) {
+        other.setAttribute('aria-pressed', String(applied && other === button));
+      }
+    }, { signal: this.abort.signal });
+
+    staffButton.addEventListener('click', () => {
+      // Loading several figures takes a while, and a silent button reads dead.
+      staffButton.disabled = true;
+      const said = staffButton.textContent;
+      staffButton.textContent = 'Henter folk …';
+      void this.characterControls.staff()
+        .then(placed => { staffButton.textContent = placed > 0 ? `${placed} personer på plass` : 'Ingen steder å stå her'; })
+        .catch(error => {
+          console.error('[StudioWorkspace] staffing failed', error);
+          staffButton.textContent = 'Fikk ikke hentet folk';
+        })
+        .finally(() => {
+          staffButton.disabled = false;
+          setTimeout(() => { if (staffButton.textContent !== said) showMarks(); }, 4000);
+        });
+    }, { signal: this.abort.signal });
+
+    // The stands are right for judging light and wrong for judging the
+    // picture, so the photographer decides which question they are asking.
+    const rigToggle = this.sequencePanel.querySelector<HTMLInputElement>('[data-rig]')!;
+    rigToggle.checked = this.characterControls.rigVisible();
+    rigToggle.addEventListener('change', () => {
+      this.characterControls.showRig(rigToggle.checked);
+    }, { signal: this.abort.signal });
+
+    window.addEventListener('ch-location-changed', () => { showCurrent(); showMarks(); }, { signal: this.abort.signal });
+    showMarks();
     window.addEventListener('ch-location-changed', () => showCurrent(), { signal: this.abort.signal });
     // The first room is built from the environment service, not from a button,
     // so the panel has to hear that too or it opens claiming an empty stage.

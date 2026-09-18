@@ -24,7 +24,10 @@ test('fixture output, falloff and shadow softness follow the catalogue', async (
   }
   await page.waitForFunction(() => {
     const s = (window as any).virtualStudio;
-    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked;
+    // The studio is ready when the figure is posed *and* the rig is up:
+    // lighting is built around the subject, so it comes after her.
+    return s?.workspace && s.characterModelId && s.characterKeyboardState.poseLocked
+      && s.lights.size >= 3;
   }, undefined, { timeout: 120_000 });
 
   const rig = await page.evaluate(async () => {
@@ -159,17 +162,21 @@ test('fixture output, falloff and shadow softness follow the catalogue', async (
   // unchanged: the previous rig metered 520 / 178 / 500 at its distances.
   const rigReadings = await page.evaluate(() => {
     const s = (window as any).virtualStudio;
-    const aims: Record<string, number[]> = {
-      'Hovedlys · Softbox': [0, 1.3, 0],
-      'Utfylling · Softbox': [0, 1.2, 0],
-      'Kantlys · Stripbox': [0, 1.5, 0],
-    };
+    // The rig aims at the subject's eye line, read off the figure that is
+    // actually standing there, rather than at the fixed heights the hand-tuned
+    // rig was written against. A meter is held where the light is aimed, so
+    // that is where the reading is taken — and it is why the same rig now
+    // lights a child in the face instead of over the top of the head.
+    const figure = s.getPrimaryCharacterMesh();
+    const bounds = figure.getHierarchyBoundingVectors(true);
+    const eye = [figure.getAbsolutePosition().x, bounds.max.y - 0.11, figure.getAbsolutePosition().z];
+
+    const wanted = ['Hovedlys · Softbox', 'Utfylling · Softbox', 'Kantlys · Stripbox'];
     const out: Record<string, { illuminance: number; power: number; base: number }> = {};
     for (const d of s.lights.values()) {
-      const aim = aims[d.name];
-      if (!aim) continue;
+      if (!wanted.includes(d.name)) continue;
       const p = d.light.position;
-      const dx = p.x - aim[0], dy = p.y - aim[1], dz = p.z - aim[2];
+      const dx = p.x - eye[0], dy = p.y - eye[1], dz = p.z - eye[2];
       out[d.name] = {
         illuminance: d.light.intensity / (dx * dx + dy * dy + dz * dz),
         power: d.powerMultiplier,
@@ -178,9 +185,17 @@ test('fixture output, falloff and shadow softness follow the catalogue', async (
     }
     return out;
   });
-  expect(rigReadings['Hovedlys · Softbox'].illuminance).toBeCloseTo(520 / 19.86, 4);
-  expect(rigReadings['Utfylling · Softbox'].illuminance).toBeCloseTo(178 / 20.24, 4);
-  expect(rigReadings['Kantlys · Stripbox'].illuminance).toBeCloseTo(500 / 24.75, 4);
+  // Asserted in stops, because that is the claim being made: the rig delivers
+  // the light its hand-tuned predecessor did. Equality to five decimals is not
+  // a photographic statement — a good flash meter reads to a tenth of a stop,
+  // and the figure the rig is aimed at breathes, which moves the eye line a
+  // few millimetres between the moment the rig is solved and the moment the
+  // meter is held up. A hundredth of a stop is two orders below anything
+  // visible and still tight enough to catch a real mistake.
+  const stopsFrom = (reading: number, wanted: number) => Math.abs(Math.log2(reading / wanted));
+  expect(stopsFrom(rigReadings['Hovedlys · Softbox'].illuminance, 520 / 19.86)).toBeLessThan(0.01);
+  expect(stopsFrom(rigReadings['Utfylling · Softbox'].illuminance, 178 / 20.24)).toBeLessThan(0.01);
+  expect(stopsFrom(rigReadings['Kantlys · Stripbox'].illuminance, 500 / 24.75)).toBeLessThan(0.01);
   // Key to fill stays the classic portrait ratio, close to 3:1.
   expect(
     rigReadings['Hovedlys · Softbox'].illuminance / rigReadings['Utfylling · Softbox'].illuminance,
