@@ -1,4 +1,5 @@
 import Foundation
+import simd
 
 /// The figure, as the studio understands it.
 ///
@@ -33,6 +34,12 @@ public struct StudioFigure: Sendable {
         public let rotation: SIMD4<Float>
         /// The joint's parent, or nil for the root of the rig.
         public let parent: Int?
+        /// The matrix that takes a vertex from model space into this joint's space.
+        ///
+        /// Without it a posed figure comes out folded around the origin: the pose
+        /// says where the joint goes, and this says where the skin was when the
+        /// joint was where it started.
+        public let inverseBind: float4x4
     }
 
     /// One fixed-pose clip. Every clip writes every joint, so switching poses
@@ -88,13 +95,20 @@ public struct StudioFigure: Sendable {
         for (index, node) in document.nodes.enumerated() {
             for child in node.children ?? [] { parents[child] = index }
         }
-        joints = jointIndices.map { nodeIndex in
+        let binds: [Float]
+        if let accessor = document.skins?.first?.inverseBindMatrices {
+            binds = try Self.floats(document, binary, accessor)
+        } else {
+            binds = []
+        }
+        joints = jointIndices.enumerated().map { slot, nodeIndex in
             let node = document.nodes[nodeIndex]
             return Joint(
                 name: node.name ?? "joint\(nodeIndex)",
                 translation: Self.vector3(node.translation),
                 rotation: Self.vector4(node.rotation, fallback: SIMD4(0, 0, 0, 1)),
-                parent: parents[nodeIndex].flatMap { jointIndices.firstIndex(of: $0) }
+                parent: parents[nodeIndex].flatMap { jointIndices.firstIndex(of: $0) },
+                inverseBind: Self.matrix(binds, slot)
             )
         }
 
@@ -169,6 +183,19 @@ public struct StudioFigure: Sendable {
         }
     }
 
+    /// One column-major 4x4 out of a flat accessor, or the identity when the file
+    /// carries none — which the specification allows and means "already there".
+    private static func matrix(_ values: [Float], _ index: Int) -> float4x4 {
+        let start = index * 16
+        guard start + 16 <= values.count else { return matrix_identity_float4x4 }
+        return float4x4(
+            SIMD4(values[start], values[start + 1], values[start + 2], values[start + 3]),
+            SIMD4(values[start + 4], values[start + 5], values[start + 6], values[start + 7]),
+            SIMD4(values[start + 8], values[start + 9], values[start + 10], values[start + 11]),
+            SIMD4(values[start + 12], values[start + 13], values[start + 14], values[start + 15])
+        )
+    }
+
     private static func vector3(_ values: [Double]?) -> SIMD3<Float> {
         guard let values, values.count >= 3 else { return .zero }
         return SIMD3(Float(values[0]), Float(values[1]), Float(values[2]))
@@ -218,4 +245,121 @@ public func visibleParts(triangleCount: Int, hiding ranges: [(start: Int, end: I
         }
     }
     return parts
+}
+
+// MARK: - Posing
+
+public extension StudioFigure {
+    /// Where every joint ends up when a pose is struck, in model space.
+    ///
+    /// The clip gives each joint a rotation relative to its bind pose; the rest of
+    /// the transform is the node's own. Walking the chain from the root gives the
+    /// world matrix, and multiplying by the inverse bind gives the matrix that
+    /// moves skin rather than bone.
+    ///
+    /// The joints arrive in the order the skin lists them, and a parent always
+    /// appears before its children in the builder's output — but that is the
+    /// builder's habit, not a rule of the format, so the walk is explicit rather
+    /// than assumed.
+    func skinMatrices(pose: Pose) -> [float4x4] {
+        var world = [float4x4?](repeating: nil, count: joints.count)
+
+        func resolve(_ index: Int, depth: Int = 0) -> float4x4 {
+            if let known = world[index] { return known }
+            // A cycle in the parent chain would otherwise hang the app rather than
+            // draw a wrong figure, which is the worse of the two failures.
+            guard depth < joints.count else { return matrix_identity_float4x4 }
+
+            let joint = joints[index]
+            let rotation = pose.rotations.indices.contains(index) ? pose.rotations[index] : joint.rotation
+            let local = float4x4(translation: joint.translation, rotation: rotation)
+            let matrix = joint.parent.map { resolve($0, depth: depth + 1) * local } ?? local
+            world[index] = matrix
+            return matrix
+        }
+
+        return joints.indices.map { resolve($0) * joints[$0].inverseBind }
+    }
+
+    /// The surface's vertices with a pose applied, on the processor.
+    ///
+    /// Not how a figure should be drawn every frame — that is the renderer's
+    /// skinning — but it is how a figure can be *checked*: the result is an array of
+    /// numbers a test can measure, so "the seated clip puts the hands on the thighs"
+    /// becomes an assertion rather than a screenshot. It is also enough to put a
+    /// posed figure on screen before any skinning is wired up at all.
+    func skinned(_ surface: Surface, pose: Pose) -> [Float] {
+        let matrices = skinMatrices(pose: pose)
+        guard surface.joints.count == surface.vertexCount * 4,
+              surface.weights.count == surface.vertexCount * 4 else {
+            return surface.positions
+        }
+
+        var posed = [Float](repeating: 0, count: surface.positions.count)
+        for vertex in 0..<surface.vertexCount {
+            let rest = SIMD4<Float>(
+                surface.positions[vertex * 3],
+                surface.positions[vertex * 3 + 1],
+                surface.positions[vertex * 3 + 2],
+                1
+            )
+            var moved = SIMD4<Float>.zero
+            for influence in 0..<4 {
+                let weight = surface.weights[vertex * 4 + influence]
+                guard weight > 0 else { continue }
+                let joint = Int(surface.joints[vertex * 4 + influence])
+                guard joint < matrices.count else { continue }
+                moved += (matrices[joint] * rest) * weight
+            }
+            posed[vertex * 3] = moved.x
+            posed[vertex * 3 + 1] = moved.y
+            posed[vertex * 3 + 2] = moved.z
+        }
+        return posed
+    }
+
+    /// The tallest and lowest point of a surface in a pose, in metres.
+    ///
+    /// The studio grounds a figure by measuring it, so the measurement is here.
+    func extent(_ surface: Surface, pose: Pose) -> (low: Float, high: Float) {
+        let posed = skinned(surface, pose: pose)
+        var low = Float.greatestFiniteMagnitude
+        var high = -Float.greatestFiniteMagnitude
+        for vertex in stride(from: 1, to: posed.count, by: 3) {
+            low = min(low, posed[vertex])
+            high = max(high, posed[vertex])
+        }
+        return (low, high)
+    }
+}
+
+private extension float4x4 {
+    /// A transform from a translation and a quaternion, as glTF stores them.
+    init(translation: SIMD3<Float>, rotation: SIMD4<Float>) {
+        let q = simd_quatf(ix: rotation.x, iy: rotation.y, iz: rotation.z, r: rotation.w)
+        var matrix = float4x4(q.normalized)
+        matrix.columns.3 = SIMD4(translation, 1)
+        self = matrix
+    }
+}
+
+public extension StudioFigure {
+    /// How far to drop a posed figure so its soles meet the floor.
+    ///
+    /// The pose clips do not ground anybody. `StudioStand` happens to have the
+    /// soles at zero because that is the rest stance the body was built in, but
+    /// `StudioSeated` bends the knees and hips and leaves the figure sitting in the
+    /// air with its feet a third of a metre up. In the web studio `applyStudioPose`
+    /// measures the skinned bounds and drops the figure afterwards — and it waits
+    /// for the next rendered frame first, because measuring before the skin matrices
+    /// update reads the previous pose and leaves the feet floating.
+    ///
+    /// A native renderer skins on the GPU and has the same problem, so the
+    /// measurement lives here where it can be taken without a frame at all.
+    ///
+    /// `soles` is where the bottom of the shoe should end up: about 16 mm, which is
+    /// the sole's own thickness.
+    func groundOffset(_ surface: Surface, pose: Pose, soles: Float = 0.016) -> Float {
+        soles - extent(surface, pose: pose).low
+    }
 }

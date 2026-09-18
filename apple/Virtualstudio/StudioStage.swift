@@ -140,8 +140,29 @@ final class StudioStage {
         wall.components.set(GroundingShadowComponent(castsShadow: false, receivesShadow: true))
         root.addChild(wall)
 
-        // The figure: a stand-in, not a character. The GLBs are not converted to USD
-        // yet, and the shadow question does not need a face to answer.
+        // The figure. The bundled woman when she is in the app bundle, and a
+        // stand-in when she is not: the GLBs are fetched rather than committed, so a
+        // fresh clone builds and runs without them and shows a box.
+        //
+        // `female_casualsuit01` is what she opens wearing in the studio, and the
+        // ranges it hides are the catalogue's own.
+        if let woman = FigureMesh.entity(named: "studio-woman", pose: "StudioStand",
+                                         wearing: FigureMesh.defaultWardrobe(for: "studio-woman")) {
+            // The body is modelled facing positive z; the camera stands at negative
+            // z, where a camera stands. Half a turn puts them face to face.
+            woman.orientation = simd_quatf(angle: .pi, axis: [0, 1, 0])
+            root.addChild(woman)
+            occluders = [
+                box(centre: [0, 0.44, 0], size: [0.34, 0.86, 0.22]),
+                box(centre: [0, 1.02, 0], size: [0.42, 0.92, 0.24]),
+                sphere(centre: [0, 1.62, 0], radius: 0.115),
+            ]
+            buildGauge()
+            buildCamera()
+            removeAmbient()
+            return
+        }
+
         let skin = SimpleMaterial(color: .init(red: 0.78, green: 0.66, blue: 0.58, alpha: 1), roughness: 0.7, isMetallic: false)
         let torso = ModelEntity(
             mesh: .generateBox(width: 0.42, height: 0.92, depth: 0.24, cornerRadius: 0.1),
@@ -169,7 +190,17 @@ final class StudioStage {
             sphere(centre: [0, 1.62, 0], radius: 0.115),
         ]
 
-        // The gauge. Plain white so nothing about the material affects the reading.
+        buildGauge()
+        buildCamera()
+        removeAmbient()
+    }
+
+    /// The instrument: a 2 cm bar standing 30 cm off the wall throws a shadow whose
+    /// edge is wide or narrow in direct proportion to the source, which is the one
+    /// thing being measured. A figure alone would not show it — a face has no
+    /// straight edge to read a penumbra against.
+    private func buildGauge() {
+        // Plain white so nothing about the material affects the reading.
         let white = SimpleMaterial(color: .white, roughness: 1, isMetallic: false)
         let rod = ModelEntity(mesh: .generateBox(width: 0.02, height: 2.0, depth: 0.02), materials: [white])
         rod.name = "penumbraGauge"
@@ -178,6 +209,9 @@ final class StudioStage {
         root.addChild(rod)
         occluders.append(box(centre: [1.1, 1.0, 2.7], size: [0.02, 2.0, 0.02]))
 
+    }
+
+    private func buildCamera() {
         let camera = PerspectiveCamera()
         camera.name = "takingCamera"
         // 35 mm on full frame: 2·atan(24 / (2·35)) = 37.8° vertically, which is
@@ -187,8 +221,6 @@ final class StudioStage {
         camera.camera.far = 120
         camera.look(at: Self.cameraTarget, from: Self.cameraPosition, relativeTo: nil)
         root.addChild(camera)
-
-        removeAmbient()
     }
 
     // MARK: - The rig

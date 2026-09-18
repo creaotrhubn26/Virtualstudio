@@ -243,3 +243,127 @@ func dressesTheBundledFigure() throws {
         #expect(part.indexOffset + part.indexCount <= skin.indices.count)
     }
 }
+
+// MARK: - Posing
+
+@Test("the standing clip stands the figure at her declared height")
+func standingHeight() throws {
+    guard let bundledFigure else { return }
+    let figure = try StudioFigure(glb: try Data(contentsOf: bundledFigure))
+    let skin = try #require(figure.surfaces.first)
+    let standing = try #require(figure.poses.first { $0.name == "StudioStand" })
+
+    // 1.72 m is what the builder was told to make her, and the skin is the body
+    // without shoes, so it comes up a little short of the declared stature.
+    let extent = figure.extent(skin, pose: standing)
+    #expect(extent.high > 1.6 && extent.high < 1.75, "top of the head at \(extent.high) m")
+    #expect(abs(extent.low) < 0.05, "the soles at \(extent.low) m")
+}
+
+@Test("a clip poses the body and does not put it on the ground")
+func clipsDoNotGround() throws {
+    guard let bundledFigure else { return }
+    let figure = try StudioFigure(glb: try Data(contentsOf: bundledFigure))
+    let skin = try #require(figure.surfaces.first)
+    let standing = try #require(figure.poses.first { $0.name == "StudioStand" })
+    let seated = try #require(figure.poses.first { $0.name == "StudioSeated" })
+
+    let up = figure.extent(skin, pose: standing)
+    let down = figure.extent(skin, pose: seated)
+
+    // Standing already has the soles on the floor, because that is the rest stance
+    // the body was built in.
+    #expect(abs(up.low) < 0.05, "standing soles at \(up.low) m")
+
+    // Seated does not. The clip bends the knees and the hips and leaves the figure
+    // sitting in the air with its feet 34 cm up — the head stays exactly where it
+    // was. That is not a fault in the clip: grounding is the studio's job, and
+    // `applyStudioPose` drops the figure afterwards so the shoes meet the floor.
+    // A renderer that plays the clip and stops has a figure hovering.
+    #expect(down.low > 0.25, "seated soles at \(down.low) m")
+    #expect(abs(down.high - up.high) < 0.01, "the clip moved the head to \(down.high) m")
+
+    // Which is what `groundOffset` is for.
+    #expect(abs(figure.groundOffset(skin, pose: seated, soles: 0.016) + down.low - 0.016) < 1e-5)
+    #expect(abs(figure.groundOffset(skin, pose: standing, soles: 0.016) - 0.016) < 0.05)
+}
+
+@Test("skinning moves the skin and keeps it in one piece")
+func skinningIsSane() throws {
+    guard let bundledFigure else { return }
+    let figure = try StudioFigure(glb: try Data(contentsOf: bundledFigure))
+    let skin = try #require(figure.surfaces.first)
+    let seated = try #require(figure.poses.first { $0.name == "StudioSeated" })
+    let posed = figure.skinned(skin, pose: seated)
+
+    #expect(posed.count == skin.positions.count)
+    // Every vertex is a number, and none has been thrown across the room — the
+    // failure a missing inverse bind matrix produces.
+    var moved = 0
+    for index in 0..<posed.count {
+        #expect(posed[index].isFinite, "vertex component \(index)")
+        #expect(abs(posed[index]) < 4, "vertex component \(index) at \(posed[index]) m")
+        if abs(posed[index] - skin.positions[index]) > 0.01 { moved += 1 }
+    }
+    // And it is a pose, not a copy.
+    #expect(moved > skin.positions.count / 20, "only \(moved) components moved")
+}
+
+@Test("a joint chain that points at itself does not hang")
+func cyclesAreSurvived() throws {
+    // Not a file this builder writes, but a reader that loops on one is a reader
+    // that freezes the app instead of drawing a wrong figure.
+    let json = """
+    {"asset":{"version":"2.0"},
+     "accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"}],
+     "bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],
+     "meshes":[{"name":"Skin","primitives":[{"attributes":{"POSITION":0}}]}],
+     "nodes":[{"name":"a","children":[1]},{"name":"b","children":[0]}],
+     "skins":[{"joints":[0,1]}]}
+    """
+    let figure = try StudioFigure(glb: makeGLB(json: json, binary: oneTriangle))
+    let matrices = figure.skinMatrices(pose: StudioFigure.Pose(name: "x", rotations: []))
+    #expect(matrices.count == 2)
+}
+
+
+// MARK: - The wardrobe on the body
+
+private func bundled(_ path: String) -> URL? {
+    var directory = URL(filePath: #filePath).deletingLastPathComponent()
+    for _ in 0..<8 {
+        let candidate = directory.appending(path: "public/models/avatars/studio/\(path)")
+        if FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+        directory = directory.deletingLastPathComponent()
+    }
+    return nil
+}
+
+@Test("a garment rides the body's skeleton, not its own")
+func garmentWearsTheBodysPose() throws {
+    guard let bodyURL = bundled("studio-woman.glb"),
+          let suitURL = bundled("wardrobe/studio-woman/female_casualsuit01.glb") else { return }
+    let body = try StudioFigure(glb: try Data(contentsOf: bodyURL))
+    let suit = try StudioFigure(glb: try Data(contentsOf: suitURL))
+
+    // A garment carries a copy of the rig and no clips of its own. The copy exists
+    // so the mesh has something to be skinned to; the poses come from the body. That
+    // only works because the joint order is deterministic and identical in every
+    // file the builder writes, which is the reason the builder goes to the trouble.
+    #expect(suit.poses.isEmpty, "a garment should carry no clips")
+    #expect(suit.joints.count == body.joints.count)
+    #expect(suit.joints.map(\.name) == body.joints.map(\.name))
+
+    let seated = try #require(body.poses.first { $0.name == "StudioSeated" })
+    let cloth = try #require(suit.surfaces.first)
+    let posed = suit.skinned(cloth, pose: seated)
+    #expect(posed.count == cloth.positions.count)
+
+    // The suit sits where the body sits: same feet off the floor, same head height,
+    // within the few centimetres cloth stands off skin.
+    let bodyExtent = body.extent(try #require(body.surfaces.first), pose: seated)
+    let suitExtent = suit.extent(cloth, pose: seated)
+    #expect(abs(suitExtent.low - bodyExtent.low) < 0.12,
+            "suit soles at \(suitExtent.low) m against the body's \(bodyExtent.low) m")
+    #expect(suitExtent.high < bodyExtent.high, "a suit does not reach over the head")
+}

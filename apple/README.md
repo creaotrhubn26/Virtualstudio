@@ -15,8 +15,12 @@ repository carries the description and not a large plist that merge-conflicts on
 every change.
 
 It is at the stage the plan calls a measurement rather than a prototype: it puts
-a rig on a stage, built from the same catalogue and the same arithmetic the web
-studio uses, and reports what the device is doing while it renders. It has
+the bundled figure on a stage, dressed, lit by the same catalogue and the same
+arithmetic the web studio uses, and reports what the device is doing while it
+renders.
+
+The figures are not in git. `scripts/aws/fetch-assets.sh models` brings them down;
+without them the app still builds and runs and shows a box where she should be. It has
 already answered two of the plan's four questions, both in the negative — see
 [`../docs/measurements/README.md`](../docs/measurements/README.md).
 

@@ -150,6 +150,27 @@ not read there either, the conclusion is larger and clearer — a custom shadow 
 RealityKit's post-process has nothing to reconstruct from, and the scene renderer
 has to be Metal.
 
+## 5. The figure, on the screen
+
+![The bundled woman, dressed, lit by the studio's own rig](figure-on-ipad.png)
+
+Not a measurement, but the thing the measurements are for. Everything in that
+picture came through the pipeline the plan now describes:
+
+`build_studio_characters.py` → GLB → `StudioAssets` → skinned on the processor →
+`visibleParts` → `MeshDescriptor` → RealityKit. The rig lighting her is the
+`studio-portrett` look out of `content.json`, placed by `resolvePlacement` and
+swung clear of the lens by `clearOfCamera`. She wears what
+`wardrobe.json` says she opens in, and the body draws only the triangles the suit
+does not cover — 103 parts rather than a rebuilt buffer.
+
+55 MB and 16.7 ms in the simulator, which measures nothing about the device.
+
+What is not there yet: textures, because the builder writes them beside the models
+rather than inside them and none are in the app bundle; and normals that follow
+the pose rather than the rest stance, which needs the renderer's own skinning
+rather than the processor's.
+
 ## What is still unmeasured
 
 Everything that needs the hardware: sustained frame time, `thermalState` over a
