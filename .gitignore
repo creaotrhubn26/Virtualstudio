@@ -96,6 +96,9 @@ test-results/
 # Build them with scripts/characters/build_studio_characters.py, or bring the
 # published set down with scripts/aws/fetch-assets.sh.
 public/models/avatars/studio/*.glb
+# Built beside the glTF by the same run, and just as large
+public/models/avatars/studio/*.usdz
+public/models/avatars/studio/*-poses.json
 public/models/avatars/studio/wardrobe/
 public/models/avatars/studio/textures/
 

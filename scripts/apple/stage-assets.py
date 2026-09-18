@@ -43,6 +43,11 @@ def images(glb: Path) -> list[str]:
     return [image['uri'] for image in document.get('images', []) if 'uri' in image]
 
 
+def stage_usd(source: Path, destination: Path) -> int:
+    """A USDZ carries its own textures, so it travels alone."""
+    return stage(source, destination)
+
+
 def stage(source: Path, destination: Path) -> int:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
@@ -73,6 +78,14 @@ def main() -> None:
         staged += 1
         wanted.update(images(figure))
 
+        # The USDZ is what RealityKit draws — it carries its own textures inside the
+        # package — and the poses travel beside it, because a skeleton binds one
+        # animation source at a time and these are stances to switch between.
+        for extra in (STUDIO / f'{body}.usdz', STUDIO / f'{body}-poses.json'):
+            if extra.exists():
+                total += stage(extra, STAGE / extra.name)
+                staged += 1
+
         for garment in catalogue['defaults'].get(body, []):
             source = STUDIO / 'wardrobe' / body / f'{garment}.glb'
             if not source.exists():
@@ -81,6 +94,10 @@ def main() -> None:
             total += stage(source, STAGE / 'wardrobe' / body / source.name)
             staged += 1
             wanted.update(images(source))
+            package = source.with_suffix('.usdz')
+            if package.exists():
+                total += stage(package, STAGE / 'wardrobe' / body / package.name)
+                staged += 1
 
     for uri in sorted(wanted):
         source = STUDIO / uri

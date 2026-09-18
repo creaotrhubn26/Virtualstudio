@@ -2,10 +2,15 @@
 Only MakeHuman DATA is consumed. No MakeHuman/MPFB application code is imported.
 Rebuild: Blender --background --factory-startup --python scripts/characters/build_studio_characters.py
 """
-import gzip, hashlib, json, math, os, struct, urllib.request, zipfile, re, tempfile
+import gzip, hashlib, json, math, os, struct, sys, urllib.request, zipfile, re, tempfile
 from pathlib import Path
 from collections import defaultdict
 import numpy as np
+
+# Blender runs a script from wherever it was invoked, so the module beside this one
+# has to be put on the path before it can be imported.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from usd_export import write_usd  # noqa: E402
 REPO = Path(__file__).resolve().parents[2]
 OUT = REPO / "public/models/avatars/studio"
 TEXTURES = OUT / "textures"
@@ -401,17 +406,21 @@ def add_poses(g, joints, names):
         palm_world=between(joints[f'middle_01_{side}']-c,np.array([sign*.035,-.14,1.]))
         seated_quats[f'hand_{side}']=qmul(inverse(forearm_world),palm_world).tolist()
     times=g.accessor([0,1],'SCALAR',bounds=True)
+    table={}
     for pose,rotations in poses.items():
         animation={'name':pose,'channels':[],'samplers':[]}
+        quats={}
         for k in names:
             q=quat(*rotations[k]) if k in rotations else [0,0,0,1]
             if pose=='StudioSeated' and k in seated_quats: q=seated_quats[k]
+            quats[k]=q
             if pose=='StudioStand':g.doc['nodes'][names.index(k)]['rotation']=q
             output=g.accessor([q,q],'VEC4')
             animation['samplers'].append({'input':times,'output':output,'interpolation':'LINEAR'})
             animation['channels'].append({'sampler':len(animation['samplers'])-1,'target':{'node':names.index(k),'path':'rotation'}})
         g.doc['animations'].append(animation)
-    return list(poses)
+        table[pose] = [quats[k] for k in names]
+    return list(poses), table
 
 
 def summarise(path, extra):
@@ -425,21 +434,33 @@ def build_body(name, male, height, hair, skin_asset):
     raw, convert, joints = figure(male, height)
     names = skeleton(g, joints, name)
     faces = body_faces()
+    # Collected as they are written, so the USD stage is built from the same
+    # vertices rather than from the glTF afterwards. See usd_export.
+    surfaces = [dict(name='Skin', positions=convert(raw), faces=faces, uvs=base_uv,
+                     bindings=skin_weights, diffuse=system_file(skin_asset), roughness=0.58)]
     g.add_mesh('Skin', convert(raw), faces, base_uv, skin_weights,
                g.material('Skin', system_file(skin_asset), 0.58), names)
     for kind, item, label in [('eyes', 'low-poly', 'Eyes'), ('hair', hair, 'Hair')]:
         v, uv, item_faces = fit_asset(kind, item, raw)
         texture = system_file('eyes/materials/brown_eye.png' if kind == 'eyes' else f'hair/{item}/{item}_diffuse.png')
         material = g.material(label, texture, 0.17 if kind == 'eyes' else 0.72, alpha=kind == 'hair')
+        surfaces.append(dict(name=label, positions=convert(v), faces=[f for _, f in item_faces], uvs=uv,
+                             bindings=[[('head', 1)] for _ in v], diffuse=texture,
+                             roughness=0.17 if kind == 'eyes' else 0.72, alpha=kind == 'hair'))
         g.add_mesh(label, convert(v), [f for _, f in item_faces], uv, [[('head', 1)] for _ in v], material, names)
-    poses = add_poses(g, joints, names)
+    poses, rotations = add_poses(g, joints, names)
     path = OUT / (name + '.glb')
     g.write(path)
+    usd = write_usd(OUT / (name + '.usdz'), CACHE / 'usd', name, joints, names,
+                    {k: rig[k]['parent'] for k in names}, surfaces,
+                    poses={clip: rotations[clip] for clip in poses},
+                    display={k: BONE_NAMES[k] for k in names})
     _, body_triangles = covered_triangles(faces, set())
     summary = summarise(path, {
         'heightMeters': height, 'joints': len(names), 'surfaces': len(g.doc['meshes']),
         'triangles': sum(g.doc['accessors'][m['primitives'][0]['indices']]['count'] // 3 for m in g.doc['meshes']),
-        'bodyTriangles': body_triangles, 'textures': len(g.doc['images']), 'poses': poses})
+        'bodyTriangles': body_triangles, 'textures': len(g.doc['images']), 'poses': poses,
+        'usd': usd})
     print(json.dumps(summary), flush=True)
     return summary
 
@@ -464,6 +485,13 @@ def build_garment(body, item, slot, male, height):
     path = OUT / 'wardrobe' / body / (item + '.glb')
     path.parent.mkdir(parents=True, exist_ok=True)
     g.write(path)
+    write_usd(path.with_suffix('.usdz'), CACHE / 'usd', f'{body}-{item}', joints, names,
+              {k: rig[k]['parent'] for k in names},
+              [dict(name=item, positions=convert(vertices), faces=[f for _, f in faces], uvs=uv,
+                    bindings=bindings, diffuse=texture('diffuseTexture'),
+                    roughness=0.55 if slot == 'shoes' else 0.84,
+                    normal=texture('normalmapTexture'), ao=texture('aomapTexture'))],
+              display={k: BONE_NAMES[k] for k in names})
     summary = summarise(path, {
         'id': item, 'body': body, 'slot': slot, 'joints': len(names),
         'triangles': g.doc['accessors'][g.doc['meshes'][0]['primitives'][0]['indices']]['count'] // 3,

@@ -159,6 +159,26 @@ counts and the textures actually inside the archive against the metadata.
 That is the same arrangement this session arrived at for Virtualstudio, which is
 mild evidence it is the right one rather than a coincidence of taste.
 
+## What was done about it
+
+Point 1 and point 3 are in, the same afternoon:
+
+- `scripts/characters/usd_export.py` writes a USD stage prim by prim from the same
+  morphed vertices, the same 53-joint rig and the same fitted garments the glTF
+  writer is handed — one authoring run, two formats, no conversion step. The GLBs
+  come out byte-identical, which is the check that it is not a conversion.
+- The app loads the USDZ and poses it by writing `jointTransforms`, with the joint
+  names split out of their USD paths. **The hair draws and the eyes are eyes.**
+
+The poses travel as a `-poses.json` beside the package rather than inside it,
+because a skeleton binds one animation source at a time and the studio's three
+stances are things to switch between.
+
+Still open: the wardrobe's covered triangles are not hidden on the USD path, so the
+body shows through the clothes. `visibleParts` does it for the glTF path, and the
+USD answer is probably to split the body mesh by coverage region at build time and
+switch prims rather than rebuild a buffer.
+
 ## What this changes
 
 Nothing is decided here. But three things in the iPad plan rest on premises this

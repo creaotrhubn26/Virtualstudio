@@ -337,6 +337,11 @@
         "StudioPortrait",
         "StudioSeated"
       ],
+      "usd": {
+        "triangles": 32280,
+        "meshes": 3,
+        "joints": 53
+      },
       "bytes": 1488344,
       "sha256": "457357188c4e7f11ce6a93928162ad3e3147b010dbba0a5e7a8bc457fdcd6dbd"
     },
@@ -353,6 +358,11 @@
         "StudioPortrait",
         "StudioSeated"
       ],
+      "usd": {
+        "triangles": 30272,
+        "meshes": 3,
+        "joints": 53
+      },
       "bytes": 1352980,
       "sha256": "f846eb5aac025086f41414aa1216f10d2bbb71678b9c8b432b1cc8733e0f17da"
     }

@@ -190,7 +190,24 @@ and the same cloth is worn by every body cut for it.
 app asks for: two figures, the clothes they open in, and **13 of the texture
 directory's files**. The directory is 76 MB; the app carries 40.
 
-Skin and cloth are right. **Hair and eyes are not** — and the reason is now known
+### Fixed, by handing the job to RealityKit
+
+![The same figure, loaded from the USDZ the builder now writes](figure-usdz.png)
+
+Hair draws and the eyes are eyes. Nothing about the material configuration was
+solved — it was **removed**. The builder now writes a USDZ beside the glTF, with
+`UsdPreviewSurface` saying in one line what two attempts in Swift could not:
+`opacity` connected to the texture's alpha channel, `opacityThreshold` beside it.
+RealityKit's own loader obeys it, and does the skinning too.
+
+What is left in the picture is the body showing through the clothes. The glTF path
+hides a garment's covered triangles with `visibleParts`; the USD path does not hide
+them yet. That is the next piece, and it is the only thing the older screenshot
+below does better.
+
+### What it looked like built by hand
+
+Skin and cloth were right. **Hair and eyes were not** — and the reason is now known
 rather than guessed. A cutout has to be told where its opacity comes from;
 `opacityThreshold` alone does not establish it. Campfire connects `opacity` to the
 texture's alpha channel in USD and sets the threshold separately, and does the same

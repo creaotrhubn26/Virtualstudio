@@ -99,10 +99,17 @@ final class StudioStage {
     /// she arrives into it. A stand-in box stands where she will be until she does —
     /// the empty state, so the screen is never a blank waiting for a file.
     func addFigure() async {
-        guard let woman = await FigureMesh.entity(
-            named: "studio-woman", pose: "StudioStand",
-            wearing: FigureMesh.defaultWardrobe(for: "studio-woman")
-        ) else { return }
+        // The USDZ first, because RealityKit draws its materials correctly and the
+        // hand-built ones do not. The glTF path stays as the fallback: a figure that
+        // has not been rebuilt since the USD export was added still has a GLB.
+        FigureEntity.prepare("studio-woman")
+        let dressed = FigureEntity.defaultWardrobe
+        var loaded = await FigureEntity.load(named: "studio-woman", pose: "StudioStand", wearing: dressed)
+        if loaded == nil {
+            loaded = await FigureMesh.entity(named: "studio-woman", pose: "StudioStand",
+                                             wearing: FigureMesh.defaultWardrobe(for: "studio-woman"))
+        }
+        guard let woman = loaded else { return }
         // The body is modelled facing positive z; the camera stands at negative z,
         // where a camera stands. Half a turn puts them face to face.
         woman.orientation = simd_quatf(angle: .pi, axis: [0, 1, 0])
