@@ -2618,12 +2618,6 @@ class VirtualStudio {
           return await exportStore.exportScene(sceneData.name, format);
         }
 
-        // USD exports
-        if (format === 'usda' || format === 'usdz') {
-          console.log('[Export] USD export - using export service');
-          return await exportStore.exportScene(sceneData.name, format);
-        }
-
         console.warn('[Export] Unsupported format:', format);
         return null;
       } catch (error) {
