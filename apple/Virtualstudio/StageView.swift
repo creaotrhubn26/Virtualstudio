@@ -56,6 +56,15 @@ struct StageView: View {
 
     /// `--light-radius 5` makes the key an absurdly large source, to tell a shader
     /// that ignores the size from a scene that cannot show it.
+    /// `--shadow-scale 2` computes the shadow term at half the picture's
+    /// resolution. The default is the number the measurement chose.
+    static var launchShadowScale: Int {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "--shadow-scale"), index + 1 < arguments.count,
+              let scale = Int(arguments[index + 1]) else { return 2 }
+        return scale
+    }
+
     static var launchRadius: Double? {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "--light-radius"), index + 1 < arguments.count,
@@ -74,7 +83,7 @@ struct StageView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            StudioView(stage: stage, report: report, softShadows: softShadows)
+            StudioView(stage: stage, report: report, softShadows: softShadows, shadowScale: Self.launchShadowScale)
                 .ignoresSafeArea()
                 .task {
                     // The rig first, so there is something to see while the figure's

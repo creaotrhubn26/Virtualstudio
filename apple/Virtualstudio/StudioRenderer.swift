@@ -29,14 +29,21 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
     private var output: RealityRenderer.CameraOutput?
     private var positions: StudioPositionPass?
     private var composite: (any MTLRenderPipelineState)?
+    private var factorPipeline: (any MTLRenderPipelineState)?
+    private var factor: (any MTLTexture)?
+    /// How much coarser the shadow term is than the picture. `--shadow-scale 1`
+    /// renders it at full resolution, which is what it cost thirteen milliseconds
+    /// to do.
+    private let shadowScale: Int
     private var last = CACurrentMediaTime()
 
     /// `--hard-shadows` leaves RealityKit's own shadow alone and skips both extra
     /// passes, which is how their cost is measured rather than guessed.
     private let softShadows: Bool
 
-    init?(stage: StudioStage, report: DeviceReport, softShadows: Bool) {
+    init?(stage: StudioStage, report: DeviceReport, softShadows: Bool, shadowScale: Int) {
         self.softShadows = softShadows
+        self.shadowScale = max(1, shadowScale)
         guard let device = MTLCreateSystemDefaultDevice(),
               let queue = device.makeCommandQueue(),
               let renderer = try? RealityRenderer() else { return nil }
@@ -61,6 +68,12 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
             descriptor.fragmentFunction = library.makeFunction(name: "softShadow")
             descriptor.colorAttachments[0].pixelFormat = .rgba16Float
             composite = try? device.makeRenderPipelineState(descriptor: descriptor)
+
+            let term = MTLRenderPipelineDescriptor()
+            term.vertexFunction = library.makeFunction(name: "fullScreenTriangle")
+            term.fragmentFunction = library.makeFunction(name: "shadowFactor")
+            term.colorAttachments[0].pixelFormat = .r16Float
+            factorPipeline = try? device.makeRenderPipelineState(descriptor: term)
         }
 
         renderer.entities.append(stage.root)
@@ -88,6 +101,18 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
         // Full resolution, not half: the whole point of the pass is the width of an
         // edge, and a half-resolution position map would put a two-pixel step in it.
         positions?.resize(to: size, format: .rgba16Float)
+
+        // The term at its own resolution. One channel, because it is one number.
+        let coarse = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .r16Float,
+            width: max(1, Int(size.width) / shadowScale),
+            height: max(1, Int(size.height) / shadowScale),
+            mipmapped: false
+        )
+        coarse.usage = [.renderTarget, .shaderRead]
+        coarse.storageMode = .private
+        factor = device.makeTexture(descriptor: coarse)
+        factor?.label = "Studio — how much of the light each place can see"
     }
 
     func draw(in view: MTKView) {
@@ -108,15 +133,29 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
 
         positions?.render(deltaTime: delta)
 
-        if let composite, let surface = positions?.texture,
-           let encoder = shadowEncoder(buffer: buffer, into: drawable.texture) {
+        if let composite, let factorPipeline, let factor,
+           let surface = positions?.texture {
             var uniforms = stage.shadowUniforms
-            encoder.setRenderPipelineState(composite)
-            encoder.setFragmentTexture(colour, index: 0)
-            encoder.setFragmentTexture(surface, index: 1)
-            encoder.setFragmentBytes(&uniforms, length: MemoryLayout<SoftShadow.Uniforms>.stride, index: 0)
-            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
-            encoder.endEncoding()
+
+            // The term first, at its own resolution.
+            if let encoder = shadowEncoder(buffer: buffer, into: factor) {
+                encoder.setRenderPipelineState(factorPipeline)
+                encoder.setFragmentTexture(surface, index: 0)
+                encoder.setFragmentBytes(&uniforms, length: MemoryLayout<SoftShadow.Uniforms>.stride, index: 0)
+                encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+                encoder.endEncoding()
+            }
+
+            // Then the picture, darkened by it.
+            if let encoder = shadowEncoder(buffer: buffer, into: drawable.texture) {
+                encoder.setRenderPipelineState(composite)
+                encoder.setFragmentTexture(colour, index: 0)
+                encoder.setFragmentTexture(factor, index: 1)
+                encoder.setFragmentTexture(surface, index: 2)
+                encoder.setFragmentBytes(&uniforms, length: MemoryLayout<SoftShadow.Uniforms>.stride, index: 0)
+                encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+                encoder.endEncoding()
+            }
         } else if let blit = buffer.makeBlitCommandEncoder() {
             // No shadow to add, but the frame still has to arrive.
             blit.copy(from: colour, to: drawable.texture)
@@ -146,9 +185,10 @@ struct StudioView: UIViewRepresentable {
     let stage: StudioStage
     let report: DeviceReport
     let softShadows: Bool
+    let shadowScale: Int
 
     func makeCoordinator() -> StudioRenderer? {
-        StudioRenderer(stage: stage, report: report, softShadows: softShadows)
+        StudioRenderer(stage: stage, report: report, softShadows: softShadows, shadowScale: shadowScale)
     }
 
     func makeUIView(context: Context) -> MTKView {

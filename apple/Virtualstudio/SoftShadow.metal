@@ -105,27 +105,25 @@ vertex FullScreen fullScreenTriangle(uint id [[vertex_id]]) {
 constant float3 kStageCentre = float3(0, 2, 0);
 constant float kStageHalfExtent = 4.0;
 
-fragment half4 softShadow(FullScreen in [[stage_in]],
-                          texture2d<half> sourceColor [[texture(0)]],
-                          texture2d<float> surfacePosition [[texture(1)]],
-                          constant ShadowUniforms &uniforms [[buffer(0)]]) {
+// The shadow term, on its own and at its own resolution.
+//
+// Tracing twenty-four rays against four occluders for every one of 5.7 million
+// pixels is thirteen milliseconds on an M5, against one for the whole rest of the
+// frame. The term does not need the colour's resolution: a penumbra is a gradient
+// by definition, and a gradient upsamples honestly where a silhouette would not.
+// The position it reads is still full resolution and sampled nearest, so no pixel
+// is ever given a place halfway between a near edge and a far floor.
+fragment float shadowFactor(FullScreen in [[stage_in]],
+                            texture2d<float> surfacePosition [[texture(0)]],
+                            constant ShadowUniforms &uniforms [[buffer(0)]]) {
     constexpr sampler pointSampler(filter::nearest, address::clamp_to_edge);
-    half4 colour = sourceColor.sample(pointSampler, in.uv);
-
     float3 encoded = surfacePosition.sample(pointSampler, in.uv).rgb;
-    if (uniforms.debugMode == 2) {
-        return half4(half3(encoded), 1.0h);
-    }
-    // Black is the background the position pass clears to: nothing was drawn here,
-    // so there is nothing to shade.
-    if (all(encoded < 1e-5)) {
-        return colour;
-    }
-    float3 surface = (encoded - 0.5) * (2 * kStageHalfExtent) + kStageCentre;
+    // Black is what the position pass clears to: nothing was drawn here.
+    if (all(encoded < 1e-5)) return 1.0;
 
+    float3 surface = (encoded - 0.5) * (2 * kStageHalfExtent) + kStageCentre;
     float3 toLight = uniforms.lightPosition - surface;
-    float distanceToLight = length(toLight);
-    float3 direction = toLight / max(distanceToLight, 1e-5);
+    float3 direction = toLight / max(length(toLight), 1e-5);
 
     // Two axes across the light's face, to spread the samples over its disc.
     float3 up = abs(direction.y) < 0.9 ? float3(0, 1, 0) : float3(1, 0, 0);
@@ -142,7 +140,6 @@ fragment half4 softShadow(FullScreen in [[stage_in]],
         float3 towards = target - origin;
         float reach = length(towards);
         float3 unit = towards / max(reach, 1e-5);
-
         for (uint index = 0; index < uniforms.occluderCount; index++) {
             Occluder occluder = uniforms.occluders[index];
             bool hit = occluder.kind == 0
@@ -151,8 +148,26 @@ fragment half4 softShadow(FullScreen in [[stage_in]],
             if (hit) { blocked++; break; }
         }
     }
+    return 1.0 - float(blocked) / float(kShadowRays);
+}
 
-    float visible = 1.0 - float(blocked) / float(kShadowRays);
+// Colour, darkened where the light cannot reach. Linear sampling on the factor,
+// which is what makes a half-resolution term acceptable: the thing being spread
+// over four pixels is a gradient, not an edge.
+fragment half4 softShadow(FullScreen in [[stage_in]],
+                          texture2d<half> sourceColor [[texture(0)]],
+                          texture2d<float> shadow [[texture(1)]],
+                          texture2d<float> surfacePosition [[texture(2)]],
+                          constant ShadowUniforms &uniforms [[buffer(0)]]) {
+    constexpr sampler pointSampler(filter::nearest, address::clamp_to_edge);
+    constexpr sampler smoothSampler(filter::linear, address::clamp_to_edge);
+    half4 colour = sourceColor.sample(pointSampler, in.uv);
+
+    if (uniforms.debugMode == 2) {
+        return half4(half3(surfacePosition.sample(pointSampler, in.uv).rgb), 1.0h);
+    }
+
+    float visible = shadow.sample(smoothSampler, in.uv).r;
     if (uniforms.debugMode == 1) {
         half occluded = half(1.0 - visible);
         return half4(occluded, occluded, occluded, 1.0h);

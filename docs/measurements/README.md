@@ -312,6 +312,40 @@ spend the next hour on that composite rather than anywhere else, and the obvious
 lever is the one Campfire already documents: the pass does not have to run at the
 colour resolution.
 
+### The shadow at its own resolution
+
+The term does not need the picture's resolution. A penumbra is a gradient by
+definition, and a gradient upsamples honestly where a silhouette would not — so it
+is computed into a one-channel texture of its own and sampled linearly on the way
+back. The position it reads stays full resolution and is sampled nearest, so no
+pixel is ever handed a place halfway between a near edge and a far floor.
+
+On the device:
+
+| Shadow term at | GPU frame | GPU worst |
+|---|---|---|
+| full resolution | 13.94 ms | 14.42 ms |
+| **one half** | **5.53 ms** | 7.08 ms |
+| one quarter | 3.83 ms | 4.26 ms |
+| no shadow at all | 0.99 ms | 2.44 ms |
+
+And what it costs, measured in the simulator where a frame can be captured — same
+shaders, and an image comparison rather than a timing:
+
+| Against the full-resolution shadow | Mean difference | p99 | Max |
+|---|---|---|---|
+| one half | **0.08 levels** | 1 | 36 |
+| one quarter | 0.13 levels | 2 | 36 |
+
+Eight hundredths of a level, and the maximum is a handful of pixels on a hard
+silhouette. Half resolution is the default because it saves 8.4 ms and costs
+nothing anyone can see.
+
+The feature survives it: with the term at half resolution, a 1.04 m softbox and a
+0.10 m snoot still differ over 56 295 pixels, against 56 414 at full resolution.
+
+At 5.53 ms the whole frame fits inside a 120 Hz budget for the first time.
+
 ### Two things the measurement found on its own
 
 **The iPad went to sleep twice**, 229 seconds each time, in the middle of the run.
