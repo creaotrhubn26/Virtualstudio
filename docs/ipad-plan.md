@@ -217,7 +217,12 @@ rendered beside the navigation view.
    the same image to the last bit.)* So the custom Metal shadow pass through
    `renderingEffects.customPostProcessing` is not optional — it is the feature.
    Port `contactHardeningRatio` into that pass; the maths already exists and is
-   tested. What remains for the device is only whether it is affordable.
+   tested. That pass is now started and is not finished: it runs and it
+   composites, and every attempt to read the depth buffer it needs is
+   silently discarded in the simulator. See findings 3 and 4 in
+   [`measurements/README.md`](measurements/README.md). What remains for the
+   device is whether the depth buffer reads there at all, and then whether the
+   pass is affordable.
 2. **Is light linear?** *(Answered, and the answer is no.)* The same rig one stop
    apart reads 0.581 of the pixel value, and two stops apart 0.300 — three
    quarters of a stop and one and three quarters. sRGB gamma alone would give

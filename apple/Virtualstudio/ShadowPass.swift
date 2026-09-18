@@ -70,6 +70,60 @@ enum SoftShadow {
             set { lock.withLock { value = newValue } }
         }
 
+        /// A private copy of the depth texture.
+        ///
+        /// RealityKit hands over a depth texture whose usage is
+        /// `shaderRead | renderTarget` — and it is still the render pass's own depth
+        /// attachment. Reading it where it lies discards the whole encoder without a
+        /// word: every instruction before the first access runs, everything after is
+        /// gone, and the frame arrives unchanged. Copying it first costs a blit and
+        /// makes it an ordinary texture.
+        func depthCopy(device: any MTLDevice, like source: any MTLTexture) -> (any MTLTexture)? {
+            lock.withLock {
+                if let copy, copy.width == source.width, copy.height == source.height { return copy }
+                let descriptor = MTLTextureDescriptor.texture2DDescriptor(
+                    pixelFormat: source.pixelFormat,
+                    width: source.width,
+                    height: source.height,
+                    mipmapped: false
+                )
+                descriptor.usage = [.shaderRead]
+                descriptor.storageMode = .private
+                let made = device.makeTexture(descriptor: descriptor)
+                copy = made
+                return made
+            }
+        }
+        private var copy: (any MTLTexture)?
+
+        /// The render pipeline, built on the first frame rather than in
+        /// `prepare(for:)`.
+        ///
+        /// A render pipeline has to name the pixel format it writes, and
+        /// `prepare(for:)` is handed a device and nothing else. Guessing the format
+        /// produces a pipeline that builds without complaint and a draw that is
+        /// then discarded in silence — another failure that looks exactly like a
+        /// shader whose logic is wrong. The target texture knows its own format, so
+        /// the pipeline waits until there is one.
+        func pipeline(device: any MTLDevice, format: MTLPixelFormat) -> MTLRenderPipelineState? {
+            lock.withLock {
+                if let built, builtFormat == format { return built }
+                guard let library = device.makeDefaultLibrary() else { return nil }
+                let descriptor = MTLRenderPipelineDescriptor()
+                descriptor.vertexFunction = library.makeFunction(name: "fullScreenTriangle")
+                descriptor.fragmentFunction = library.makeFunction(name: "softShadow")
+                descriptor.colorAttachments[0].pixelFormat = format
+                let made = try? device.makeRenderPipelineState(descriptor: descriptor)
+                built = made
+                builtFormat = format
+                Logger(subsystem: "no.holycrust.virtualstudio", category: "shadow")
+                    .notice("pipeline for format \(format.rawValue): \(made != nil)")
+                return made
+            }
+        }
+        private var built: MTLRenderPipelineState?
+        private var builtFormat: MTLPixelFormat?
+
         /// True once, so the pass can say what it was given without filling the log
         /// sixty times a second.
         func firstCall() -> Bool {
@@ -89,7 +143,6 @@ enum SoftShadow {
 @available(iOS 26.0, *)
 struct SoftShadowPass: PostProcessEffect {
     let state: SoftShadow.State
-    private var pipeline: MTLComputePipelineState?
 
     init(state: SoftShadow.State) {
         self.state = state
@@ -98,32 +151,33 @@ struct SoftShadowPass: PostProcessEffect {
     static let log = Logger(subsystem: "no.holycrust.virtualstudio", category: "shadow")
 
     mutating func prepare(for device: any MTLDevice) {
-        guard pipeline == nil else { return }
         // 48 bytes an occluder, 496 the whole block. If either changes, the shader
         // is reading the wrong bytes and the picture will not say so.
         assert(MemoryLayout<SoftShadow.Occluder>.stride == 48,
                "occluder layout drifted from SoftShadow.metal")
         assert(MemoryLayout<SoftShadow.Uniforms>.stride == 496,
                "uniform layout drifted from SoftShadow.metal")
-        guard let library = device.makeDefaultLibrary() else {
-            Self.log.error("no default Metal library")
-            return
-        }
-        guard let function = library.makeFunction(name: "softShadow") else {
-            Self.log.error("softShadow is not in the library")
-            return
-        }
-        let built = try? device.makeComputePipelineState(function: function)
-        pipeline = built
-        Self.log.notice("prepared: \(built != nil)")
     }
 
     func postProcess(context: borrowing PostProcessEffectContext<any MTLCommandBuffer>) {
         let settings = state.settings
+        let target = context.targetColorTexture
+        let descriptor = MTLRenderPassDescriptor()
+        descriptor.colorAttachments[0].texture = target
+        descriptor.colorAttachments[0].loadAction = .dontCare
+        descriptor.colorAttachments[0].storeAction = .store
+
+        // Out of the render pass's own attachment and into a texture of our own,
+        // before anything tries to read it.
+        let depth = state.depthCopy(device: context.device, like: context.sourceDepthTexture)
+        if let depth, let blit = context.commandBuffer.makeBlitCommandEncoder() {
+            blit.copy(from: context.sourceDepthTexture, to: depth)
+            blit.endEncoding()
+        }
+
         guard settings.enabled,
-              let pipeline,
-              let encoder = context.commandBuffer.makeComputeCommandEncoder() else {
-            Self.log.notice("pass skipped: enabled=\(settings.enabled) pipeline=\(self.pipeline != nil)")
+              let pipeline = state.pipeline(device: context.device, format: target.pixelFormat),
+              let encoder = context.commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
             // Nothing to add, but the frame still has to arrive: the target is a
             // separate texture from the source, so a pass that does nothing must
             // still copy. A pass that returns early leaves a black screen.
@@ -133,22 +187,16 @@ struct SoftShadowPass: PostProcessEffect {
 
         var uniforms: SoftShadow.Uniforms = makeUniforms(settings: settings, projection: context.projection)
 
-        encoder.setComputePipelineState(pipeline)
-        encoder.setTexture(context.sourceColorTexture, index: 0)
-        encoder.setTexture(context.sourceDepthTexture, index: 1)
-        encoder.setTexture(context.targetColorTexture, index: 2)
-        encoder.setBytes(&uniforms, length: MemoryLayout<SoftShadow.Uniforms>.stride, index: 0)
-
-        let width = context.targetColorTexture.width
-        let height = context.targetColorTexture.height
-        let group = MTLSize(width: 16, height: 16, depth: 1)
-        let grid = MTLSize(
-            width: (width + group.width - 1) / group.width,
-            height: (height + group.height - 1) / group.height,
-            depth: 1
-        )
-        encoder.dispatchThreadgroups(grid, threadsPerThreadgroup: group)
+        encoder.setRenderPipelineState(pipeline)
+        encoder.setFragmentTexture(context.sourceColorTexture, index: 0)
+        encoder.setFragmentTexture(depth ?? context.sourceDepthTexture, index: 1)
+        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<SoftShadow.Uniforms>.stride, index: 0)
+        // One triangle that covers the screen; no vertex buffer needed.
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
         encoder.endEncoding()
+
+        let width = target.width
+        let height = target.height
 
         if state.firstCall() {
             let radius = settings.lightRadius
@@ -156,6 +204,17 @@ struct SoftShadowPass: PostProcessEffect {
             let mode = settings.debugMode
             let stride = MemoryLayout<SoftShadow.Uniforms>.stride
             Self.log.notice("dispatched \(width)x\(height) radius=\(radius) occluders=\(count) mode=\(mode) stride=\(stride)")
+
+            // What the depth texture actually is. A shader that reads a texture
+            // whose usage does not include shaderRead is discarded without a word,
+            // and that is indistinguishable from a shader whose logic is wrong.
+            let depth = context.sourceDepthTexture
+            let colour = context.sourceColorTexture
+            let depthUsage = depth.usage.rawValue
+            let depthFormat = depth.pixelFormat.rawValue
+            let depthType = depth.textureType.rawValue
+            let colourUsage = colour.usage.rawValue
+            Self.log.notice("depth \(depth.width)x\(depth.height) format=\(depthFormat) usage=\(depthUsage) type=\(depthType) samples=\(depth.sampleCount) colourUsage=\(colourUsage)")
         }
     }
 

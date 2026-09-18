@@ -86,66 +86,92 @@ static float2 discSample(uint index, uint count) {
     return float2(cos(angle), sin(angle)) * radius;
 }
 
-kernel void softShadow(texture2d<half, access::read> sourceColor [[texture(0)]],
-                       depth2d<float, access::read> sourceDepth [[texture(1)]],
-                       texture2d<half, access::write> targetColor [[texture(2)]],
-                       constant ShadowUniforms &uniforms [[buffer(0)]],
-                       uint2 position [[thread_position_in_grid]]) {
-    if (position.x >= targetColor.get_width() || position.y >= targetColor.get_height()) return;
+// A full-screen triangle, so the pass is a draw rather than a dispatch.
+//
+// A compute kernel can write RealityKit's target texture but cannot read its depth
+// texture: everything before the first read runs, everything after is silently
+// discarded, and the frame arrives unchanged with no error anywhere. That failure
+// looks exactly like a shader whose logic is wrong, and it cost most of a day.
+// Sampled from a fragment shader the same texture reads fine.
+struct FullScreen {
+    float4 position [[position]];
+    float2 uv;
+};
+
+vertex FullScreen fullScreenTriangle(uint id [[vertex_id]]) {
+    float2 corner = float2((id << 1) & 2, id & 2);
+    FullScreen out;
+    out.position = float4(corner * 2.0 - 1.0, 0.0, 1.0);
+    out.uv = float2(corner.x, 1.0 - corner.y);
+    return out;
+}
+
+fragment half4 softShadow(FullScreen in [[stage_in]],
+                          texture2d<half> sourceColor [[texture(0)]],
+                          depth2d<float> sourceDepth [[texture(1)]],
+                          constant ShadowUniforms &uniforms [[buffer(0)]]) {
+    constexpr sampler pointSampler(filter::nearest, address::clamp_to_edge);
+    uint2 position = uint2(in.uv * float2(sourceColor.get_width(), sourceColor.get_height()));
+
+    // Unused now that the fragment shader knows its own coordinates, but kept so
+    // the debug modes still speak in pixels.
+    (void)position;
 
     // 4 paints the frame solid, which answers a question nothing else can: is the
     // pass's output presented at all?
     if (uniforms.debugMode == 4) {
-        targetColor.write(half4(1.0h, 0.0h, 0.0h, 1.0h), position);
-        return;
+        return half4(1.0h, 0.0h, 0.0h, 1.0h);
     }
 
-    half4 colour = sourceColor.read(position);
+    half4 colour = sourceColor.sample(pointSampler, in.uv);
 
     // 5 darkens the whole frame without tracing anything: it separates "the
     // composite write works" from "the shadow term is wrong".
     if (uniforms.debugMode == 5) {
-        targetColor.write(half4(colour.rgb * 0.18h, colour.a), position);
-        return;
+        return half4(colour.rgb * 0.18h, colour.a);
     }
 
-    // The depth texture is not the size of the colour texture. Reading it at colour
-    // coordinates returns zero everywhere outside its own bounds, which is most of
-    // the frame, and every one of those pixels then looks like empty space — which
-    // is exactly how this pass came to do nothing at all while running perfectly.
-    float2 colourSize = float2(targetColor.get_width(), targetColor.get_height());
+    float2 colourSize = float2(sourceColor.get_width(), sourceColor.get_height());
     float2 depthSize = float2(sourceDepth.get_width(), sourceDepth.get_height());
-    uint2 depthPosition = uint2(clamp(
-        (float2(position) + 0.5) / colourSize * depthSize,
-        float2(0.0),
-        depthSize - 1.0
-    ));
-    float depth = sourceDepth.read(depthPosition);
+    // 7 reports the depth texture's own size without reading a texel: red is its
+    // width over 4096, green its height. Everything after the first read of this
+    // texture is discarded when it is not really bound, so the size has to be
+    // asked for before the read, not after.
+    if (uniforms.debugMode == 7) {
+        return half4(half(depthSize.x / 4096.0),
+                                half(depthSize.y / 4096.0),
+                                half(colourSize.x / 4096.0), 1.0h);
+    }
+
+    float depth = sourceDepth.sample(pointSampler, in.uv);
 
     if (uniforms.debugMode == 3) {
         // Reversed-Z over a 120 m far plane puts a five-metre subject around 0.01,
         // so it is scaled to something an eye or a histogram can read.
         half shown = half(saturate(depth * 40.0));
-        targetColor.write(half4(shown, shown, shown, 1.0h), position);
-        return;
+        return half4(shown, shown, shown, 1.0h);
+    }
+
+    // 6 asks only one question: which pixels have any depth at all? White is
+    // "something was drawn here", black is "the depth texture said nothing".
+    if (uniforms.debugMode == 6) {
+        half any = depth > 0.0 ? 1.0h : 0.0h;
+        return half4(any, any, any, 1.0h);
     }
 
     // Nothing was drawn here. Reversed-Z, so the far plane is zero.
     if (depth <= 0.0) {
-        targetColor.write(colour, position);
-        return;
+        return colour;
     }
 
     // Back to where this pixel is in the room.
-    float2 uv = (float2(position) + 0.5) / float2(targetColor.get_width(), targetColor.get_height());
-    float4 clip = float4(uv.x * 2.0 - 1.0, (1.0 - uv.y) * 2.0 - 1.0, depth, 1.0);
+    float4 clip = float4(in.uv.x * 2.0 - 1.0, (1.0 - in.uv.y) * 2.0 - 1.0, depth, 1.0);
     float4 world = uniforms.inverseViewProjection * clip;
     float3 surface = world.xyz / world.w;
 
     if (uniforms.debugMode == 2) {
         float3 shown = fract(surface);
-        targetColor.write(half4(half3(shown), 1.0h), position);
-        return;
+        return half4(half3(shown), 1.0h);
     }
 
     float3 toLight = uniforms.lightPosition - surface;
@@ -181,10 +207,9 @@ kernel void softShadow(texture2d<half, access::read> sourceColor [[texture(0)]],
 
     if (uniforms.debugMode == 1) {
         half occluded = half(1.0 - visible);
-        targetColor.write(half4(occluded, occluded, occluded, 1.0h), position);
-        return;
+        return half4(occluded, occluded, occluded, 1.0h);
     }
 
     float shade = mix(uniforms.shadowDepth, 1.0, visible);
-    targetColor.write(half4(colour.rgb * half(shade), colour.a), position);
+    return half4(colour.rgb * half(shade), colour.a);
 }

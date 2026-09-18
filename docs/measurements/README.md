@@ -103,6 +103,53 @@ occlusion to the pixel. Somewhere between the radius arriving and the rays being
 cast, the size stops mattering, and that is not yet diagnosed. It is the next
 thing to pick up, and the diagnostics to pick it up with are all in place.
 
+## 4. The depth texture cannot be read — in the simulator
+
+This is the one to settle on the device, and it is worth stating exactly, because
+the failure gives no signal at all.
+
+The pass composites correctly. Painting the frame solid turns the screen solid;
+multiplying the colour by 0.18 darkens the picture. Both confirmed with the
+shader as a compute kernel and again as a fragment shader.
+
+**Any access to `context.sourceDepthTexture` discards everything after it.** Not
+an error, not a warning, not a log line: the instructions before the first access
+run and are visible, the instructions after are gone, and the frame arrives
+exactly as RealityKit rendered it. A shader that has quietly lost half its body
+looks identical to a shader whose logic is wrong, which is where most of the time
+on this went.
+
+Four ways were tried, all with the same result:
+
+| Attempt | Result |
+|---|---|
+| `depth2d<float, access::read>` in a compute kernel | everything after the read discarded |
+| `texture2d<float, access::read>` in a compute kernel | same |
+| `depth2d<float>` sampled in a fragment shader | same |
+| blit into a private `shaderRead`-only copy, sampled | same |
+
+The texture itself reports nothing unusual:
+
+```
+depth 2752x2064  format=260 (.depth32Float)  usage=5 (.shaderRead|.renderTarget)
+type=2 (.type2D)  samples=1        colour usage=5
+```
+
+Same size as the colour texture, declared readable, not multisampled, not an
+array. By its own description it should read.
+
+**So this is most likely a simulator limitation rather than an API one**, and it
+is exactly the kind of thing the plan says a simulator cannot answer. The next
+step is not more shader work: it is to run the same build on the physical M5 iPad
+and see whether the depth texture reads there. Everything needed for that is in
+place — the pass, the debug modes, and the two launch arguments.
+
+If it reads on the device, the shadow pass finishes in an afternoon: the
+occlusion tracing already works against the reconstructed positions. If it does
+not read there either, the conclusion is larger and clearer — a custom shadow in
+RealityKit's post-process has nothing to reconstruct from, and the scene renderer
+has to be Metal.
+
 ## What is still unmeasured
 
 Everything that needs the hardware: sustained frame time, `thermalState` over a

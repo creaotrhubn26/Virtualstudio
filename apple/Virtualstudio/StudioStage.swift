@@ -209,6 +209,16 @@ final class StudioStage {
     /// What the shadow pass should draw instead of the picture, for diagnosis.
     var shadowDebugMode: UInt32 = 0
 
+    /// Override the key's emitting size, in metres, ignoring the modifier.
+    ///
+    /// A catalogue softbox and a snoot are 1.04 m and 0.10 m apart, and against a
+    /// figure standing on the floor that is a contact shadow either way: the
+    /// penumbra of a source is proportional to how far the occluder is from what
+    /// catches its shadow, and at the feet that distance is nothing. An absurd
+    /// value separates "the size does not reach the rays" from "the scene cannot
+    /// show the difference".
+    var shadowRadiusOverride: Double?
+
     /// When the custom pass draws the key's shadow, the key must give up its own.
     ///
     /// Two shadows over the same light multiply, and RealityKit's is hard: wherever
@@ -305,7 +315,7 @@ final class StudioStage {
                 // the one whose modifier the photographer is choosing.
                 shadowState.settings = SoftShadow.State.Settings(
                     lightPosition: SIMD3(Float(position.x), Float(position.y), Float(position.z)),
-                    lightRadius: Float(size),
+                    lightRadius: Float(shadowRadiusOverride ?? size),
                     occluders: occluders,
                     view: Self.view,
                     enabled: true,

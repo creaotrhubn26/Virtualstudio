@@ -54,6 +54,15 @@ struct StageView: View {
         return mode
     }
 
+    /// `--light-radius 5` makes the key an absurdly large source, to tell a shader
+    /// that ignores the size from a scene that cannot show it.
+    static var launchRadius: Double? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "--light-radius"), index + 1 < arguments.count,
+              let metres = Double(arguments[index + 1]) else { return nil }
+        return metres
+    }
+
     static var launchStops: Double {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "--stops"), index + 1 < arguments.count,
@@ -83,6 +92,7 @@ struct StageView: View {
                 }
                 stage.shadowDebugMode = Self.launchDebugMode
                 stage.softShadowKey = softShadows
+                stage.shadowRadiusOverride = Self.launchRadius
                 content.add(stage.root)
                 stage.light(locationId: locationId, modifierLabel: modifier, keyOffsetStops: keyOffsetStops)
 
