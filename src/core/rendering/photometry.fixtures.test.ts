@@ -140,8 +140,9 @@ describe('the numbers both editions have to agree on', () => {
       mkdirSync(dirname(FIXTURE), { recursive: true });
       writeFileSync(FIXTURE, `${JSON.stringify(current, null, 2)}\n`);
     }
-    const committed = JSON.parse(readFileSync(FIXTURE, 'utf8'));
-    expect(current).toEqual(committed);
+    // Through JSON both ways: the fixture is a file, and -0 does not survive
+    // being written to one.
+    expect(JSON.parse(JSON.stringify(current))).toEqual(JSON.parse(readFileSync(FIXTURE, 'utf8')));
   });
 
   it('states a stripbox is crisper than a softbox, which is the whole claim', () => {

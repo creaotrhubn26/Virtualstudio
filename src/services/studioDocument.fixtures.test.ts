@@ -171,7 +171,9 @@ describe('the verdicts both editions have to reach', () => {
       mkdirSync(dirname(FIXTURE), { recursive: true });
       writeFileSync(FIXTURE, `${JSON.stringify(current, null, 2)}\n`);
     }
-    expect(current).toEqual(JSON.parse(readFileSync(FIXTURE, 'utf8')));
+    // Through JSON both ways: the fixture is a file, and -0 does not survive
+    // being written to one.
+    expect(JSON.parse(JSON.stringify(current))).toEqual(JSON.parse(readFileSync(FIXTURE, 'utf8')));
   });
 
   it('refuses more than it accepts, because most of these are broken on purpose', () => {

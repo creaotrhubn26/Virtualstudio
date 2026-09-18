@@ -18,12 +18,26 @@ let package = Package(
     products: [
         .library(name: "Photometry", targets: ["Photometry"]),
         .library(name: "SceneDocument", targets: ["SceneDocument"]),
+        .library(name: "PoseRig", targets: ["PoseRig"]),
+        .library(name: "LimbIK", targets: ["LimbIK"]),
     ],
     targets: [
         .target(name: "Photometry"),
         .testTarget(
             name: "PhotometryTests",
             dependencies: ["Photometry"],
+            resources: [.copy("Fixtures")]
+        ),
+        .target(name: "PoseRig"),
+        .testTarget(
+            name: "PoseRigTests",
+            dependencies: ["PoseRig"],
+            resources: [.copy("Fixtures")]
+        ),
+        .target(name: "LimbIK", dependencies: ["PoseRig"]),
+        .testTarget(
+            name: "LimbIKTests",
+            dependencies: ["LimbIK"],
             resources: [.copy("Fixtures")]
         ),
         .target(name: "SceneDocument"),

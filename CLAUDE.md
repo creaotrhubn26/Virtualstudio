@@ -286,9 +286,9 @@ Validate an entire file before clearing the current scene. Maintain legacy v1 re
 ## The native core
 
 [`apple/VirtualstudioCore`](apple/README.md) holds the renderer-free arithmetic as
-Swift packages: `Photometry` and `SceneDocument` today, `PoseRig`, `LimbIK` and
-the content tables next. It is the foundation of the native iPad edition, and it
-runs in under a second with no simulator and no device.
+Swift packages: `Photometry`, `SceneDocument`, `PoseRig` and `LimbIK` today, the
+content tables next. It is the foundation of the native iPad edition, and it runs
+in under a second with no simulator and no device.
 
 The rule that makes it worth having: **a Swift port is checked against the
 TypeScript implementation, not against fresh Swift tests.** Each module's numbers
@@ -297,14 +297,19 @@ suites read, so a divergence is a test failure in one language rather than a
 discrepancy nobody notices. Regenerate deliberately after a real change:
 
 ```sh
-UPDATE_FIXTURES=1 npm test -- photometry.fixtures
-UPDATE_FIXTURES=1 npm test -- studioDocument.fixtures
+UPDATE_FIXTURES=1 npm test -- fixtures
 ```
 
 The document fixture matters most. Validation runs before the current scene is
 cleared, so the two editions have to agree about every file: 23 documents that
 must open, 27 that must not. Add a rule to `studioDocument.ts` and add a case to
 the fixture in the same change.
+
+The pose fixture is next in weight: 816 clamp cases covering every joint against
+four bone axes and twelve rotations. Two deliberate breakages were tried against
+it — clamping a hinge in degrees instead of radians, and replacing a limb's
+inherited bend plane with a fixed one — and both fail loudly, so the check has
+teeth.
 
 Swift's `Codable` drops fields it does not declare, which would break the
 forward-compatibility rule above, so `StudioDocument` keeps the whole document as
@@ -343,7 +348,7 @@ Work in this order unless the user changes priorities:
 3. **Broader real character variation.** *(Wardrobe is now a layer; see "Wardrobe as a layer".)* Remaining: body archetypes and the 50 figures built on them, using the pinned pack's 22 usable skins (six ethnicities across three ages), 10 hairstyles and 12 outfits. Garments are fitted per body shape, so a new archetype means refitting the wardrobe for it — keep the number of archetypes small and vary skin, hair, face and height freely on top. Add facial expression blend shapes only when the source and export path are verified.
 4. **Studio object editing.** *(The general prop system and the timeline have landed; see "Objects on set" and "Movement".)* Remaining: give room furniture stable keys so individual pieces can be claimed, which means keeping them as separate meshes rather than batched; a panel for browsing and placing props; and a way to author a track for something other than a light, which today means editing the timeline by hand.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
-6. **iPad edition after the scene contract stabilizes.** Staged in [`docs/ipad-plan.md`](docs/ipad-plan.md). *(Landed: the false USD export is gone, and `Photometry` and `SceneDocument` are ported to Swift and checked against the TypeScript implementation through shared JSON fixtures — see [`apple/README.md`](apple/README.md).)* Remaining: `PoseRig`, `LimbIK` and the content tables as Swift packages; a real USD export from the character builder; then the device measurement that decides RealityKit, RealityKit with a custom Metal shadow pass, or Metal. The shadow question is already partly answered: `SpotLightComponent.Shadow` has no properties, so a modifier's real size cannot drive the penumbra there.
+6. **iPad edition after the scene contract stabilizes.** Staged in [`docs/ipad-plan.md`](docs/ipad-plan.md). *(Landed: the false USD export is gone, and `Photometry`, `SceneDocument`, `PoseRig` and `LimbIK` are ported to Swift and checked against the TypeScript implementation through shared JSON fixtures — see [`apple/README.md`](apple/README.md).)* Remaining: the content tables (looks, moves, locations, marks, storyboard) as a Swift package; a real USD export from the character builder; then the device measurement that decides RealityKit, RealityKit with a custom Metal shadow pass, or Metal. The shadow question is already partly answered: `SpotLightComponent.Shadow` has no properties, so a modifier's real size cannot drive the penumbra there.
 
 Acceptance criteria for each feature should include a real workflow test, scene round-trip when state is persisted, resource cleanup after replacement and a screenshot or numeric result that demonstrates the intended photographic behavior.
 
@@ -361,6 +366,6 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 - Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.
 - Backend-dependent workflows require a separately running service and verification.
 - There is no geometry export. The `ExporterService` stub that answered every format with an empty blob, and the USD/USDZ export that wrote element declarations with no vertex data and a `.usdz` extension on a `text/plain` blob, have both been removed rather than left to look like features. The character builder's GLB export is the real one, and a USD export belongs beside it.
-- Native iPad behavior and performance have not been tested on hardware. `Photometry` and `SceneDocument` are ported and agree with the web implementation; no native app, renderer or interface exists yet.
+- Native iPad behavior and performance have not been tested on hardware. `Photometry`, `SceneDocument`, `PoseRig` and `LimbIK` are ported and agree with the web implementation; no native app, renderer or interface exists yet.
 
 Keep claims in documentation and PRs aligned with those limits. The goal is steady progress toward a professional photographic planning tool, with every shipped capability demonstrably working.
