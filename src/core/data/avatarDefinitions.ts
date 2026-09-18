@@ -19,17 +19,17 @@ export interface AvatarDefinition {
 export const AVATAR_DEFINITIONS: AvatarDefinition[] = [
   {
     type: 'man',
-    name: 'Voksen Mann',
-    modelUrl: '/models/avatars/avatar_man.glb',
+    name: 'Studiomodell · Mann',
+    modelUrl: '/models/avatars/studio/studio-man.glb',
     skinHex: '#C68642',
-    defaultHeight: 1.80,
+    defaultHeight: 1.82,
   },
   {
     type: 'woman',
-    name: 'Voksen Kvinne',
-    modelUrl: '/models/avatars/avatar_woman.glb',
+    name: 'Studiomodell · Kvinne',
+    modelUrl: '/models/avatars/studio/studio-woman.glb',
     skinHex: '#EAC086',
-    defaultHeight: 1.68,
+    defaultHeight: 1.72,
   },
   {
     type: 'child',

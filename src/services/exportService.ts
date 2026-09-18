@@ -12,8 +12,6 @@ import '@babylonjs/serializers';
 export type ExportFormat = 
   | 'gltf' 
   | 'glb' 
-  | 'usdz' 
-  | 'usda' 
   | 'obj' 
   | 'stl' 
   | 'babylon' 
@@ -165,30 +163,6 @@ export const EXPORT_PRESETS: Record<string, ExportPreset> = {
       exportTangents: true
     }
   },
-  'pixar-usd': {
-    name: 'Pixar USD',
-    format: 'usda',
-    description: 'Human-readable USD for pipeline',
-    icon: 'movie_filter',
-    settings: {
-      ...DEFAULT_SETTINGS,
-      usdKind: 'assembly',
-      usdPurpose: 'default',
-      usdVariants: true
-    }
-  },
-  'apple-ar': {
-    name: 'Apple AR',
-    format: 'usdz',
-    description: 'USDZ for iOS Quick Look',
-    icon: 'phone_iphone',
-    settings: {
-      ...DEFAULT_SETTINGS,
-      embedTextures: true,
-      textureFormat: 'png',
-      textureMaxSize: 1024
-    }
-  },
   'archviz': {
     name: 'Architecture',
     format: 'obj',
@@ -257,7 +231,6 @@ interface ExportStore {
   exportToOBJ: () => Promise<Blob | null>;
   exportToSTL: () => Promise<Blob | null>;
   exportToBabylon: () => Promise<Blob | null>;
-  exportToUSD: (binary: boolean) => Promise<Blob | null>;
   
   // Batch export
   batchExport: (formats: ExportFormat[]) => Promise<Map<ExportFormat, Blob>>;
@@ -342,12 +315,6 @@ export const useExportStore = create<ExportStore>((set, get) => ({
           break;
         case 'babylon':
           blob = await get().exportToBabylon();
-          break;
-        case 'usda':
-          blob = await get().exportToUSD(false);
-          break;
-        case 'usdz':
-          blob = await get().exportToUSD(true);
           break;
         case 'screenshot-png':
         case 'screenshot-exr':
@@ -561,29 +528,6 @@ export const useExportStore = create<ExportStore>((set, get) => ({
     }
   },
   
-  exportToUSD: async (binary) => {
-    const { scene, settings } = get();
-    if (!scene) return null;
-    
-    // USD export via server-side conversion (client-side USD is limited)
-    // For now, generate a USDA-like structure that can be converted server-side
-    
-    try {
-      const usdContent = generateUSDAContent(scene, settings);
-      
-      if (binary) {
-        // USDZ is a zip archive containing USDA and textures
-        // For true USDZ, we'd need server-side processing
-        // Return USDA as fallback
-        return new Blob([usdContent], { type: 'text/plain' });
-      }
-      
-      return new Blob([usdContent], { type: 'text/plain' });
-    } catch (error) {
-      console.error('USD export error:', error);
-      return null;
-    }
-  },
   
   batchExport: async (formats) => {
     const results = new Map<ExportFormat, Blob>();
@@ -640,8 +584,6 @@ export const useExportStore = create<ExportStore>((set, get) => ({
       'obj': 1.0,
       'stl': 0.5,
       'babylon': 1.5,
-      'usda': 1.1,
-      'usdz': 0.9,
       'screenshot-png': 0.1,
       'screenshot-exr': 0.5,
       'animation-fbx': 1.3
@@ -651,57 +593,6 @@ export const useExportStore = create<ExportStore>((set, get) => ({
   }
 }));
 
-// Helper function to generate USDA content
-function generateUSDAContent(scene: BABYLON.Scene, settings: ExportSettings): string {
-  const lines: string[] = [
-    '#usda 1.0',
-    '(',
-    '    defaultPrim = "Root"',
-    '    upAxis = "Y"',
-    '    metersPerUnit = 1',
-    ')',
-    '',
-    'def Xform "Root" (',
-    `    kind = "${settings.usdKind}"`,
-    ')',
-    '{'
-  ];
-  
-  // Export meshes
-  scene.meshes.forEach((mesh, index) => {
-    if (!mesh.isVisible && !settings.includeHidden) return;
-    if (!(mesh instanceof BABYLON.Mesh)) return;
-    
-    const name = mesh.name.replace(/[^a-zA-Z0-9_]/g, '_') || `mesh_${index}`;
-    const pos = mesh.position;
-    const rot = mesh.rotation;
-    const scale = mesh.scaling;
-    
-    lines.push(`    def Mesh "${name}" (`);
-    lines.push(`        kind = "component"`);
-    lines.push(`    )`);
-    lines.push(`    {`);
-    lines.push(`        double3 xformOp:translate = (${pos.x}, ${pos.y}, ${pos.z})`);
-    lines.push(`        double3 xformOp:rotateXYZ = (${rot.x * 180 / Math.PI}, ${rot.y * 180 / Math.PI}, ${rot.z * 180 / Math.PI})`);
-    lines.push(`        double3 xformOp:scale = (${scale.x}, ${scale.y}, ${scale.z})`);
-    lines.push(`        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]`);
-    
-    // Add geometry reference (would need actual vertex data for full export)
-    const vertexData = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-    if (vertexData) {
-      const pointCount = vertexData.length / 3;
-      lines.push(`        int[] faceVertexCounts`);
-      lines.push(`        int[] faceVertexIndices`);
-      lines.push(`        point3f[] points (${pointCount} points)`);
-    }
-    
-    lines.push(`    }`);
-  });
-  
-  lines.push('}');
-  
-  return lines.join('\n');
-}
 
 // Export format extensions
 export const FORMAT_EXTENSIONS: Record<ExportFormat, string> = {
@@ -710,8 +601,6 @@ export const FORMAT_EXTENSIONS: Record<ExportFormat, string> = {
   'obj': '.obj',
   'stl': '.stl',
   'babylon': '.babylon',
-  'usda': '.usda',
-  'usdz': '.usdz',
   'screenshot-png': '.png',
   'screenshot-exr': '.exr',
   'animation-fbx': '.fbx'

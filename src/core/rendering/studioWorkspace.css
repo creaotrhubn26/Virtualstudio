@@ -1,0 +1,234 @@
+.studio-workspace .studio-view-toolbar {
+  position: absolute;
+  z-index: 110;
+  inset: 58px auto auto 16px;
+  max-width: calc(100% - 190px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--bg-panel);
+  box-shadow: 0 4px 16px #0003;
+}
+.studio-view-tabs, .studio-view-actions { display: flex; gap: 3px; flex-wrap: wrap; }
+.studio-view-toolbar button, .studio-preview-header button {
+  min-height: 34px;
+  padding: 0 11px;
+  font: 500 12px Inter, sans-serif;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.studio-view-toolbar button:hover, .studio-preview-header button:hover { background: var(--bg-hover); color: var(--text-primary); }
+.studio-view-toolbar button[aria-pressed="true"] { color: var(--accent-cyan); background: #2ee8ff18; border-color: #2ee8ff38; }
+.studio-view-toolbar button:disabled { opacity: .4; cursor: default; }
+.studio-view-actions { border-left: 1px solid var(--border-color); padding-left: 9px; }
+.studio-view-toolbar button:focus-visible, .studio-preview-header button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+/*
+ * Everything on the right edge, in one column.
+ *
+ * The environment panel, the camera preview and the moves panel used to be
+ * positioned against the same corner independently, which is only ever one
+ * content change away from one of them landing on top of another. The rail
+ * starts below the view toolbar and scrolls if what is in it does not fit.
+ */
+.studio-right-rail {
+  position: absolute;
+  z-index: 90;
+  right: 18px;
+  bottom: 20px;
+  top: 122px;
+  width: clamp(230px, 25%, 384px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* The rail only frames what is in it; the room behind stays draggable. */
+  pointer-events: none;
+}
+/*
+ * Each panel is as tall as it is, except the moves panel, which takes the
+ * slack and scrolls inside it. Letting the column overflow instead would push
+ * the top of it off the screen, where nothing can scroll it back.
+ */
+.studio-right-rail > * { pointer-events: auto; flex: 0 0 auto; }
+.studio-right-rail > .studio-sequence-panel { flex: 1 1 auto; min-height: 120px; }
+/* In the rail the panel is a row in a column, not a thing placed in a corner. */
+.studio-right-rail .studio-environment-panel {
+  position: static;
+  width: auto;
+  inset: auto;
+}
+.studio-camera-preview {
+  flex: 0 0 auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px #0006;
+}
+.studio-camera-preview[hidden] { display: none; }
+.studio-preview-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; color: var(--text-primary); font: 600 12px Inter, sans-serif; }
+.studio-preview-header i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); margin-right: 7px; }
+.studio-camera-preview canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: var(--bg-dark); }
+.studio-preview-settings { padding: 10px 12px 4px; color: var(--text-primary); font: 11px Inter, sans-serif; font-variant-numeric: tabular-nums; }
+.studio-camera-preview p { padding: 0 12px 10px; color: var(--text-muted); font: 10px Inter, sans-serif; }
+.studio-model-panel { position: absolute; z-index: 90; left: 16px; bottom: 20px; width: 220px; padding: 16px; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 8px 24px #0003; }
+.studio-model-heading { font: 600 10px Inter, sans-serif; color: var(--accent-cyan); letter-spacing: .1em; margin-bottom: 14px; }
+.studio-model-panel label { display: block; font: 11px Inter, sans-serif; color: var(--text-secondary); margin-bottom: 6px; }
+.studio-model-panel select { width: 100%; min-height: 38px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-input); color: var(--text-primary); padding: 7px; margin-bottom: 12px; font: 12px Inter, sans-serif; }
+.studio-model-framing { display: flex; gap: 6px; }
+.studio-model-framing button { flex: 1; min-height: 36px; border: 1px solid var(--border-color); border-radius: 5px; color: var(--text-primary); background: var(--bg-section); cursor: pointer; }
+/* The moves panel: named buttons over a plain list of what happens, and when. */
+.studio-sequence-panel {
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px;
+  background: var(--bg-panel, rgba(17, 20, 26, .92)); border: 1px solid var(--border-color);
+  border-radius: 10px; backdrop-filter: blur(16px); z-index: 6;
+}
+.studio-sequence-heading { font: 600 10px/1.4 Inter, sans-serif; letter-spacing: .08em; color: var(--text-muted); }
+.studio-sequence-panel label { font: 10px/1.4 Inter, sans-serif; color: var(--text-muted); }
+.studio-sequence-panel input[type="range"] { width: 100%; accent-color: var(--focus-ring); }
+.studio-move-length { font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); margin: 0; }
+.studio-look-groups { display: flex; flex-direction: column; gap: 8px; }
+.studio-look-status,
+.studio-location-status { font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); margin: 0; }
+.studio-location-buttons { margin-bottom: 2px; }
+.studio-mark-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.studio-mark-group > span { font: 10px/1.4 Inter, sans-serif; color: var(--text-muted); }
+.studio-mark-group[hidden] { display: none; }
+.studio-staff-button {
+  width: 100%; min-height: 32px; cursor: pointer;
+  border: 1px solid var(--accent-cyan); border-radius: 5px;
+  background: var(--bg-section); color: var(--accent-cyan);
+  font: 11px/1.4 Inter, sans-serif;
+}
+.studio-staff-button:disabled { opacity: .55; cursor: progress; }
+.studio-rig-toggle { font: 10px/1.4 Inter, sans-serif; color: var(--text-secondary); margin-top: 2px; }
+.studio-brand-fields { display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; }
+.studio-brand-fields label { font: 10px/1.4 Inter, sans-serif; color: var(--text-muted); }
+.studio-brand-fields :is(input[type="text"], textarea) {
+  width: 100%; min-height: 32px; padding: 6px 8px; resize: vertical;
+  border: 1px solid var(--border-color); border-radius: 5px;
+  background: var(--bg-input); color: var(--text-primary);
+  font: 12px/1.4 Inter, sans-serif;
+}
+.studio-brand-colours { display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: center; gap: 6px; }
+.studio-brand-colours input[type="color"] {
+  width: 100%; min-height: 30px; padding: 2px; cursor: pointer;
+  border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-input);
+}
+.studio-brand-status { font: 10px/1.5 Inter, sans-serif; color: var(--text-muted); margin: 0; }
+.studio-brand-fields :is(input, textarea):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.studio-move-buttons button[aria-pressed="true"] { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.studio-move-buttons button:disabled { opacity: .5; cursor: progress; }
+/* A group is a question, not a list: closed until someone asks it. */
+.studio-move-group { border-top: 1px solid var(--border-color); }
+.studio-move-group > summary {
+  font: 11px/1.4 Inter, sans-serif; color: var(--text-secondary);
+  min-height: 32px; display: flex; align-items: center; cursor: pointer;
+  list-style: none; user-select: none;
+}
+.studio-move-group > summary::-webkit-details-marker { display: none; }
+.studio-move-group > summary::before {
+  content: '▸'; margin-right: 6px; color: var(--text-muted);
+  transition: transform .12s ease;
+}
+.studio-move-group[open] > summary::before { transform: rotate(90deg); }
+.studio-move-group[open] > summary { color: var(--text-primary); }
+.studio-move-group > summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.studio-move-group .studio-move-buttons { padding-bottom: 6px; }
+.studio-move-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.studio-move-buttons button {
+  flex: 1 1 calc(50% - 4px); min-height: 34px; padding: 0 8px;
+  font: 11px/1.3 Inter, sans-serif; color: var(--text-primary);
+  background: var(--bg-section); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer;
+}
+.studio-move-buttons button:hover { background: var(--bg-hover, rgba(255,255,255,.08)); }
+.studio-sequence-list { list-style: decimal inside; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; }
+.studio-sequence-list li {
+  display: grid; grid-template-columns: 1fr 52px auto auto; align-items: center; gap: 4px;
+  font: 11px/1.4 Inter, sans-serif; color: var(--text-primary);
+}
+.studio-sequence-list li.muted { opacity: .45; }
+.studio-cue-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-sequence-list input[type="number"] {
+  width: 100%; min-height: 28px; padding: 0 4px; font: 11px Inter, sans-serif;
+  color: var(--text-primary); background: var(--bg-section);
+  border: 1px solid var(--border-color); border-radius: 4px;
+}
+.studio-sequence-list button {
+  min-height: 28px; padding: 0 7px; font: 10px Inter, sans-serif; color: var(--text-primary);
+  background: var(--bg-section); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer;
+}
+.studio-sequence-empty { font: 10px/1.5 Inter, sans-serif; color: var(--text-muted); margin: 0; }
+.studio-sequence-panel :is(button, input):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (max-width: 1050px) {
+  .studio-right-rail { width: 220px; }
+  .studio-move-buttons button { flex-basis: 100%; min-height: 40px; }
+}
+
+.studio-stand-toggle {
+  width: 100%; min-height: 36px; margin-top: 8px; cursor: pointer;
+  border: 1px solid var(--border-color); border-radius: 5px;
+  background: var(--bg-section); color: var(--text-primary);
+  font: 12px/1.4 Inter, sans-serif;
+}
+.studio-stand-toggle:hover { background: var(--bg-hover, rgba(255,255,255,.08)); }
+.studio-pose-edit { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 36px; font: 11px/1.4 Inter, sans-serif; color: var(--text-primary); cursor: pointer; }
+.studio-pose-edit input { width: 16px; height: 16px; accent-color: var(--focus-ring); cursor: pointer; }
+.studio-model-panel p { font: 10px/1.5 Inter, sans-serif; color: var(--text-muted); margin-top: 12px; }
+.studio-model-panel :is(button, select, input):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.studio-workspace:not([data-studio-view="camera"]) > .viewport-overlay,
+.studio-workspace:not([data-studio-view="camera"]) #viewfinderOverlay,
+.studio-workspace:not([data-studio-view="camera"]) > .light-indicator { display: none; }
+@media (max-width: 1050px) {
+  .studio-workspace .studio-view-toolbar { max-width: calc(100% - 32px); top: 54px; }
+  .studio-view-toolbar button { min-height: 40px; }
+}
+@media (max-width: 600px) {
+  .studio-workspace .studio-view-toolbar { left: 8px; max-width: calc(100% - 16px); gap: 3px; }
+  .studio-view-toolbar button { padding: 0 8px; min-height: 44px; font-size: 11px; }
+  .studio-view-actions { padding-left: 0; border-left: 0; }
+  .studio-model-panel { width: 180px; left: 8px; bottom: 12px; padding: 10px; }
+  .studio-model-panel :is(button, select) { min-height: 44px; }
+  .studio-workspace[data-studio-view="camera"] .studio-model-panel { opacity: .94; }
+}
+
+.studio-workspace-layout:not(.studio-map-open) > .viewport-2d { display: none; }
+.studio-workspace-layout.studio-map-open > .viewport-2d:not(.fullscreen) { height: 320px; min-height: 240px; max-height: 40vh; }
+.studio-workspace[data-studio-view="camera"] #renderCanvas {
+  position: absolute;
+  flex: none;
+  width: var(--studio-shot-width) !important;
+  height: var(--studio-shot-height) !important;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+}
+@media (max-width: 480px) {
+  .studio-model-panel { width: 160px; }
+  .studio-model-panel p { display: none; }
+}
+
+.studio-environment-panel { width: auto; }
+.studio-environment-panel .studio-room-toggle { display: flex; align-items: center; gap: 8px; min-height: 32px; margin: 0; cursor: pointer; }
+.studio-room-toggle input { accent-color: var(--accent-cyan); width: 16px; height: 16px; }
+@media (max-width: 1050px) {
+  /* Clear of the view toolbar, which wraps to two rows here and to three on a
+     portrait tablet. */
+  .studio-right-rail { top: 176px; right: 8px; }
+}
+@media (max-width: 600px) {
+  .studio-right-rail { top: 190px; }
+  .studio-environment-panel .studio-room-toggle { min-height: 44px; }
+}
+
+@media (max-height: 820px) {
+  .studio-environment-panel { padding: 12px; }
+  .studio-environment-panel .studio-model-heading { margin-bottom: 8px; }
+  .studio-environment-panel select { margin-bottom: 6px; }
+  .studio-environment-panel .studio-document-status { display: none; }
+  .studio-camera-preview p { display: none; }
+}

@@ -1,3 +1,4 @@
+import type { StudioRoomOptions } from '../rendering/StudioRoom';
 import { SceneNode } from '../../state/store';
 
 // Camera preset data structure
@@ -12,6 +13,13 @@ export interface CameraPreset {
 
 // Light state for serialization
 export interface LightState {
+  fixtureId?: string;
+  beamAngle?: number;
+  exponent?: number;
+  aimTarget?: [number, number, number];
+  baseIntensity?: number;
+  powerMultiplier?: number;
+  enabled?: boolean;
   id: string;
   name: string;
   type: string;
@@ -157,6 +165,7 @@ export interface GoboState {
 }
 
 export interface EnvironmentState {
+  room?: StudioRoomOptions;
   walls: WallState[];
   floors: FloorState[];
   atmosphere?: AtmosphereSettings;
@@ -164,6 +173,9 @@ export interface EnvironmentState {
 }
 
 // Main scene composition interface
+import type { StudioProp } from '../../services/studioProps';
+import type { SceneAnimation } from '../../services/sceneAnimation';
+
 export interface SceneComposition {
   id: string;
   name: string;
@@ -175,7 +187,19 @@ export interface SceneComposition {
   cameras: CameraPreset[]; // All Cam A-E presets
   lights: LightState[]; // All light positions and settings
   actors: SceneNode[]; // All actors in scene
-  props: SceneNode[]; // All props in scene
+  props: SceneNode[]; // All props in scene (asset-library loader)
+  /**
+   * Objects the photographer has taken hold of: studio-built geometry claimed
+   * by its stable key, and models imported onto the set. Optional, so a
+   * document written before props existed still reads.
+   */
+  studioProps?: StudioProp[];
+  /**
+   * Movement over time: keyframed position and rotation for anything in the
+   * scene. Optional for the same reason, and in radians like every other
+   * angle a document holds.
+   */
+  animation?: SceneAnimation;
   cameraSettings: CameraSettings; // Aperture, ISO, shutter, etc.
   
   // Composition

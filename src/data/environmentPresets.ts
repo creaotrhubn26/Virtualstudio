@@ -1,3 +1,4 @@
+import type { StudioRoomOptions } from '../core/rendering/StudioRoom';
 /**
  * Environment Presets - Complete studio/scene environment configurations
  * Combines walls, floors, lighting, camera presets, and ambient sounds
@@ -6,6 +7,7 @@
 export type EnvironmentCategory = 'studio' | 'cinematic' | 'lovecraft' | 'nature' | 'urban' | 'fantasy';
 
 export interface EnvironmentPreset {
+  room?: StudioRoomOptions;
   id: string;
   name: string;
   nameNo: string;

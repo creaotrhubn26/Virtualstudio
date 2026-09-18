@@ -26,6 +26,26 @@ import { marketplaceService } from './services/marketplaceService';
 import { getLightById, LIGHT_DATABASE, LightSpec } from './data/lightFixtures';
 import { zipSync, strToU8 } from 'fflate';
 import MP4Box from 'mp4box';
+import { StudioRoom } from './core/rendering/StudioRoom';
+import { StudioSeat } from './core/rendering/StudioSeat';
+import { PoseEditor } from './core/rendering/PoseEditor';
+import { StudioProps } from './core/rendering/StudioProps';
+import { parseProps, type StudioProp } from './services/studioProps';
+import { parseAnimation, sampleAnimation, sequenceDuration, upsertKeyframe,
+  type AnimationCue, type AnimationTrack, type Keyframe } from './services/sceneAnimation';
+import { ALL_MOVES, buildCameraMove, buildLightMove, type MoveDescription } from './services/movePresets';
+import { DEFAULT_LOOK_ID, LIGHTING_LOOKS, fixtureIlluminance, lookById,
+  type LightingLook, type LookFixture } from './services/lightingLooks';
+import { STUDIO_LOCATIONS, clearOfCamera, facingFor, garmentForRole, insideRoom, locationById, locationForRoom,
+  resolvePlacement, type StudioLocation, type StudioMark, type StudioRole } from './services/studioLocations';
+import { ROLE_UNIFORM, StudioUniform } from './core/rendering/StudioUniform';
+import { DEFAULT_BRAND, normaliseBrand, type StudioBrand } from './services/studioBranding';
+import { bodyIdFromModelUrl, defaultWardrobeFor, dressFigure, forgetFigure, garmentLabel, garmentsForBody,
+  loadWardrobeCatalogue, resolveWardrobe, wornGarments, type WardrobeCatalogue } from './services/wardrobeService';
+import { EDITABLE_JOINTS, clampJointQuaternion, eulerFromQuat, quatFromEuler, unitVector } from './core/rendering/poseRig';
+import { StudioWorkspace } from './core/rendering/StudioWorkspace';
+import { createStudioBackdrop, createStudioGrid, studioExposure, shutterSeconds, focalLengthToVerticalFov } from './core/rendering/studioGeometry';
+import { contactHardeningRatio, distanceForIlluminance, fixtureCandela, flashShutterCompensation, isFlashFixture, modifierSizeMetres, sceneIntensityFromCandela, spotConeRadians } from './core/rendering/photometry';
 import { LightingPhysics } from './core/LightingPhysics';
 import type { SceneComposition } from './core/models/sceneComposer';
 import type { ShotList, CastingShot } from './core/models/production';
@@ -319,6 +339,10 @@ interface LightData {
   modelingLightEnabled?: boolean;
   modelingLightIntensity?: number;
   shadowGenerator?: BABYLON.ShadowGenerator;
+  /** Emitting size of the fixture or modifier, metres. Drives penumbra width. */
+  sourceSizeMetres?: number;
+  /** True for strobes and speedlights, whose exposure ignores shutter speed. */
+  isFlash?: boolean;
   beamVisualization?: BABYLON.Mesh;
   useCustomColor?: boolean;
   customColor?: string;
@@ -327,23 +351,16 @@ interface LightData {
   originalDiffuse?: BABYLON.Color3;
 }
 
-interface Keyframe {
-  time: number;
-  value: { x: number; y: number; z: number };
-}
-
-interface AnimationTrack {
-  id: string;
-  nodeId: string;
-  type: 'position' | 'rotation';
-  keyframes: Keyframe[];
-}
+// Keyframe and AnimationTrack come from the animation module, so the shape the
+// document is written in and the shape the studio edits are the same one.
 
 interface AnimationState {
   isPlaying: boolean;
   currentTime: number;
   duration: number;
   tracks: AnimationTrack[];
+  /** Named beats, each played when the photographer places it. */
+  cues: AnimationCue[];
 }
 
 interface CharacterLocomotionState {
@@ -709,6 +726,12 @@ const stripBoneNamespace = (value: string): string => {
 };
 
 class VirtualStudio {
+  public workspace: StudioWorkspace | null = null;
+  public studioRoom: StudioRoom | null = null;
+  private studioSeats = new Map<number, StudioSeat>();
+  private poseEditor: PoseEditor | null = null;
+  private props: StudioProps | null = null;
+  private poseGroundingPending = false;
   private engine: BABYLON.Engine;
   public scene: BABYLON.Scene;
   public camera: BABYLON.ArcRotateCamera;
@@ -720,8 +743,6 @@ class VirtualStudio {
   private renderingPipeline: BABYLON.DefaultRenderingPipeline | null = null;
   private ssrPipeline: BABYLON.SSRRenderingPipeline | null = null;
   private renderMode: 'work' | 'final' = 'work';
-  private finalRenderSamples: number = 0;
-  private finalRenderMaxSamples: number = 128;
   private selectedRotAxes: Set<string> = new Set(['x', 'y', 'z']);
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
@@ -819,7 +840,7 @@ class VirtualStudio {
     aperture: 2.8,
     shutter: '1/125',
     iso: 100,
-    focalLength: 35,
+    focalLength: 50,
     nd: 0,
     whiteBalance: 5600
   };
@@ -836,7 +857,8 @@ class VirtualStudio {
     isPlaying: false,
     currentTime: 0,
     duration: 5,
-    tracks: []
+    tracks: [],
+    cues: []
   };
 
   private animationFrameId: number | null = null;
@@ -1003,18 +1025,18 @@ class VirtualStudio {
     this.camera = new BABYLON.ArcRotateCamera(
       'mainCamera',
       -Math.PI / 2,         // alpha: camera sits at negative Z, looking toward positive Z
-      Math.PI / 3.5,        // beta: ~51° from vertical — shows subject + backdrop comfortably
-      7,                    // radius: wider frame shows the full studio context
-      new BABYLON.Vector3(0, 1.2, 0),  // target: chest/face height
+      Math.PI / 2 - 0.025,  // level taking camera at human eye height
+      4.8,                  // full-body portrait distance
+      new BABYLON.Vector3(0, 1.1, 0),  // portrait composition
       this.scene
     );
     this.camera.attachControl(canvas, true);
     this.camera.lowerRadiusLimit = 2;
     this.camera.upperRadiusLimit = 50;
     this.camera.wheelDeltaPercentage = 0.01;
-    this.camera.minZ = 0.3;
+    this.camera.minZ = 0.05;
     this.camera.maxZ = 200;
-    this.camera.fov = (this.cameraSettings.focalLength / 50) * 0.8;
+    this.camera.fov = focalLengthToVerticalFov(this.cameraSettings.focalLength);
 
     // Smooth camera movement to reduce visual artifacts during motion
     this.camera.inertia = 0.9;
@@ -1104,12 +1126,21 @@ class VirtualStudio {
       this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
       this.focusPeakingEffect = new FocusPeakingEffect(this.scene, this.camera);
       this.physicsBasedDOF = new PhysicsBasedDOF(this.scene, this.camera);
+      // The post-process auto-enables itself by reading window.virtualStudio,
+      // which is not assigned until this constructor has finished — so the
+      // startup check always found nothing, and a camera set to f/2.8 rendered
+      // the far wall as sharply as the face. Tell it what the aperture is.
+      this.applyApertureToDepthOfField();
       this.setupAutoFocusUI();
       this.setupFocusPeakingUI();
 
       console.log('[VirtualStudio] Starting addDefaultMannequin...');
       this.addDefaultMannequin();
       console.log('[VirtualStudio] Setup complete!');
+      // Again at the end: the rendering pipeline is configured after the
+      // post-process is created, and it turns depth of field off on its way
+      // past. Whatever ran last used to win, and it was not the aperture.
+      this.applyApertureToDepthOfField();
 
       // Auto-save every 30 seconds to localStorage
       this.setupAutoSave();
@@ -1447,10 +1478,10 @@ class VirtualStudio {
 
   public resetCamera(): void {
     this.camera.alpha = -Math.PI / 2;
-    this.camera.beta = Math.PI / 3.5;
-    this.camera.radius = 7;
-    this.camera.target = new BABYLON.Vector3(0, 1.2, 0);
-    this.camera.fov = (this.cameraSettings?.focalLength ?? 50) / 50 * 0.8;
+    this.camera.beta = Math.PI / 2 - 0.025;
+    this.camera.radius = 4.8;
+    this.camera.target = new BABYLON.Vector3(0, 1.1, 0);
+    this.camera.fov = focalLengthToVerticalFov(this.cameraSettings.focalLength);
   }
 
   public toggleWalls(visible?: boolean): boolean {
@@ -1517,13 +1548,41 @@ class VirtualStudio {
     }
   }
 
+    /**
+     * Contact-hardening (PCSS) shadows whose penumbra follows the fixture's
+     * emitting size, so a 150 cm octabox wraps and a snoot cuts.
+     *
+     * Every shadow generator for a studio light goes through here. Rebuilding
+     * one with plain PCF would silently discard the modifier's softness, which
+     * is what the old per-fixture `blurKernel` values did — Babylon only
+     * applies that kernel to the blur-exponential filters.
+     */
+    public configureStudioShadowSoftness(
+      generator: BABYLON.ShadowGenerator,
+      lightData: Pick<LightData, 'light'> & Partial<Pick<LightData, 'name' | 'sourceSizeMetres'>>,
+    ): void {
+      generator.useContactHardeningShadow = true;
+      generator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM;
+      const light = lightData.light;
+      if (!(light instanceof BABYLON.SpotLight)) return;
+      if (light.shadowMaxZ === undefined) {
+        light.shadowMinZ = 0.2;
+        light.shadowMaxZ = 20;
+      }
+      const sourceSize = lightData.sourceSizeMetres
+        ?? modifierSizeMetres(lightData.name ?? '', undefined);
+      generator.contactHardeningLightSizeUVRatio = contactHardeningRatio(
+        sourceSize,
+        light.angle,
+        light.shadowMaxZ,
+      );
+    }
+
     public updateShadowMaps(): void {
       this.lights.forEach((lightData) => {
         if (!lightData.shadowGenerator && lightData.light instanceof BABYLON.SpotLight) {
           lightData.shadowGenerator = new BABYLON.ShadowGenerator(2048, lightData.light);
-          lightData.shadowGenerator.usePercentageCloserFiltering = true;
-          lightData.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-          lightData.shadowGenerator.blurKernel = 64;
+          this.configureStudioShadowSoftness(lightData.shadowGenerator, lightData);
         }
         if (lightData.shadowGenerator) {
           this.scene.meshes.filter(m => m.isVisible && m !== lightData.mesh).forEach(m => {
@@ -1535,14 +1594,21 @@ class VirtualStudio {
       console.log('[Shadow] Shadow maps updated');
     }
 
+    /**
+     * Recompute the ambient fill after the surroundings change.
+     *
+     * This used to set the intensity itself, from the volume of the scene's
+     * bounding box: a big room got 0.8, a small one 0.3. Two things were wrong
+     * with that. Room size is not a lighting model — a cathedral at night is
+     * darker than a cupboard with a lamp in it — and because this ran last, it
+     * overrode the fill that had been dimmed against the rig. An evening
+     * pizzeria was rendered with the ambient of a sixteen-metre studio, and
+     * every ratio the look was built to give was flattened at the last step.
+     *
+     * The rig decides the fill now, and this only asks for it to be redone.
+     */
     public recalculateAmbientLighting(): void {
-      const bounds = this.getSceneBounds();
-      const volume = (bounds.max.x - bounds.min.x) * (bounds.max.y - bounds.min.y) * (bounds.max.z - bounds.min.z);
-      const targetIntensity = Math.max(0.3, Math.min(0.8, volume / 1000));
-      if (this.ambientLight) {
-        this.ambientLight.intensity = targetIntensity;
-      }
-      console.log('[Ambient] Lighting recalculated. Intensity:', targetIntensity.toFixed(2));
+      this.updateAmbientLightIntensity();
     }
 
     // Get bounding box of all visible scene geometry
@@ -1584,9 +1650,6 @@ class VirtualStudio {
     // Regenerate shadow maps for all lights (Phase 3: Shadow Map Auto-Update)
     private regenerateShadowMaps(): void {
       this.lights.forEach((lightData) => {
-        // Save existing kernel before disposing so we can restore it
-        const savedKernel = lightData.shadowGenerator?.blurKernel ?? 64;
-
         // Dispose existing shadow generator if present
         if (lightData.shadowGenerator) {
           const shadowMap = lightData.shadowGenerator.getShadowMap();
@@ -1600,10 +1663,7 @@ class VirtualStudio {
         // Create new shadow generator for spot/directional lights
         if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.DirectionalLight) {
           const shadowGenerator = new BABYLON.ShadowGenerator(2048, lightData.light);
-          shadowGenerator.usePercentageCloserFiltering = true;
-          shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-          // Restore previously tuned kernel (softbox=64, octabox=96, snoot=4, etc.)
-          shadowGenerator.blurKernel = savedKernel;
+          this.configureStudioShadowSoftness(shadowGenerator, lightData);
 
           // Add all visible meshes as shadow casters
           this.scene.meshes.forEach(mesh => {
@@ -1684,7 +1744,11 @@ class VirtualStudio {
         }
       }
 
-      // Keep SSR aligned with preset intent.
+      // Allocate screen-space reflections only when an operator requests them.
+      if (preset.ssrEnabled === true && !this.ssrPipeline) {
+        this.ssrPipeline = new BABYLON.SSRRenderingPipeline('ssrPipeline', this.scene,
+          [this.camera, ...(this.workspace ? [this.workspace.navigationCamera] : [])]);
+      }
       if (this.ssrPipeline) {
         if (preset.ssrEnabled === false) {
           this.ssrPipeline.strength = 0;
@@ -1767,7 +1831,8 @@ class VirtualStudio {
           angle: number;
           exponent: number;
           target: BABYLON.Vector3;
-          blurKernel: number;
+          /** Emitting size of the modifier, metres — sets the penumbra width. */
+          sourceSizeMetres: number;
         }
       ): void => {
         if (!entry) return;
@@ -1792,10 +1857,9 @@ class VirtualStudio {
 
         this.aimLightAt(lightId, config.target);
 
+        data.sourceSizeMetres = config.sourceSizeMetres;
         if (data.shadowGenerator) {
-          data.shadowGenerator.usePercentageCloserFiltering = true;
-          data.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-          data.shadowGenerator.blurKernel = config.blurKernel;
+          this.configureStudioShadowSoftness(data.shadowGenerator, data);
         }
 
         if (data.mesh.material instanceof BABYLON.StandardMaterial) {
@@ -1817,7 +1881,7 @@ class VirtualStudio {
         angle: Math.PI / 3,   // 60° half-angle, softbox-style wide field
         exponent: 2.0,         // near-uniform illumination across panel
         target: new BABYLON.Vector3(0, 1.3, 0),
-        blurKernel: 64,        // softbox: broad soft shadows
+        sourceSizeMetres: 0.9,  // 90 cm softbox: broad soft shadows
       });
 
       applyLightProfile(fillEntry, {
@@ -1826,7 +1890,7 @@ class VirtualStudio {
         angle: Math.PI / 2.5, // 72° — octabox-style very wide
         exponent: 1.5,         // near-uniform, maximum coverage
         target: new BABYLON.Vector3(0, 1.2, 0),
-        blurKernel: 96,        // octabox: maximum beauty softness
+        sourceSizeMetres: 1.2,  // 120 cm octabox: maximum beauty softness
       });
 
       applyLightProfile(rimEntry, {
@@ -1835,7 +1899,7 @@ class VirtualStudio {
         angle: Math.PI / 5,   // 36° — tighter, edge-defining beam
         exponent: 3.5,         // slight centre hotspot for crisp edge
         target: new BABYLON.Vector3(0, 1.45, 0),
-        blurKernel: 32,        // rim: some shadow definition
+        sourceSizeMetres: 0.3,  // 30 cm stripbox: keeps the rim edge defined
       });
 
       // Keep extra lights from flattening facial contrast.
@@ -1941,7 +2005,12 @@ class VirtualStudio {
     /**
      * Phase 4.3: Serialize current scene state to SceneComposition format
      */
-    public getCurrentSceneAsPreset(): SceneComposition {
+    /** The scene graph as the application sees it, for a test that needs to look. */
+  public sceneNodes(): { id: string; type: string; name: string }[] {
+    return useAppStore.getState().scene.map(node => ({ id: node.id, type: node.type, name: node.name }));
+  }
+
+  public getCurrentSceneAsPreset(): SceneComposition {
       const envState = environmentService.getState();
       const renderState = useRenderingStore.getState();
 
@@ -1953,15 +2022,22 @@ class VirtualStudio {
         updatedAt: new Date().toISOString(),
 
         // Serialize lights
-        lights: Array.from(this.lights.values()).map(light => ({
-          id: light.name,
+        lights: Array.from(this.lights.entries()).map(([id, light]) => ({
+          id,
+          fixtureId: light.type,
+          aimTarget: (light.mesh as any)._aimTarget?.asArray() as [number, number, number] | undefined,
+          baseIntensity: light.baseIntensity,
+          powerMultiplier: light.powerMultiplier,
+          enabled: light.light.isEnabled(),
+          beamAngle: light.light instanceof BABYLON.SpotLight ? light.light.angle : undefined,
+          exponent: light.light instanceof BABYLON.SpotLight ? light.light.exponent : undefined,
           name: light.name,
           type: light.light.getTypeID() === BABYLON.Light.LIGHTTYPEID_SPOTLIGHT ? 'spot' : 'directional',
-          position: [light.mesh.position.x, light.mesh.position.y, light.mesh.position.z] as [number, number, number],
+          position: [light.mesh.position.x, (light.mesh as any)._lightHeadHeight ?? light.mesh.position.y, light.mesh.position.z] as [number, number, number],
           rotation: [light.mesh.rotation.x, light.mesh.rotation.y, light.mesh.rotation.z] as [number, number, number],
           scale: [light.mesh.scaling.x, light.mesh.scaling.y, light.mesh.scaling.z] as [number, number, number],
           cct: light.cct || 5600,
-          intensity: light.intensity,
+          intensity: light.light.intensity,
           modifier: light.modifier || 'none',
           visible: light.mesh.isVisible,
           specs: light.specs
@@ -1981,19 +2057,38 @@ class VirtualStudio {
           locked: false
         } as SceneNode)),
 
-        // Serialize characters/actors
-        actors: Array.from(this.sceneState.characters.values()).map(char => ({
-          id: char.id,
-          type: 'model' as const,
-          name: char.name,
-          transform: {
-            position: [char.mesh.position.x, char.mesh.position.y, char.mesh.position.z] as [number, number, number],
-            rotation: [char.mesh.rotation.x, char.mesh.rotation.y, char.mesh.rotation.z] as [number, number, number],
-            scale: [char.mesh.scaling.x, char.mesh.scaling.y, char.mesh.scaling.z] as [number, number, number]
-          },
-          visible: char.mesh.isVisible,
-          locked: false
-        } as SceneNode)),
+        // Modern characters live in the hierarchy store; include their source and pose.
+        actors: useAppStore.getState().scene.filter(node => node.type === 'model').flatMap(node => {
+          const mesh = this.scene.getMeshByName(node.id);
+          if (!mesh?.metadata?.sourceModelUrl) return [];
+          return [{ ...node, transform: {
+            position: mesh.position.asArray() as [number, number, number],
+            rotation: mesh.rotation.asArray() as [number, number, number],
+            scale: mesh.scaling.asArray() as [number, number, number],
+          }, userData: { ...node.userData, modelUrl: mesh.metadata.sourceModelUrl,
+            heightMeters: mesh.metadata.heightMeters, studioPose: mesh.metadata.studioPose,
+            // Joint edits on top of the clip. Absent when the figure is still
+            // in a plain pose, so old documents stay byte-identical.
+            jointRotations: this.getEditedJointRotations(mesh),
+            // What the figure has on, so it opens in the same part it was cast in.
+            wardrobe: wornGarments(mesh) },
+          visible: mesh.isEnabled() }];
+        }),
+
+        // Movement over time. A scenario is rarely a still -- something
+        // arrives, a door opens -- and without this none of it survived
+        // being saved.
+        animation: {
+          duration: Math.max(this.animationState.duration, sequenceDuration(this.animationState)),
+          tracks: this.animationState.tracks,
+          cues: this.animationState.cues,
+        },
+
+        // Everything the photographer has taken hold of: claimed studio
+        // objects keep only their key and transform, imported models keep
+        // where they came from. A separate key from the older `props`, which
+        // belongs to the asset-library loader and means something else.
+        studioProps: this.props?.props ?? [],
 
         // Serialize camera
         cameras: [{
@@ -2006,16 +2101,11 @@ class VirtualStudio {
         }],
 
         // Camera settings
-        cameraSettings: {
-          aperture: 2.8,
-          shutter: '1/50',
-          iso: 800,
-          focalLength: 50,
-          nd: 0
-        },
+        cameraSettings: { ...this.cameraSettings },
 
         // Environment state
         environment: {
+          room: envState.room,
           walls: Object.entries(envState.walls).map(([key, wall]) => ({
             id: key,
             assetId: wall.materialId,
@@ -2074,15 +2164,27 @@ class VirtualStudio {
               lightData.position[1],
               lightData.position[2]
             );
-            await this.addLight(lightData.name, position);
+            const loadedId = await this.addLight(lightData.fixtureId || lightData.name, position);
 
-            // Apply light properties
-            const light = this.lights.get(lightData.id);
+            // Runtime IDs are newly allocated on load.
+            const light = this.lights.get(loadedId);
             if (light) {
               light.mesh.rotation.set(lightData.rotation[0], lightData.rotation[1], lightData.rotation[2]);
-              light.mesh.scaling.set(lightData.scale[0], lightData.scale[1], lightData.scale[2]);
+              light.mesh.scaling.set(lightData.scale?.[0] ?? 1, lightData.scale?.[1] ?? 1, lightData.scale?.[2] ?? 1);
+              light.name = lightData.name;
               light.intensity = lightData.intensity;
+              light.baseIntensity = lightData.baseIntensity ?? lightData.intensity;
+              light.powerMultiplier = lightData.powerMultiplier ?? 1;
+              light.light.intensity = lightData.intensity;
+              if (light.light instanceof BABYLON.SpotLight) {
+                light.light.angle = lightData.beamAngle ?? light.light.angle;
+                light.light.exponent = lightData.exponent ?? light.light.exponent;
+              }
+              light.light.setEnabled(lightData.enabled ?? true);
               light.cct = lightData.cct;
+              light.light.diffuse = this.cctToColor(lightData.cct);
+              light.light.specular = light.light.diffuse.clone();
+              if (lightData.aimTarget) this.aimLightAt(loadedId, BABYLON.Vector3.FromArray(lightData.aimTarget));
               if (lightData.modifier) light.modifier = lightData.modifier;
               light.mesh.isVisible = lightData.visible;
               // Note: Light color is set during creation based on CCT
@@ -2133,6 +2235,30 @@ class VirtualStudio {
         for (const actorData of preset.actors) {
           try {
             const actorNode = actorData as any; // Type assertion for legacy data
+            if (actorData.userData?.modelUrl) {
+              const data = actorData.userData;
+              const savedWardrobe = Array.isArray(data.wardrobe) ? (data.wardrobe as string[]) : undefined;
+              await this.loadCharacterModel(String(data.modelUrl), actorData.name, '', Number(data.heightMeters || 1.7) / 1.7, { additive: true, wardrobe: savedWardrobe });
+              const mesh = this.characterMesh;
+              if (mesh) {
+                if (data.studioPose) this.applyStudioPose(data.studioPose as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
+                // Joint edits sit on top of the clip, so they are replayed
+                // after it, once the clip has written every rotation.
+                const joints = data.jointRotations as Record<string, { x: number; y: number; z: number }> | undefined;
+                if (joints) this.afterNextFrame(() => this.applyJointRotations(mesh, joints));
+                const restore = () => {
+                  mesh.position.copyFromFloats(...actorData.transform.position);
+                  mesh.rotation.copyFromFloats(...actorData.transform.rotation);
+                  mesh.scaling.copyFromFloats(...actorData.transform.scale);
+                  mesh.setEnabled(actorData.visible !== false);
+                  mesh.computeWorldMatrix(true);
+                  this.syncCharacterNodeTransform(mesh, true);
+                };
+                restore();
+                this.afterNextFrame(restore);
+              }
+              continue;
+            }
             if (actorNode.assetId) {
               await this.loadAvatarModel(actorNode.assetId, { name: actorNode.name });
 
@@ -2151,6 +2277,25 @@ class VirtualStudio {
         }
       }
 
+      // The timeline, restored before the props it moves so that nothing plays
+      // against a scene that is not built yet.
+      const animation = parseAnimation((preset as unknown as Record<string, unknown>).animation);
+      this.animationState.tracks = animation.tracks;
+      this.animationState.cues = animation.cues;
+      this.animationState.duration = animation.duration || this.animationState.duration;
+      this.animationState.currentTime = 0;
+
+      // Objects the photographer had taken hold of, restored after the actors.
+      // A claimed object may be one the studio derives from a figure -- the
+      // portrait chair is built from the seated pose -- so there is nothing to
+      // hand back until the figure is on set and has settled into its pose.
+      await this.restoreStudioProps(preset);
+
+      if (preset.cameraSettings) {
+        Object.assign(this.cameraSettings, preset.cameraSettings);
+        this.setFocalLength(this.cameraSettings.focalLength);
+        this.updateSceneBrightness();
+      }
       // Apply camera
       if (preset.cameras && preset.cameras.length > 0) {
         const camData = preset.cameras[0];
@@ -2163,6 +2308,7 @@ class VirtualStudio {
 
       // Apply environment
       if (preset.environment) {
+        environmentService.setStudioRoom(preset.environment.room || { type: 'none', furnishings: true, practicals: true });
         // Apply walls
         if (preset.environment.walls && preset.environment.walls.length > 0) {
           const wall = preset.environment.walls[0];
@@ -2181,7 +2327,7 @@ class VirtualStudio {
           if (this.ambientLight) {
             this.ambientLight.intensity = atm.ambientIntensity;
           }
-          this.scene.clearColor = BABYLON.Color4.FromHexString(atm.clearColor + 'FF');
+          this.scene.clearColor = BABYLON.Color4.FromHexString(atm.clearColor.length === 7 ? atm.clearColor + 'FF' : atm.clearColor);
         }
       }
 
@@ -2211,9 +2357,7 @@ class VirtualStudio {
         if (settings.focalLength) {
           // Convert focal length to FOV approximation
           // FOV (radians) ≈ 2 * atan(sensor_width / (2 * focal_length))
-          // Assuming 35mm sensor width
-          const sensorWidth = 36; // mm
-          const fov = 2 * Math.atan(sensorWidth / (2 * settings.focalLength));
+          const fov = focalLengthToVerticalFov(settings.focalLength);
           this.camera.fov = fov;
         }
       }
@@ -2240,8 +2384,7 @@ class VirtualStudio {
       // Set focal length from shot
       const shotExt = shot as CastingShot & { focalLength?: number };
       if (shotExt.focalLength) {
-        const sensorWidth = 36; // mm
-        const fov = 2 * Math.atan(sensorWidth / (2 * shotExt.focalLength));
+        const fov = focalLengthToVerticalFov(shotExt.focalLength);
         this.camera.fov = fov;
       }
 
@@ -2312,7 +2455,14 @@ class VirtualStudio {
         this.removePropNodeById(id, false);
       });
 
-      // Remove all characters
+      // Remove imported characters, including those registered through the hierarchy.
+      for (const node of [...useAppStore.getState().scene]) {
+        const mesh = this.scene.getMeshByName(node.id);
+        if (!mesh?.metadata?.sourceModelUrl) continue;
+        this.characterMesh = mesh;
+        this.characterModelId = node.id;
+        this.removeCharacterModel();
+      }
       this.sceneState.characters.forEach((char, _id) => {
         char.mesh.dispose();
       });
@@ -2465,12 +2615,6 @@ class VirtualStudio {
           console.log('[Export] Exporting', meshesToExport.length, 'meshes');
 
           // Use export service to generate file
-          return await exportStore.exportScene(sceneData.name, format);
-        }
-
-        // USD exports
-        if (format === 'usda' || format === 'usdz') {
-          console.log('[Export] USD export - using export service');
           return await exportStore.exportScene(sceneData.name, format);
         }
 
@@ -2706,7 +2850,7 @@ class VirtualStudio {
     const category = options.category || 'bakgrunn';
 
     // Create backdrop based on category/type
-    if (category === 'bakgrunn' || backdropId.includes('seamless') || backdropId.includes('background')) {
+    if (!backdropId.includes('cove') && !backdropId.includes('cyclorama') && (category === 'bakgrunn' || backdropId.includes('seamless') || backdropId.includes('background'))) {
       // Create a cyclorama/seamless paper backdrop
       this.createSeamlessBackdrop(backdropId, scale, options.receiveShadow !== false);
     } else if (backdropId.includes('cove') || backdropId.includes('cyclorama')) {
@@ -2724,135 +2868,11 @@ class VirtualStudio {
   }
 
   private createSeamlessBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
-    const W = 9 * scale;       // total width — wide for colored gel gradients
-    const H = 5.5 * scale;     // wall height
-    const R = 2.2 * scale;     // curve radius (floor-to-wall transition)
-    const D = 6 * scale;       // floor depth in front of curve
-    const Z = 8;               // back wall at POSITIVE Z (behind the subject, in front of rearWall at Z=10)
-
-    const backdropMat = new BABYLON.PBRMaterial('backdropMat_' + backdropId, this.scene);
-    backdropMat.albedoColor = new BABYLON.Color3(0.82, 0.82, 0.84);   // neutral cool-grey
-    backdropMat.roughness = 0.55;   // semi-gloss so coloured gels show specular hotspots
-    backdropMat.metallic = 0.02;    // hint of metallic keeps the specular physically correct
-    backdropMat.backFaceCulling = false;
-    backdropMat.maxSimultaneousLights = 8;  // receive all studio lights, not just 4
-
-    // Root node at origin — all children keep their own world-space positions
-    const rootNode = new BABYLON.Mesh('backdropRoot_' + backdropId, this.scene);
-    rootNode.isVisible = false;
-    rootNode.position.set(0, 0, 0);
-
-    // 1. Back wall — vertical flat plane at Z, bottom edge at y=R, top at y=R+H
-    const backWall = BABYLON.MeshBuilder.CreatePlane('backdropWall_' + backdropId, {
-      width: W, height: H,
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, this.scene);
-    backWall.position.set(0, R + H / 2, Z);
-    backWall.material = backdropMat;
-    backWall.receiveShadows = receiveShadow;
-    backWall.parent = rootNode;
-
-    // 2. Smooth quarter-circle cove: rises from floor (y=0, z=Z-R) to wall base (y=R, z=Z)
-    //    Parameterisation: t ∈ [0, π/2]
-    //      t=0  → floor tangent point  (y=0,   z=Z-R)
-    //      t=π/2 → wall tangent point  (y=R,   z=Z)
-    const segs = 32;
-    const leftPath: BABYLON.Vector3[] = [];
-    const rightPath: BABYLON.Vector3[] = [];
-    for (let i = 0; i <= segs; i++) {
-      const t = (i / segs) * (Math.PI / 2);
-      const y = R * Math.sin(t);        // 0 → R (rising from floor to wall base)
-      const z = Z - R * Math.cos(t);   // Z-R → Z (approaching back wall)
-      leftPath.push(new BABYLON.Vector3(-W / 2, y, z));
-      rightPath.push(new BABYLON.Vector3( W / 2, y, z));
-    }
-    const cove = BABYLON.MeshBuilder.CreateRibbon('backdropCove_' + backdropId, {
-      pathArray: [leftPath, rightPath],
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, this.scene);
-    cove.material = backdropMat;
-    cove.receiveShadows = receiveShadow;
-    cove.parent = rootNode;
-
-    // 3. Floor extension — from the cove front (Z-R) toward the camera (-Z direction)
-    const floorExt = BABYLON.MeshBuilder.CreateGround('backdropFloorExt_' + backdropId, {
-      width: W, height: D, subdivisions: 4
-    }, this.scene);
-    floorExt.position.set(0, 0.002, Z - R - D / 2);   // slightly above main ground to prevent z-fight
-    floorExt.material = backdropMat;
-    floorExt.receiveShadows = receiveShadow;
-    floorExt.parent = rootNode;
-
-    this.currentBackdropMesh = rootNode;
-    console.log(`Infinity-cove backdrop created: ${backdropId}  (Z=${Z}, W=${W}, R=${R}, D=${D})`);
+    this.currentBackdropMesh = createStudioBackdrop(this.scene, backdropId, scale, receiveShadow);
   }
 
   private createCycloramaBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
-    // Create a professional cyclorama (infinity cove)
-    const width = 10 * scale;
-    const height = 5 * scale;
-    const curveRadius = 2 * scale;
-
-    // Create back wall — at positive Z (behind subject, visible to camera at negative Z)
-    const backWall = BABYLON.MeshBuilder.CreatePlane('cycloBackWall', {
-      width: width,
-      height: height - curveRadius,
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, this.scene);
-    backWall.position.set(0, (height - curveRadius) / 2 + curveRadius, 8);
-
-    // Create curved transition: rises from floor (y=0, z=8-R) to wall base (y=R, z=8)
-    const pathPoints: BABYLON.Vector3[][] = [];
-    const segments = 16;
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * (Math.PI / 2);
-      const y = curveRadius * Math.sin(angle);
-      const z = 8 - curveRadius * Math.cos(angle);
-      pathPoints.push([
-        new BABYLON.Vector3(-width / 2, y, z),
-        new BABYLON.Vector3(width / 2, y, z)
-      ]);
-    }
-
-    const paths: BABYLON.Vector3[][] = [];
-    for (let i = 0; i < pathPoints.length; i++) {
-      paths.push(pathPoints[i]);
-    }
-
-    const curve = BABYLON.MeshBuilder.CreateRibbon('cycloCurve', {
-      pathArray: paths,
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, this.scene);
-
-    // Create floor
-    const floorDepth = 8 + curveRadius;
-    const floor = BABYLON.MeshBuilder.CreateGround('cycloFloor', {
-      width: width,
-      height: floorDepth
-    }, this.scene);
-    // Floor center: between cove front (8-R) and camera-side edge (8-R-floorDepth)
-    floor.position.set(0, 0.002, (8 - curveRadius) - floorDepth / 2);
-
-    // Create material
-    const cycloMat = new BABYLON.StandardMaterial('cycloMat', this.scene);
-    cycloMat.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95); // White cove
-    cycloMat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-    cycloMat.backFaceCulling = false;
-
-    backWall.material = cycloMat;
-    curve.material = cycloMat;
-    floor.material = cycloMat.clone('cycloFloorMat');
-
-    backWall.receiveShadows = receiveShadow;
-    curve.receiveShadows = receiveShadow;
-    floor.receiveShadows = receiveShadow;
-
-    // Parent all parts to backWall for easy removal
-    curve.parent = backWall;
-    floor.parent = backWall;
-
-    this.currentBackdropMesh = backWall;
-    console.log('Cyclorama backdrop created:', backdropId);
+    this.currentBackdropMesh = createStudioBackdrop(this.scene, backdropId, scale, receiveShadow, true);
   }
 
   public removeBackdrop(): void {
@@ -2861,7 +2881,7 @@ class VirtualStudio {
       this.currentBackdropMesh.getChildMeshes().forEach(child => {
         child.dispose();
       });
-      this.currentBackdropMesh.dispose();
+      this.currentBackdropMesh.dispose(false, true);
       this.currentBackdropMesh = null;
       console.log('Backdrop removed');
     }
@@ -2964,23 +2984,23 @@ class VirtualStudio {
     this.renderingPipeline.imageProcessing.toneMappingEnabled = true;
     this.renderingPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
 
-    // Exposure / contrast — slight lift for cleaner highlights; more punch in mid-tones
-    this.renderingPipeline.imageProcessing.exposure = 1.08;
-    this.renderingPipeline.imageProcessing.contrast = 1.28;
+    // Neutral exposure and contrast for judging the lighting setup
+    this.renderingPipeline.imageProcessing.exposure = 0.8;
+    this.renderingPipeline.imageProcessing.contrast = 1.0;
 
-    // Vignette — moderate oval that draws the eye to the subject without crushing edges
-    this.renderingPipeline.imageProcessing.vignetteEnabled = true;
+    // Artistic effects are opt-in; retain their settings for rendering presets
+    this.renderingPipeline.imageProcessing.vignetteEnabled = false;
     this.renderingPipeline.imageProcessing.vignetteWeight = 2.2;
     this.renderingPipeline.imageProcessing.vignetteStretch = 0.5;
     this.renderingPipeline.imageProcessing.vignetteColor = new BABYLON.Color4(0, 0, 0, 0);
     this.renderingPipeline.imageProcessing.vignetteBlendMode = BABYLON.ImageProcessingConfiguration.VIGNETTEMODE_MULTIPLY;
 
-    // High-quality anti-aliasing (FXAA + MSAA 8x)
+    // FXAA plus 4x MSAA for interactive work
     this.renderingPipeline.fxaaEnabled = true;
-    this.renderingPipeline.samples = 8;
+    this.renderingPipeline.samples = 4;
 
-    // Bloom — wide, soft halo so gel colours spill across the backdrop naturally
-    this.renderingPipeline.bloomEnabled = true;
+    // Optional image effect
+    this.renderingPipeline.bloomEnabled = false;
     this.renderingPipeline.bloomThreshold = 0.38;   // lower = more gel areas bloom
     this.renderingPipeline.bloomWeight = 0.65;       // stronger bloom for vivid gels
     this.renderingPipeline.bloomKernel = 192;        // wider kernel = softer halo
@@ -2989,46 +3009,20 @@ class VirtualStudio {
     // Depth of Field - DISABLED: Using custom PhysicsBasedDOF instead
     this.renderingPipeline.depthOfFieldEnabled = false;
 
-    // Film grain — very subtle, animated for photorealistic film texture
-    this.renderingPipeline.grainEnabled = true;
+    // Optional image effect
+    this.renderingPipeline.grainEnabled = false;
     this.renderingPipeline.grain.intensity = 1.5;   // reduced from 3 — cleaner, more controlled
     this.renderingPipeline.grain.animated = true;
 
-    // Chromatic aberration — enabled at a gentle amount for lens realism
-    this.renderingPipeline.chromaticAberrationEnabled = true;
+    // Optional image effect
+    this.renderingPipeline.chromaticAberrationEnabled = false;
     this.renderingPipeline.chromaticAberration.aberrationAmount = 6;  // subtle
 
-    // Sharpen — strong enough for crisp hair and fabric detail without ringing
-    this.renderingPipeline.sharpenEnabled = true;
+    // Optional image effect
+    this.renderingPipeline.sharpenEnabled = false;
     this.renderingPipeline.sharpen.edgeAmount = 0.45;
 
-    // Setup SSR (Screen-Space Reflections) for realistic reflections
-    try {
-      this.ssrPipeline = new BABYLON.SSRRenderingPipeline(
-        'ssrPipeline',
-        this.scene,
-        [this.camera],
-        false, // forceGeometryBuffer
-        BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE
-      );
-
-      // SSR settings — higher quality for polished floor/backdrop reflections
-      this.ssrPipeline.strength = 1.0;
-      this.ssrPipeline.reflectionSpecularFalloffExponent = 2;
-      this.ssrPipeline.step = 0.5;              // finer steps → less stair-stepping
-      this.ssrPipeline.maxSteps = 128;          // more steps → longer reflections
-      this.ssrPipeline.maxDistance = 50;
-      this.ssrPipeline.thickness = 0.35;        // tighter → crisper contact reflections
-      this.ssrPipeline.roughnessFactor = 0.08;  // tighter roughness gate
-      this.ssrPipeline.selfCollisionNumSkip = 2;
-      this.ssrPipeline.enableSmoothReflections = true;
-      this.ssrPipeline.blurDispersionStrength = 0.02; // less blur = cleaner floor mirror
-      this.ssrPipeline.enableAutomaticThicknessComputation = false;
-
-      console.log('SSR pipeline enabled');
-    } catch (e) {
-      console.warn('SSR not available:', e);
-    }
+    // Reflections and artistic effects remain opt-in through rendering presets.
 
     // Dispatch event to notify UI about rendering pipeline
     window.dispatchEvent(new CustomEvent('vs-rendering-pipeline-ready', {
@@ -3061,14 +3055,13 @@ class VirtualStudio {
     this.renderMode = mode;
 
     if (mode === 'final') {
-      // Final Mode: Higher quality, progressive rendering
+      // Final Mode: Higher antialiasing quality
       if (this.renderingPipeline) {
         this.renderingPipeline.samples = 8;
-        this.renderingPipeline.bloomEnabled = true;
-        this.renderingPipeline.grainEnabled = true;
+        this.renderingPipeline.bloomEnabled = false;
+        this.renderingPipeline.grainEnabled = false;
       }
-      this.finalRenderSamples = 0;
-      console.log('Switched to Final Mode - Progressive rendering enabled');
+      console.log('Switched to Final Mode - higher MSAA quality');
     } else {
       // Work Mode: Balanced quality/performance
       if (this.renderingPipeline) {
@@ -3079,7 +3072,7 @@ class VirtualStudio {
     }
 
     window.dispatchEvent(new CustomEvent('vs-render-mode-changed', {
-      detail: { mode, samples: this.finalRenderSamples }
+      detail: { mode, samples: this.renderingPipeline?.samples ?? 1 }
     }));
   }
 
@@ -5433,14 +5426,7 @@ class VirtualStudio {
     ground.material = groundMat;
     ground.receiveShadows = true;
 
-    this.gridMesh = BABYLON.MeshBuilder.CreateGround('grid', { width: 20, height: 20, subdivisions: 20 }, this.scene);
-    const gridMat = new BABYLON.StandardMaterial('gridMat', this.scene);
-    gridMat.wireframe = true;
-    gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.25, 0.35);
-    gridMat.alpha = 0.5;
-    gridMat.zOffset = -1; // Prevent z-fighting with ground
-    this.gridMesh.material = gridMat;
-    this.gridMesh.position.y = 0.01;
+    this.gridMesh = createStudioGrid(this.scene);
 
     const wallMat = new BABYLON.StandardMaterial('wallMat', this.scene);
     wallMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
@@ -5476,11 +5462,14 @@ class VirtualStudio {
 
     // Default 3-point lighting setup with Aputure 300D lights
     // IMPORTANT: Must await this to ensure lights are fully loaded before continuing
-    await this.setupDefaultLighting();
+    // The rig is built once the default figure is on set; see addDefaultMannequin.
 
     console.log('[VirtualStudio] Default lighting setup complete. Lights loaded:', this.lights.size);
 
       // Initialize and subscribe to environment service for wall/floor/ambient lighting sync
+      this.studioRoom = new StudioRoom(this.scene, () => [...this.lights.values()].flatMap(data => data.shadowGenerator ? [data.shadowGenerator] : []));
+      this.scene.onDisposeObservable.addOnce(() => this.studioRoom?.clear());
+      this.startIdleBreathing();
       environmentService.initializeDefaults();
       environmentService.subscribe((state) => {
         // Update scene walls, floors, and lighting when environment changes
@@ -5490,6 +5479,74 @@ class VirtualStudio {
       console.log('[VirtualStudio] Environment service initialized and subscribed');
 
     this.setupPhysicalCameraProps();
+    const renderCanvas = this.engine.getRenderingCanvas();
+    if (renderCanvas) this.workspace = new StudioWorkspace(this.scene, this.camera, renderCanvas, this.renderingPipeline, () => this.cameraSettings, {
+      load: model => this.loadStudioCharacter(model),
+      pose: pose => this.applyStudioPose(pose),
+      editPose: enabled => this.setPoseEditing(enabled),
+      wardrobe: () => this.getWardrobeOptions(),
+      wearing: () => this.getCharacterWardrobe(),
+      wear: items => this.setCharacterWardrobe(items),
+      moves: () => this.availableMoves(),
+      addMove: (move, options) => this.addMove(move, options),
+      sequence: () => this.sequence(),
+      setCueEnabled: (id, enabled) => this.setCueEnabled(id, enabled),
+      setCueStart: (id, start) => this.setCueStart(id, start),
+      removeCue: id => this.removeCue(id),
+      locations: () => this.availableLocations(),
+      brand: () => this.currentBrand(),
+      setBrand: brand => this.setBrand(brand),
+      applyLocation: id => this.applyLocation(id),
+      currentLocation: () => this.currentLocation(),
+      marks: () => this.availableMarks(),
+      rigVisible: () => this.isRigVisible(),
+      showRig: visible => this.setRigVisible(visible),
+      standOn: id => this.standOnMark(id),
+      staff: () => this.staffLocation(),
+      looks: () => this.availableLooks(),
+      applyLook: id => this.applyLook(id),
+      currentLook: () => this.currentLook(),
+      /**
+       * Stand up, or sit down again.
+       *
+       * The pose menu could always reach both, but "Sitt på portrettstol" is
+       * a setting and standing up is an action. From a chair this is the only
+       * move there is, so it gets its own button.
+       */
+      stand: () => {
+        const mesh = this.getPrimaryCharacterMesh();
+        const seated = mesh?.metadata?.studioPose === 'StudioSeated';
+        this.seatedWalkNoticed = false;
+        const next = seated ? (this.lastStandingPose ?? 'StudioStand') : 'StudioSeated';
+        if (!seated) this.lastStandingPose = (mesh?.metadata?.studioPose as string) ?? 'StudioStand';
+        return this.applyStudioPose(next as 'StudioStand' | 'StudioPortrait' | 'StudioSeated');
+      },
+      seated: () => this.getPrimaryCharacterMesh()?.metadata?.studioPose === 'StudioSeated',
+      frame: portrait => {
+        const mesh = this.getPrimaryCharacterMesh();
+        const position = mesh?.getAbsolutePosition() || BABYLON.Vector3.Zero();
+        const eyes = mesh?.getChildMeshes().find(child => child.name === 'Eyes');
+        const seated = mesh?.metadata?.studioPose === 'StudioSeated';
+        const eyeHeight = eyes?.getBoundingInfo().boundingBox.centerWorld.y || 1.6;
+        this.setFocalLength(portrait ? 85 : 50);
+        this.camera.setTarget(new BABYLON.Vector3(position.x, portrait ? eyeHeight - .12 : seated ? .77 : 1.0, position.z));
+        this.camera.alpha = -Math.PI / 2;
+        this.camera.beta = Math.PI / 2;
+        this.camera.radius = portrait ? 2.8 : seated ? 3.8 : 4.8;
+      },
+    }, {
+      save: () => this.getCurrentSceneAsPreset(),
+      load: async preset => {
+        await this.applyScenePreset(preset);
+        // The document carries its own fixtures, which may be a look taken
+        // apart afterwards. Saying which look it was would be a lie, so the
+        // panel says what is true: this is the document's own lighting.
+        this.currentLookId = null;
+        window.dispatchEvent(new CustomEvent('ch-look-changed', { detail: { id: null, label: 'Lys fra dokumentet' } }));
+        useAppStore.getState().selectNode(null);
+        this.gizmoManager?.attachToMesh(null);
+      },
+    });
   }
 
   private setupPhysicalCameraProps(): void {
@@ -5765,7 +5822,12 @@ class VirtualStudio {
         }
       }
 
+      if (state?.floor) {
+        this.toggleFloor(state.floor.visible !== false);
+        this.toggleGrid(state.floor.gridVisible === true);
+      }
       this.recalculateAmbientLighting();
+      this.studioRoom?.apply(state.room || { type: 'none', furnishings: true, practicals: true });
       this.publishEnvironmentDiagnostics('scene-environment-updated');
       window.dispatchEvent(new CustomEvent('vs-environment-changed', {
         detail: (window as any).__virtualStudioDiagnostics?.environment,
@@ -5779,6 +5841,7 @@ class VirtualStudio {
   private applyWallTexture(wallId: string, materialId: string): void {
     const wall = this.scene.getMeshByName(wallId);
     if (!wall) return;
+    if (wall.material?.name === `${wallId}_${materialId}`) return;
 
     const wallMaterial = getWallById(materialId);
     if (!wallMaterial) {
@@ -5850,6 +5913,7 @@ class VirtualStudio {
   private updateFloorProperties(materialId: string): void {
     const floor = this.scene.getMeshByName('ground');
     if (!floor) return;
+    if (floor.material?.name === `floor_${materialId}`) return;
 
     const floorMaterial = getFloorById(materialId);
     if (!floorMaterial) {
@@ -6153,152 +6217,152 @@ class VirtualStudio {
     // We use moderate values (300-700 cd) balanced against the scene's exposure/tone-map.
     // Softbox (rectangular) → wider beam, lower exponent (uniform field), very soft shadows.
     // Octabox (circular)    → even wider, near-uniform field, maximum shadow softness.
-    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; shadowKernel: number; glbFile: string; faceYawOffset: number | null } } = {
+    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; glbFile: string; faceYawOffset: number | null } } = {
       // faceYawOffset: known TRELLIS models are confirmed -Z face (offset=0).
       //                null = auto-detect from bright submesh centroid (for Tripo/AI models).
-      'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
-      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
-      'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
-      'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
-      'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'godox-ad200pro': { intensity: 240, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'godox-ad400pro': { intensity: 340, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'godox-ad600pro': { intensity: 420, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'profoto-b10plus':{ intensity: 480, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'profoto-b10':    { intensity: 420, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 80,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad200pro': { intensity: 240, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad400pro': { intensity: 340, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad600pro': { intensity: 420, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-b10plus':{ intensity: 480, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-b10':    { intensity: 420, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
 
       // HMI / Fresnel / PAR
-      'arri-m18':        { intensity: 800, name: 'Arri M18 HMI',       cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'arri-m40':        { intensity: 1400, name: 'Arri M40 HMI',      cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'joker-400':       { intensity: 500, name: 'K5600 Joker 400',    cct: 5600, beamAngle: Math.PI / 3.5, exponent: 3.0, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'par-can-1000':    { intensity: 700, name: 'PAR64 1000W',        cct: 3200, beamAngle: Math.PI / 8,   exponent: 5.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'dedolight-150':   { intensity: 280, name: 'Dedolight 150W',     cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'dedolight-dled4': { intensity: 180, name: 'Dedolight DLED4',    cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'chauvet-fresnel-spot': { intensity: 220, name: 'Chauvet Fresnel', cct: 5600, beamAngle: Math.PI / 7, exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'arri-m18':        { intensity: 800, name: 'Arri M18 HMI',       cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'arri-m40':        { intensity: 1400, name: 'Arri M40 HMI',      cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'joker-400':       { intensity: 500, name: 'K5600 Joker 400',    cct: 5600, beamAngle: Math.PI / 3.5, exponent: 3.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'par-can-1000':    { intensity: 700, name: 'PAR64 1000W',        cct: 3200, beamAngle: Math.PI / 8,   exponent: 5.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'dedolight-150':   { intensity: 280, name: 'Dedolight 150W',     cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'dedolight-dled4': { intensity: 180, name: 'Dedolight DLED4',    cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'chauvet-fresnel-spot': { intensity: 220, name: 'Chauvet Fresnel', cct: 5600, beamAngle: Math.PI / 7, exponent: 6.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
 
       // Beauty Dish / Ring
-      'godox-bd-07':         { intensity: 320, name: 'Godox BD-07 Beauty Dish', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'profoto-softlight-65':{ intensity: 350, name: 'Profoto Softlight 65cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'godox-ar400':         { intensity: 280, name: 'Godox AR400 Ring Flash',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
-      'profoto-pro-ring2':   { intensity: 300, name: 'Profoto Pro-Ring2',       cct: 5500, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
+      'godox-bd-07':         { intensity: 320, name: 'Godox BD-07 Beauty Dish', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'profoto-softlight-65':{ intensity: 350, name: 'Profoto Softlight 65cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'godox-ar400':         { intensity: 280, name: 'Godox AR400 Ring Flash',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
+      'profoto-pro-ring2':   { intensity: 300, name: 'Profoto Pro-Ring2',       cct: 5500, beamAngle: Math.PI / 2,   exponent: 1.2, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
 
       // LED Ring Lights
-      'nanlite-halo-14':  { intensity: 160, name: 'Nanlite Halo 14"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'nanlite-halo-26':  { intensity: 260, name: 'Nanlite Halo 26"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'godox-rl-60':      { intensity: 200, name: 'Godox RL-60 Ring',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-halo-14':  { intensity: 160, name: 'Nanlite Halo 14"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-halo-26':  { intensity: 260, name: 'Nanlite Halo 26"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'godox-rl-60':      { intensity: 200, name: 'Godox RL-60 Ring',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
 
       // Large LED Panels
-      'aputure-nova-p300c':  { intensity: 550, name: 'Aputure NOVA P300c',   cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'arri-skypanel-s60':   { intensity: 520, name: 'Arri SkyPanel S60-C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'arri-skypanel-s120':  { intensity: 800, name: 'Arri SkyPanel S120-C', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'rosco-litepad-hol':   { intensity: 180, name: 'Rosco LitePad HO+',   cct: 5500, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'nanlite-mixpad-27c':  { intensity: 140, name: 'Nanlite MixPad 27C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'nanlite-pavotube-15c-kit': { intensity: 120, name: 'Nanlite PavoTube 15C', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 64, glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'aputure-nova-p300c':  { intensity: 550, name: 'Aputure NOVA P300c',   cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'arri-skypanel-s60':   { intensity: 520, name: 'Arri SkyPanel S60-C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'arri-skypanel-s120':  { intensity: 800, name: 'Arri SkyPanel S120-C', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 1.0, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'rosco-litepad-hol':   { intensity: 180, name: 'Rosco LitePad HO+',   cct: 5500, beamAngle: Math.PI / 1.5, exponent: 1.0,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-mixpad-27c':  { intensity: 140, name: 'Nanlite MixPad 27C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-pavotube-15c-kit': { intensity: 120, name: 'Nanlite PavoTube 15C', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
 
       // Speedlights
-      'godox-tt685-ii':  { intensity: 180, name: 'Godox TT685 II',   cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
-      'profoto-a10':     { intensity: 220, name: 'Profoto A10',      cct: 5500, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
-      'canon-600ex-rt':  { intensity: 180, name: 'Canon 600EX-RT',  cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+      'godox-tt685-ii':  { intensity: 180, name: 'Godox TT685 II',   cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+      'profoto-a10':     { intensity: 220, name: 'Profoto A10',      cct: 5500, beamAngle: Math.PI / 3, exponent: 2.5, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+      'canon-600ex-rt':  { intensity: 180, name: 'Canon 600EX-RT',  cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
 
       // ── Light Shapers ──────────────────────────────────────────────────────
       // Softbox — rectangular diffuse sources, very soft wrapping light
-      'shaper-softbox-40':     { intensity: 140, name: 'Softboks 40×40 cm',   cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.4, shadowKernel: 96,  glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
-      'shaper-softbox-60':     { intensity: 220, name: 'Softboks 60×60 cm',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 128, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
-      'shaper-softbox-90x120': { intensity: 350, name: 'Softboks 90×120 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 160, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
-      'shaper-softbox-120x180':{ intensity: 500, name: 'Softboks 120×180 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
-      'shaper-softbox-150x200':{ intensity: 650, name: 'Softboks 150×200 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-40':     { intensity: 140, name: 'Softboks 40×40 cm',   cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.4,  glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-60':     { intensity: 220, name: 'Softboks 60×60 cm',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-90x120': { intensity: 350, name: 'Softboks 90×120 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-120x180':{ intensity: 500, name: 'Softboks 120×180 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.8, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-150x200':{ intensity: 650, name: 'Softboks 150×200 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.7, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
 
       // Octabox — circular diffuse, even fill with natural catchlight
-      'shaper-octabox-60':  { intensity: 250, name: 'Oktaboks 60 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 128, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'shaper-octabox-75':  { intensity: 320, name: 'Oktaboks 75 cm',  cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.1, shadowKernel: 144, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'shaper-octabox-95':  { intensity: 400, name: 'Oktaboks 95 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 160, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'shaper-octabox-120': { intensity: 500, name: 'Oktaboks 120 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 176, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
-      'shaper-octabox-150': { intensity: 600, name: 'Oktaboks 150 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-60':  { intensity: 250, name: 'Oktaboks 60 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-75':  { intensity: 320, name: 'Oktaboks 75 cm',  cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.1, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-95':  { intensity: 400, name: 'Oktaboks 95 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-120': { intensity: 500, name: 'Oktaboks 120 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-150': { intensity: 600, name: 'Oktaboks 150 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
 
       // Stripbox — tall narrow softbox, hair/rim/background accent
-      'shaper-stripbox-15x90':  { intensity: 180, name: 'Stripboks 15×90 cm',  cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.0, shadowKernel: 48,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
-      'shaper-stripbox-30x120': { intensity: 280, name: 'Stripboks 30×120 cm', cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.5, shadowKernel: 64,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
-      'shaper-stripbox-40x140': { intensity: 340, name: 'Stripboks 40×140 cm', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.2, shadowKernel: 80,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
-      'shaper-stripbox-60x180': { intensity: 380, name: 'Stripboks 60×180 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 96,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-15x90':  { intensity: 180, name: 'Stripboks 15×90 cm',  cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.0,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-30x120': { intensity: 280, name: 'Stripboks 30×120 cm', cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.5,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-40x140': { intensity: 340, name: 'Stripboks 40×140 cm', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.2,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-60x180': { intensity: 380, name: 'Stripboks 60×180 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
 
       // Beauty dish — semi-specular, controlled wrap, beauty/portrait
-      'shaper-beautydish-35': { intensity: 220, name: 'Beauty dish 35 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.2, shadowKernel: 48, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'shaper-beautydish-40': { intensity: 300, name: 'Beauty dish 40 cm', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'shaper-beautydish-56': { intensity: 380, name: 'Beauty dish 56 cm', cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.5, shadowKernel: 80, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
-      'shaper-beautydish-70': { intensity: 480, name: 'Beauty dish 70 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.3, shadowKernel: 96, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-35': { intensity: 220, name: 'Beauty dish 35 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.2, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-40': { intensity: 300, name: 'Beauty dish 40 cm', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-56': { intensity: 380, name: 'Beauty dish 56 cm', cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.5, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-70': { intensity: 480, name: 'Beauty dish 70 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.3, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
 
       // Ring light — flat, shadow-free, catchlight ring
-      'shaper-ring-18': { intensity:  90, name: 'Ringslys 7" / 18 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 96,  glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ring-35': { intensity: 160, name: 'Ringslys 14" / 35 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ring-48': { intensity: 210, name: 'Ringslys 19" / 48 cm', cct: 5600, beamAngle: Math.PI / 1.9, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ring-65': { intensity: 260, name: 'Ringslys 26" / 65 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-18': { intensity:  90, name: 'Ringslys 7" / 18 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2,  glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-35': { intensity: 160, name: 'Ringslys 14" / 35 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-48': { intensity: 210, name: 'Ringslys 19" / 48 cm', cct: 5600, beamAngle: Math.PI / 1.9, exponent: 0.9, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-65': { intensity: 260, name: 'Ringslys 26" / 65 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
 
       // Umbrella — silver reflective, bounced warm
-      'shaper-umbrella-reflective':  { intensity: 320, name: 'Paraply sølv 100 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
-      'shaper-umbrella-silver-150':  { intensity: 480, name: 'Paraply sølv 150 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
-      'shaper-umbrella-xl':          { intensity: 580, name: 'Paraply sølv XL 165 cm',cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
+      'shaper-umbrella-reflective':  { intensity: 320, name: 'Paraply sølv 100 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
+      'shaper-umbrella-silver-150':  { intensity: 480, name: 'Paraply sølv 150 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
+      'shaper-umbrella-xl':          { intensity: 580, name: 'Paraply sølv XL 165 cm',cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
 
       // Umbrella — shoot-through, soft transmitted
-      'shaper-umbrella-shootthrough':     { intensity: 280, name: 'Paraply shoot-through 100 cm', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
-      'shaper-umbrella-shootthrough-150': { intensity: 400, name: 'Paraply shoot-through 150 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-shootthrough':     { intensity: 280, name: 'Paraply shoot-through 100 cm', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.7, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-shootthrough-150': { intensity: 400, name: 'Paraply shoot-through 150 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
 
       // Umbrella — gold reflective, warm toned
-      'shaper-umbrella-gold':     { intensity: 300, name: 'Paraply gull 100 cm', cct: 4000, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
-      'shaper-umbrella-gold-150': { intensity: 440, name: 'Paraply gull 150 cm', cct: 4000, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-gold':     { intensity: 300, name: 'Paraply gull 100 cm', cct: 4000, beamAngle: Math.PI / 1.6, exponent: 0.8, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-gold-150': { intensity: 440, name: 'Paraply gull 150 cm', cct: 4000, beamAngle: Math.PI / 1.4, exponent: 0.7, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
 
       // Snoot — cylindrical narrower, hard directional accent/hair light
-      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',      cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
-      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb', cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
-      'shaper-snoot-gel':  { intensity: 240, name: 'Snoot med gelramme',  cct: 5600, beamAngle: Math.PI / 10, exponent: 7.0, shadowKernel: 10, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
+      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',      cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
+      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb', cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
+      'shaper-snoot-gel':  { intensity: 240, name: 'Snoot med gelramme',  cct: 5600, beamAngle: Math.PI / 10, exponent: 7.0, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
 
       // Parabolic reflector — deep dish, specular-to-diffuse adjustable
-      'shaper-para-75':  { intensity: 340, name: 'Parabolreflektor 75 cm',  cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.2, shadowKernel: 40, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
-      'shaper-para-90':  { intensity: 450, name: 'Parabolreflektor 90 cm',  cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 48, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
-      'shaper-para-120': { intensity: 580, name: 'Parabolreflektor 120 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, shadowKernel: 56, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
-      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.6, shadowKernel: 64, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-75':  { intensity: 340, name: 'Parabolreflektor 75 cm',  cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.2, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-90':  { intensity: 450, name: 'Parabolreflektor 90 cm',  cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-120': { intensity: 580, name: 'Parabolreflektor 120 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.6, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
 
       // Fresnel lens — variable spot/flood, sharp-edged theatrical beam
-      'shaper-fresnel-6':  { intensity: 240, name: 'Fresnel 6"',  cct: 5600, beamAngle: Math.PI / 7,   exponent: 4.5, shadowKernel: 20, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 4.0, shadowKernel: 24, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-fresnel-20': { intensity: 720, name: 'Fresnel 20"', cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.0, shadowKernel: 40, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-6':  { intensity: 240, name: 'Fresnel 6"',  cct: 5600, beamAngle: Math.PI / 7,   exponent: 4.5, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 4.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.5, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-20': { intensity: 720, name: 'Fresnel 20"', cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.0, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
 
       // LED panel — flat broad source, broadcast/interview fill
-      'shaper-ledpanel-15x30':  { intensity: 100, name: 'LED-panel 15×30 cm',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',   cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0, shadowKernel: 96,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',   cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
-      'shaper-ledpanel-120x120':{ intensity: 720, name: 'LED-panel 120×120 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-15x30':  { intensity: 100, name: 'LED-panel 15×30 cm',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',   cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',   cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-120x120':{ intensity: 720, name: 'LED-panel 120×120 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.8, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
 
       // Chimera — fabric frame softbox, cinema/broadcast standard
-      'shaper-chimera-2x3': { intensity: 280, name: 'Chimera 60×90 cm (2×3 ft)',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
-      'shaper-chimera-3x4': { intensity: 440, name: 'Chimera 90×120 cm (3×4 ft)',  cct: 5600, beamAngle: Math.PI / 1.7, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
-      'shaper-chimera-4x6': { intensity: 640, name: 'Chimera 120×180 cm (4×6 ft)', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
+      'shaper-chimera-2x3': { intensity: 280, name: 'Chimera 60×90 cm (2×3 ft)',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
+      'shaper-chimera-3x4': { intensity: 440, name: 'Chimera 90×120 cm (3×4 ft)',  cct: 5600, beamAngle: Math.PI / 1.7, exponent: 0.9, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
+      'shaper-chimera-4x6': { intensity: 640, name: 'Chimera 120×180 cm (4×6 ft)', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
 
       // Lantern / Globe — omnidirectional soft wrap-around light
-      'shaper-lantern-45': { intensity: 180, name: 'Lanterneglobus 45 cm', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
-      'shaper-lantern-75': { intensity: 280, name: 'Lanterneglobus 75 cm', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
-      'shaper-lantern-90': { intensity: 360, name: 'Lanterneglobus 90 cm', cct: 5600, beamAngle: Math.PI / 1.05,exponent: 0.4, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
+      'shaper-lantern-45': { intensity: 180, name: 'Lanterneglobus 45 cm', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.5, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
+      'shaper-lantern-75': { intensity: 280, name: 'Lanterneglobus 75 cm', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
+      'shaper-lantern-90': { intensity: 360, name: 'Lanterneglobus 90 cm', cct: 5600, beamAngle: Math.PI / 1.05,exponent: 0.4, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
 
       // Kino Flo — fluorescent tube bank, film/broadcast magazine fill
-      'shaper-kino-2bank': { intensity: 160, name: 'Kino Flo 2 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 128, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
-      'shaper-kino-4bank': { intensity: 280, name: 'Kino Flo 4 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
-      'shaper-kino-2x2':   { intensity: 360, name: 'Kino Flo 2 rør 2 bank', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 160, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
-      'shaper-kino-4x4':   { intensity: 580, name: 'Kino Flo 4 rør 4 bank', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-2bank': { intensity: 160, name: 'Kino Flo 2 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-4bank': { intensity: 280, name: 'Kino Flo 4 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.9, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-2x2':   { intensity: 360, name: 'Kino Flo 2 rør 2 bank', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-4x4':   { intensity: 580, name: 'Kino Flo 4 rør 4 bank', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.7, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
 
       // Diffusion Frame — large silk/muslin scrim on stand
-      'shaper-diffframe-4x4': { intensity: 380, name: 'Diffusjonsramme 4×4 ft', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
-      'shaper-diffframe-6x6': { intensity: 600, name: 'Diffusjonsramme 6×6 ft', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
-      'shaper-diffframe-8x8': { intensity: 820, name: 'Diffusjonsramme 8×8 ft', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
+      'shaper-diffframe-4x4': { intensity: 380, name: 'Diffusjonsramme 4×4 ft', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
+      'shaper-diffframe-6x6': { intensity: 600, name: 'Diffusjonsramme 6×6 ft', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.6, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
+      'shaper-diffframe-8x8': { intensity: 820, name: 'Diffusjonsramme 8×8 ft', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
 
       // Open Reflector — bare bowl, hard specular punch
-      'shaper-openref-standard': { intensity: 420, name: 'Åpen reflektor 60 cm',      cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
-      'shaper-openref-wide':     { intensity: 550, name: 'Åpen reflektor vid 90 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 2.0, shadowKernel: 40, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
-      'shaper-openref-tele':     { intensity: 380, name: 'Åpen reflektor tele 45 cm', cct: 5600, beamAngle: Math.PI / 4.5, exponent: 3.5, shadowKernel: 24, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
+      'shaper-openref-standard': { intensity: 420, name: 'Åpen reflektor 60 cm',      cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.5, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
+      'shaper-openref-wide':     { intensity: 550, name: 'Åpen reflektor vid 90 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 2.0, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
+      'shaper-openref-tele':     { intensity: 380, name: 'Åpen reflektor tele 45 cm', cct: 5600, beamAngle: Math.PI / 4.5, exponent: 3.5, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
     };
 
-    const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
+    const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
 
     // Photometric override: when the fixture has real spec data in
     // LIGHT_DATABASE (lumens, lux1m, beamAngle, cct), derive Babylon's
@@ -6306,40 +6370,30 @@ class VirtualStudio {
     // scalar. This is how set.a.light gets consistent realism across
     // fixtures: real candela feeds inverse-square falloff, which feeds PBR.
     //
-    // cd = lumens / solid-angle, where solid-angle = 2π(1 − cos(beam/2))
-    // lux@1m == cd (since E = I/d² and d=1) — so if the spec gives
-    // lux1m, we use that directly.
+    // The scale is linear and never clamped. An earlier ceiling of 800
+    // collapsed every fixture above 8000 cd onto the same value, so a
+    // 120d, a 300d and a 600d all lit the subject identically.
     const specFromDB = getLightById(modelId);
     if (specFromDB) {
-      const realCct = specFromDB.cct ?? lightConfig.cct;
       const realBeamAngleRad = specFromDB.beamAngle
         ? (specFromDB.beamAngle * Math.PI) / 180
         : lightConfig.beamAngle;
 
-      let candela: number | null = null;
-      if (specFromDB.lux1m && specFromDB.lux1m > 0) {
-        candela = specFromDB.lux1m;
-      } else if (specFromDB.lumens && specFromDB.lumens > 0) {
-        const solidAngle = 2 * Math.PI * (1 - Math.cos(realBeamAngleRad / 2));
-        candela = solidAngle > 1e-6 ? specFromDB.lumens / solidAngle : specFromDB.lumens;
-      }
+      const candela = fixtureCandela({
+        type: specFromDB.type,
+        guideNumber: specFromDB.guideNumber,
+        lux1m: specFromDB.lux1m,
+        lumens: specFromDB.lumens,
+        beamAngleDeg: (realBeamAngleRad * 180) / Math.PI,
+      });
 
       if (candela !== null) {
-        // Scale real candela into Babylon scene-intensity units.
-        // Calibrated against the (previously hand-tuned) reference set so
-        // director-placed rigs read at roughly the same exposure as the
-        // hollywood-rembrandt preset's key ≈ 520. Aputure 300D lux1m=45000,
-        // target key ≈ 500 → scale ≈ 0.011, but at that scale low-output
-        // strobes (Profoto D2 lux1m=6000) fade. 0.1 gives Profoto D2 ≈ 600
-        // (right for a 1000Ws strobe in modeling range), Aputure 300D ≈
-        // 4500 (clamped), ARRI M18 continuous-HMI stays visible. Clamp so
-        // one outlier doesn't wash the scene.
-        const CANDELA_TO_BABYLON_INTENSITY = 0.1;
-        const INTENSITY_CEILING = 800;
-        const scaled = candela * CANDELA_TO_BABYLON_INTENSITY;
-        lightConfig.intensity = Math.min(scaled, INTENSITY_CEILING);
-        lightConfig.cct = realCct;
-        lightConfig.beamAngle = realBeamAngleRad;
+        lightConfig.intensity = sceneIntensityFromCandela(candela);
+        lightConfig.cct = specFromDB.cct ?? lightConfig.cct;
+        // A bare bulb, a tube or a window is published at 180° or more, which
+        // is not a cone. The published angle still sets the fixture's output
+        // above; only what the spot light is told is capped.
+        lightConfig.beamAngle = spotConeRadians((realBeamAngleRad * 180) / Math.PI);
         lightConfig.name = `${specFromDB.brand} ${specFromDB.model}`;
       }
     }
@@ -6611,19 +6665,28 @@ class VirtualStudio {
         },
         intensity: lightConfig.intensity,
         baseIntensity: lightConfig.intensity,  // physical candela — glow reference
-        powerMultiplier: 1.0
+        powerMultiplier: 1.0,
+        isFlash: isFlashFixture(specFromDB?.type)
       };
 
       // Store light in lights map
       this.lights.set(lightId, lightData);
 
-      // Create shadow generator immediately with PCF soft shadows.
-      // Kernel size is tuned per light type: softboxes need larger kernels for
-      // diffuse, wrapping shadows; snoots/fresnels use small kernels for crisp edges.
+      // Create shadow generator with contact-hardening (PCSS) shadows, so
+      // penumbra width follows the emitting surface: a 150 cm octabox wraps,
+      // a snoot cuts. `blurKernel` used to carry that intent, but Babylon
+      // only applies it to the blur-exponential filters — under
+      // usePercentageCloserFiltering it was ignored, and every modifier cast
+      // the same shadow regardless of its size.
+      // Bound the shadow frustum to the room (≈16 × 17 m). Left undefined it
+      // inherits the camera's maxZ, which both wastes depth precision and
+      // makes the light-size ratio meaningless.
+      babylonLight.shadowMinZ = 0.2;
+      babylonLight.shadowMaxZ = 20;
+      const sourceSizeMetres = modifierSizeMetres(lightConfig.name, lightConfig.glbFile);
+      lightData.sourceSizeMetres = sourceSizeMetres;
       const shadowGen = new BABYLON.ShadowGenerator(2048, babylonLight);
-      shadowGen.usePercentageCloserFiltering = true;
-      shadowGen.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-      shadowGen.blurKernel = lightConfig.shadowKernel;
+      this.configureStudioShadowSoftness(shadowGen, lightData);
       // Add every visible mesh in the scene as a shadow caster
       this.scene.meshes.forEach(m => {
         if (m.isVisible && m !== mesh && m.getTotalVertices() > 0) {
@@ -6632,7 +6695,10 @@ class VirtualStudio {
       });
       this.scene.meshes.forEach(m => { if (m.isVisible && m.getTotalVertices() > 0) m.receiveShadows = true; });
       lightData.shadowGenerator = shadowGen;
-      console.log(`[addLight] Shadow generator created: kernel=${lightConfig.shadowKernel}, PCF quality=HIGH`);
+      console.log(
+        `[addLight] Shadow generator created: source=${sourceSizeMetres.toFixed(2)} m, ` +
+        `lightSizeUV=${shadowGen.contactHardeningLightSizeUVRatio.toFixed(4)}, PCSS quality=HIGH`
+      );
 
       // Add mesh to gizmo manager for selection
       if (this.gizmoManager?.attachableMeshes) {
@@ -6774,82 +6840,740 @@ class VirtualStudio {
     lightData.elevation = undefined;
   }
 
-  public async setupDefaultLighting(): Promise<void> {
-    const subjectCenter = new BABYLON.Vector3(0, 1.2, 0);
+  /**
+   * The key's illuminance at the subject, in scene units (candela per m²).
+   *
+   * A rig is specified the way it is metered — a reading at the subject and
+   * the ratios around it — not by typing an intensity into each fixture. These
+   * three numbers reproduce the previous hand-tuned 520 / 178 / 500 exactly,
+   * but now the fixtures carry their catalogue output and the rig is built
+   * from placement and output percentage, as it would be on the floor.
+   */
+  private static readonly RIG_KEY_ILLUMINANCE = 520 / 19.86;
+  /** Classic portrait key-to-fill ratio, close to 3:1. */
+  private static readonly RIG_KEY_TO_FILL = (520 / 19.86) / (178 / 20.24);
+  /** Rim slightly under the key, enough to separate without reading as a second key. */
+  private static readonly RIG_RIM_TO_KEY = (500 / 24.75) / (520 / 19.86);
 
+  /**
+   * Stand a fixture so it delivers `targetIlluminance` at the subject.
+   *
+   * A fixture cannot exceed its own output, so if the wanted reading is beyond
+   * what it gives from the preferred spot, it moves closer along the same line
+   * — direction, and therefore the modelling and shadow angle, is unchanged.
+   * If it has light to spare, it stays put and its output is dialled back.
+   */
+  private placeFixtureForIlluminance(
+    modelId: string,
+    preferredPosition: BABYLON.Vector3,
+    aim: BABYLON.Vector3,
+    targetIlluminance: number,
+  ): { position: BABYLON.Vector3; powerMultiplier: number } {
+    const spec = getLightById(modelId);
+    const candela = spec
+      ? fixtureCandela({
+          type: spec.type,
+          guideNumber: spec.guideNumber,
+          lux1m: spec.lux1m,
+          lumens: spec.lumens,
+          beamAngleDeg: spec.beamAngle,
+        })
+      : null;
+
+    if (candela === null) {
+      return { position: preferredPosition.clone(), powerMultiplier: 1 };
+    }
+
+    const output = sceneIntensityFromCandela(candela);
+    const offset = preferredPosition.subtract(aim);
+    const preferredDistance = offset.length();
+    const neededAtPreferred = targetIlluminance * preferredDistance * preferredDistance;
+
+    if (neededAtPreferred <= output) {
+      return { position: preferredPosition.clone(), powerMultiplier: neededAtPreferred / output };
+    }
+
+    const distance = distanceForIlluminance(output, targetIlluminance);
+    return {
+      position: aim.add(offset.normalize().scale(distance)),
+      powerMultiplier: 1,
+    };
+  }
+
+  /**
+   * Stand one fixture of a look, and give it the level the look asks for.
+   *
+   * The fixture keeps its catalogue output; where it stands and how far its
+   * output is dialled back is what makes the ratio, exactly as on the floor.
+   */
+  /**
+   * The small motion that separates a person from a statue.
+   *
+   * A figure holding a pose clip is perfectly still, and a room full of
+   * perfectly still people reads as mannequins however good the geometry is.
+   * Breathing and a slow weight shift cost almost nothing and are the first
+   * thing the eye believes.
+   *
+   * It is deliberately tiny — a centimetre of rise, a degree and a half of
+   * sway — and it is added on top of whatever the pose left, never instead of
+   * it. Joint editing switches it off, because a handle that drifts under the
+   * cursor is worse than a still figure.
+   */
+  private idleBreathObserver: BABYLON.Nullable<BABYLON.Observer<BABYLON.Scene>> = null;
+  private idleBreathing = true;
+
+  public setIdleBreathing(enabled: boolean): void {
+    this.idleBreathing = enabled;
+    if (!enabled) {
+      // Put everybody back facing where their pose left them, or the last
+      // sway becomes the direction they were posed in.
+      for (const figure of this.scene.meshes) {
+        const restYaw = figure.metadata?.idleRestYaw as number | undefined;
+        if (restYaw !== undefined) figure.rotation.y = restYaw;
+      }
+    }
+  }
+
+  /**
+   * The figures the breath moves, kept rather than searched for.
+   *
+   * The first version filtered the whole scene every frame looking for
+   * anything with a pose on it. In a furnished room with a crew in it that is
+   * thousands of meshes, sixty times a second, allocating a new array each
+   * time — it made the studio slow enough that the browser suites went from
+   * three minutes to nineteen and timed out. The list is short and changes
+   * rarely; keeping it is free.
+   */
+  private breathingFigures = new Set<BABYLON.AbstractMesh>();
+  private breathScanDue = 0;
+
+  private startIdleBreathing(): void {
+    if (this.idleBreathObserver) return;
+    this.idleBreathObserver = this.scene.onBeforeRenderObservable.add(() => {
+      if (!this.idleBreathing) return;
+      const now = performance.now();
+      const seconds = now / 1000;
+
+      // Re-read who is on set a few times a second, not every frame.
+      if (now >= this.breathScanDue) {
+        this.breathScanDue = now + 500;
+        this.breathingFigures.clear();
+        for (const mesh of this.scene.meshes) {
+          if (mesh.metadata?.studioPose && !mesh.isDisposed()) this.breathingFigures.add(mesh);
+        }
+      }
+      if (this.breathingFigures.size === 0) return;
+
+      const figures = [...this.breathingFigures];
+      for (const [index, figure] of figures.entries()) {
+        if (figure.isDisposed()) { this.breathingFigures.delete(figure); continue; }
+        // Out of step with each other, or a crowd sways together like one
+        // animal rather than like several people.
+        const offset = index * 1.37;
+        // No vertical bob. A person breathing keeps their feet on the floor and
+        // expands their chest; lifting the whole figure is a float on water,
+        // and it made every measurement of ground contact wobble by more than
+        // the contact itself — a seated figure's shoes drifted 6 mm off the
+        // height they had been grounded to. The weight shift below is the part
+        // that reads as life, and it turns rather than lifts.
+        const restYaw = figure.metadata?.idleRestYaw as number | undefined;
+        const baseYaw = restYaw ?? figure.rotation.y;
+        if (restYaw === undefined && figure.metadata) figure.metadata.idleRestYaw = baseYaw;
+        // A slow shift of weight, far slower than the breath.
+        figure.rotation.y = baseYaw + Math.sin((seconds * 0.07 + offset) * Math.PI * 2) * 0.026;
+      }
+    });
+  }
+
+  /**
+   * Forget which way a figure was facing, so the next mark becomes the new rest.
+   *
+   * Without this the sway would keep turning around the direction the figure
+   * faced before it was moved.
+   */
+  private resetIdleRest(figure: BABYLON.AbstractMesh): void {
+    if (!figure.metadata) return;
+    delete figure.metadata.idleRestYaw;
+  }
+
+  /**
+   * Let the aperture change the picture, not only the exposure.
+   *
+   * Depth of field is what separates a photograph of a restaurant from a
+   * rendering of one: the face sharp, the room behind it soft. The f-number
+   * already drives the exposure; this is the other half of what it means.
+   */
+  private applyApertureToDepthOfField(): void {
+    const aperture = this.cameraSettings?.aperture;
+    if (!this.physicsBasedDOF || !aperture || !Number.isFinite(aperture)) return;
+    this.physicsBasedDOF.setAperture(aperture);
+    // Wide open it is visible and wanted; stopped down there is nothing to
+    // show, and the extra pass is not worth paying for.
+    this.physicsBasedDOF.setEnabled(aperture <= 5.6);
+  }
+
+  /**
+   * Lower a seated figure onto a seat that is already there.
+   *
+   * The seated clip was authored for the portrait stool, and grounding puts
+   * the shoes on the floor — which for a seated pose leaves the body hovering
+   * at whatever height the clip happened to sit at. Reading where the pelvis
+   * actually is and moving the figure so that lands on the chair is the same
+   * measurement `StudioSeat` makes to raise its pedestal, used the other way
+   * round.
+   */
+  private sitOnExistingSeat(mesh: BABYLON.AbstractMesh, seatHeight: number): void {
+    const hips = mesh.getChildTransformNodes().find(node => node.name === 'mixamorigHips');
+    if (!hips) return;
+    mesh.computeWorldMatrix(true);
+
+    // The underside of the pelvis, which is what rests on a chair.
+    const pelvis = hips.getAbsolutePosition().y - 0.095;
+    const drop = pelvis - seatHeight;
+    if (!Number.isFinite(drop) || Math.abs(drop) > 1.2) return;
+    mesh.position.y -= drop;
+    mesh.computeWorldMatrix(true);
+    this.resetIdleRest(mesh);
+  }
+
+  /**
+   * Take the lighting rig out of the picture, without turning it off.
+   *
+   * A softbox standing in a pizzeria is correct for previsualization — you are
+   * meant to see your lights — and wrong for the one question the photographer
+   * actually wants to answer: does this look like a restaurant? The stands go,
+   * the light they give stays exactly as it was, so the judgement is about the
+   * picture rather than about the gear in it.
+   */
+  public setRigVisible(visible: boolean): void {
+    this.rigVisible = visible;
+    for (const data of this.lights.values()) {
+      data.mesh.setEnabled(visible);
+      // Only the body goes; the light itself is untouched.
+      data.mesh.getChildMeshes().forEach(child => child.setEnabled(visible));
+      data.beamVisualization?.setEnabled(visible);
+    }
+    window.dispatchEvent(new CustomEvent('ch-rig-visibility-changed', { detail: { visible } }));
+  }
+
+  public isRigVisible(): boolean {
+    return this.rigVisible;
+  }
+
+  private rigVisible = true;
+
+  /** The marks this place offers, or none when it has nowhere in particular. */
+  public availableMarks(): StudioMark[] {
+    return locationById(this.currentLocation() ?? '')?.marks ?? [];
+  }
+
+  /**
+   * Put a figure where somebody would actually stand.
+   *
+   * Dragging a person around with the keyboard and hoping is not how anybody
+   * decides where they should stand: in a kitchen you stand at the counter, at
+   * the table or by the window, and that is the list. The room built the
+   * counter, so the room knows where that is.
+   */
+  public standOnMark(markId: string, mesh?: BABYLON.AbstractMesh): boolean {
+    const mark = this.availableMarks().find(candidate => candidate.id === markId);
+    const figure = mesh ?? this.getPrimaryCharacterMesh();
+    if (!mark || !figure) return false;
+
+    figure.position.x = mark.x;
+    figure.position.z = mark.z;
+    this.resetIdleRest(figure);
+    // People in a room are oriented to each other, not to north: a waiter faces
+    // the table, two guests face each other, and a few degrees of offset is
+    // the difference between talking and confronting.
+    const facing = facingFor(mark, this.availableMarks());
+    this.alignMeshToDirection(figure, new BABYLON.Vector3(Math.sin(facing), 0, -Math.cos(facing)));
+    this.syncCharacterNodeTransform(figure, true);
+
+    // Sitting is a state, so a mark that is a chair applies the pose rather
+    // than leaving somebody standing inside the seat.
+    figure.metadata = { ...figure.metadata, studioSeatHeight: mark.seated ? mark.seatHeight : undefined };
+    const seatedNow = figure.metadata?.studioPose === 'StudioSeated';
+    if (mark.seated !== seatedNow) this.applyStudioPose(mark.seated ? 'StudioSeated' : 'StudioStand', figure);
+
+    // Sitting down is the last word, not the first. Applying a pose queues
+    // grounding a frame later, loading a figure queues another, and a lift
+    // performed before either of those runs is simply undone — which left
+    // guests hovering a third of a metre under their chairs. This settles
+    // after the rest of it has finished arguing.
+    if (mark.seated && mark.seatHeight !== undefined) {
+      window.setTimeout(() => {
+        if (!figure.isDisposed()) this.sitOnExistingSeat(figure, mark.seatHeight!);
+      }, 420);
+    }
+    else this.afterNextFrame(() => { if (!figure.isDisposed()) this.groundCharacterSurfaces(figure); });
+
+    // A role is the other half of a mark: the baker at the oven wears work
+    // clothes, the person at the pass is front of house. Without it a staffed
+    // restaurant is one model copied four times.
+    if (mark.role) void this.dressForRole(figure, mark.role);
+
+    window.dispatchEvent(new CustomEvent('ch-character-mark-applied', {
+      detail: { markId, label: mark.label, role: mark.role ?? null },
+    }));
+    return true;
+  }
+
+  /**
+   * Put a figure in the clothes their role would wear.
+   *
+   * Chosen from what this body's wardrobe actually holds rather than by naming
+   * a file, so a body with a different set of clothes still dresses as close
+   * to the role as it can instead of arriving undressed.
+   */
+  private async dressForRole(figure: BABYLON.AbstractMesh, role: StudioRole): Promise<void> {
+    const modelUrl = figure.metadata?.sourceModelUrl as string | undefined;
+    const body = modelUrl ? bodyIdFromModelUrl(modelUrl) : null;
+    if (!modelUrl || !body) return;
+
+    try {
+      this.wardrobeCatalogue ??= await loadWardrobeCatalogue();
+    } catch {
+      return; // dressStudioCharacter reports this; a role is not worth a second warning.
+    }
+
+    const owned = garmentsForBody(this.wardrobeCatalogue, body);
+    const outfit = garmentForRole(role, owned.filter(g => g.slot === 'outfit').map(g => g.id));
+    const shoes = owned.find(g => g.slot === 'shoes')?.id;
+    await this.dressStudioCharacter(figure, modelUrl, [outfit, shoes].filter(Boolean) as string[]);
+    this.wearUniform(figure, role);
+  }
+
+  /**
+   * Put the workwear on: apron, cap and gloves, with the brand on them.
+   *
+   * The catalogue has no apron, no cap and no gloves — it is twelve ordinary
+   * garments — so these are built on the rig instead, and their fronts are
+   * drawn from the brand exactly as the sign over the door is. A pizzeria's
+   * crew can carry the name of the pizzeria without anybody modelling
+   * anything.
+   */
+  private wearUniform(figure: BABYLON.AbstractMesh, role: StudioRole): void {
+    this.studioUniforms.get(figure.uniqueId)?.dispose();
+    this.studioUniforms.delete(figure.uniqueId);
+
+    const kit = ROLE_UNIFORM[role] ?? {};
+    const skeleton = this.skeletonForCharacter(figure);
+    if (!skeleton) return;
+
+    const uniform = StudioUniform.dress(this.scene, figure, skeleton, this.currentBrand(), kit);
+    if (!uniform) return;
+    this.studioUniforms.set(figure.uniqueId, uniform);
+
+    // Workwear casts shadows like anything else a light can see.
+    for (const data of this.lights.values()) {
+      if (!data.shadowGenerator) continue;
+      uniform.meshes().forEach(mesh => data.shadowGenerator!.addShadowCaster(mesh, false));
+    }
+  }
+
+  /** The rig a figure's garments hang on, whichever mesh carries it. */
+  private skeletonForCharacter(figure: BABYLON.AbstractMesh): BABYLON.Skeleton | null {
+    if (figure.skeleton) return figure.skeleton;
+    for (const child of figure.getChildMeshes()) {
+      if (child.skeleton) return child.skeleton;
+    }
+    return null;
+  }
+
+  private studioUniforms = new Map<number, StudioUniform>();
+
+  /**
+   * Put somebody on every mark this place has.
+   *
+   * A restaurant with one person standing in it is a room with one person
+   * standing in it. The scene a photographer is actually planning has a baker
+   * at the oven, somebody at the pass and a guest at a table — and each of
+   * them takes light, casts a shadow and blocks a sightline.
+   */
+  public async staffLocation(): Promise<number> {
+    const marks = this.availableMarks();
+    if (marks.length === 0) return 0;
+
+    const standing = [...this.scene.meshes].filter(mesh => mesh.metadata?.studioPose);
+    let placed = 0;
+    for (const [index, mark] of marks.entries()) {
+      let figure = standing[index];
+      if (!figure) {
+        // Alternating, so a crew does not read as one person copied.
+        const model = index % 2 === 0 ? 'woman' : 'man';
+        const height = model === 'woman' ? 1.72 : 1.82;
+        await this.loadCharacterModel(
+          `/models/avatars/studio/studio-${model}.glb`,
+          `${mark.label}`, '', height / 1.7, { additive: placed > 0 || standing.length > 0 });
+        figure = this.characterMesh as BABYLON.AbstractMesh;
+        this.applyStudioPose('StudioStand', figure);
+      }
+      if (figure && this.standOnMark(mark.id, figure)) placed++;
+    }
+    return placed;
+  }
+
+  /**
+   * Show or hide the studio's own parked equipment.
+   *
+   * The photo and video camera bodies belong to the studio floor. Standing
+   * them in somebody's kitchen puts two cameras in the shot that have nothing
+   * to do with the one actually filming.
+   */
+  private setStudioGearVisible(visible: boolean): void {
+    for (const mesh of this.scene.meshes) {
+      if (!/^physical-(photo|video)-camera/.test(mesh.name)) continue;
+      mesh.setEnabled(visible);
+    }
+  }
+
+  /**
+   * Keep a walking figure inside the walls of whatever room this is.
+   *
+   * Without it the figure walks straight through the front of a pizzeria and
+   * keeps going into nothing, which is a strange thing for a previsualization
+   * of a room to let you do. The margin keeps the body off the wall rather
+   * than in it.
+   */
+  private keepInsideRoom(position: BABYLON.Vector3): void {
+    const bounds = locationById(this.currentLocation() ?? '')?.bounds;
+    if (!bounds) return;
+    const limitX = Math.max(0.2, bounds.halfWidth - 0.4);
+    const limitZ = Math.max(0.2, bounds.halfDepth - 0.4);
+    position.x = BABYLON.Scalar.Clamp(position.x, -limitX, limitX);
+    position.z = BABYLON.Scalar.Clamp(position.z, -limitZ, limitZ);
+  }
+
+  /**
+   * Where the subject actually is, and where their eyes actually are.
+   *
+   * Every angle in a look is measured from here. Reading it off the figure
+   * rather than assuming 1.3 m is what lets the same rig light an adult and a
+   * child correctly — and it is why a look aimed at a fixed height lit a small
+   * child over the top of the head.
+   */
+  private subjectStand(): { x: number; z: number; eyeHeight: number } {
+    const mesh = this.getPrimaryCharacterMesh();
+    if (!mesh) return { x: 0, z: 0, eyeHeight: 1.45 };
+    const position = mesh.getAbsolutePosition();
+    const bounds = mesh.getHierarchyBoundingVectors(true);
+    const top = Number.isFinite(bounds.max.y) ? bounds.max.y : position.y + 1.6;
+    // Eyes sit about eleven centimetres below the top of the head, standing or
+    // sitting, which is close enough to aim a light at.
+    return { x: position.x, z: position.z, eyeHeight: Math.max(0.4, top - 0.11) };
+  }
+
+  private async buildLookFixture(look: LightingLook, spec: LookFixture): Promise<void> {
+    const subject = this.subjectStand();
+    const bounds = locationById(this.currentLocation() ?? '')?.bounds;
+    const shot = { x: this.camera.position.x, z: this.camera.position.z };
+
+    // A working light is placed by angle from the camera; a lamp or a candle
+    // is a thing in the room and stays where the room put it.
+    // A visible source is the lamp the room built, if the room built one by
+    // that name. Otherwise it falls back to the position it was written with,
+    // which is what a place with no geometry of its own has.
+    const anchored = spec.anchor ? this.studioRoom?.anchor(spec.anchor) : undefined;
+    const resolved = anchored
+      ? {
+          position: { x: anchored.position.x, y: anchored.position.y, z: anchored.position.z },
+          aim: { x: anchored.aim.x, y: anchored.aim.y, z: anchored.aim.z },
+        }
+      : spec.placement
+        ? resolvePlacement(spec.placement, subject, shot)
+        : {
+            position: spec.position ?? { x: 0, y: subject.eyeHeight + 1, z: -2 },
+            aim: spec.aim ?? { x: subject.x, y: subject.eyeHeight, z: subject.z },
+          };
+
+    const aim = new BABYLON.Vector3(resolved.aim.x, resolved.aim.y, resolved.aim.z);
+    // Two rules a small room adds, and neither changes the angle the look was
+    // written at unless it has to: stay inside the walls, and stay out of the
+    // shot. The second is what kept a softbox standing over the dining table,
+    // between the lens and the face.
+    let wanted = resolved.position;
+    if (!spec.motivating) wanted = clearOfCamera(wanted, resolved.aim, { ...shot, y: subject.eyeHeight });
+    if (bounds) wanted = insideRoom(wanted, resolved.aim, bounds);
+    const stand = new BABYLON.Vector3(wanted.x, wanted.y, wanted.z);
+
+    const placement = spec.motivating
+      ? { position: stand, powerMultiplier: this.motivatingOutput(spec, aim, fixtureIlluminance(look, spec), stand) }
+      : this.placeFixtureForIlluminance(spec.fixture, stand, aim, fixtureIlluminance(look, spec));
+    // Walking a light closer to make its reading must not push it through a
+    // wall, or back into the shot, either.
+    if (!spec.motivating) {
+      const clear = clearOfCamera(placement.position, resolved.aim, { ...shot, y: subject.eyeHeight });
+      placement.position.set(clear.x, clear.y, clear.z);
+    }
+    if (bounds) {
+      const kept = insideRoom(placement.position, resolved.aim, bounds);
+      placement.position.set(kept.x, kept.y, kept.z);
+    }
+
+    const id = await this.addLight(spec.fixture, placement.position);
+    const data = this.lights.get(id);
+    if (!data) return;
+
+    data.name = spec.name;
+    data.powerMultiplier = placement.powerMultiplier;
+    this.aimLightAt(id, aim);
+
+    const colour = this.cctToColor(spec.cct);
+    data.light.diffuse = colour;
+    data.light.specular = colour;
+    data.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+    if (data.light instanceof BABYLON.SpotLight) {
+      if (spec.beamDeg !== undefined) data.light.angle = (spec.beamDeg * Math.PI) / 180;
+      if (spec.exponent !== undefined) data.light.exponent = spec.exponent;
+    }
+    if (data.shadowGenerator) {
+      if (spec.bias !== undefined) data.shadowGenerator.bias = spec.bias;
+      if (spec.normalBias !== undefined) data.shadowGenerator.normalBias = spec.normalBias;
+      this.configureStudioShadowSoftness(data.shadowGenerator, data);
+    }
+  }
+
+  /**
+   * How far back a visible source is dialled, staying where it stands.
+   *
+   * Never above its own output: a practical that cannot reach the level asked
+   * for simply burns at full, which is what the real lamp would do.
+   */
+  private motivatingOutput(spec: LookFixture, aim: BABYLON.Vector3, wanted: number, stand?: BABYLON.Vector3): number {
+    const catalogue = getLightById(spec.fixture);
+    const candela = catalogue
+      ? fixtureCandela({
+          type: catalogue.type,
+          guideNumber: catalogue.guideNumber,
+          lux1m: catalogue.lux1m,
+          lumens: catalogue.lumens,
+          beamAngleDeg: catalogue.beamAngle,
+        })
+      : null;
+    if (candela === null) return 1;
+
+    const output = sceneIntensityFromCandela(candela);
+    const where = stand ?? (spec.position
+      ? new BABYLON.Vector3(spec.position.x, spec.position.y, spec.position.z)
+      : aim.add(new BABYLON.Vector3(0, 1, 0)));
+    const distance = where.subtract(aim).length();
+    return Math.min(1, (wanted * distance * distance) / output);
+  }
+
+  /**
+   * Whose place this is: the name over the door and the colours with it.
+   *
+   * The signs are painted when the room is built, so changing the brand
+   * rebuilds the room. That is why this commits on a finished edit rather than
+   * on every keystroke.
+   */
+  public setBrand(brand: Partial<StudioBrand>): StudioBrand {
+    const next = normaliseBrand({ ...this.currentBrand(), ...brand });
+    environmentService.setStudioRoom({ brand: next });
+    window.dispatchEvent(new CustomEvent('ch-brand-changed', { detail: next }));
+    return next;
+  }
+
+  public currentBrand(): StudioBrand {
+    return normaliseBrand(this.studioRoom?.getState().brand ?? DEFAULT_BRAND);
+  }
+
+  /** The places the scene can be set in. */
+  public availableLocations(): StudioLocation[] {
+    return STUDIO_LOCATIONS;
+  }
+
+  /**
+   * Where the scene is, read from the room that is actually standing.
+   *
+   * Asking the room rather than remembering the last button means an opened
+   * document reports the place it really shows, not the last one chosen.
+   */
+  public currentLocation(): string | null {
+    const room = this.studioRoom?.getState().type ?? 'none';
+    return locationForRoom(room)?.id ?? null;
+  }
+
+  /**
+   * Set the scene somewhere: build the room and light it the way it is lit.
+   *
+   * Both halves stay ordinary afterwards. The room is scene geometry and the
+   * look leaves fixtures on stands, so relighting the kitchen for the evening
+   * is one more button, not a different mode.
+   */
+  public async applyLocation(id: string): Promise<boolean> {
+    const location = locationById(id);
+    if (!location) return false;
+    return this.queueSceneWork(() => this.buildLocation(id, location));
+  }
+
+  private async buildLocation(id: string, location: StudioLocation): Promise<boolean> {
+
+    // The seamless paper belongs to the studio. In a kitchen it stands in the
+    // middle of the room, behind the figure, being a cyclorama.
+    const inStudio = location.room === 'industrial' || location.room === 'none';
+    if (inStudio) {
+      if (!this.currentBackdropMesh) this.loadBackdrop('seamless-default', { receiveShadow: true });
+    } else {
+      this.removeBackdrop();
+    }
+
+    // So do the two camera bodies that stand on the floor. They are studio
+    // gear parked at z = 2.5, which in a 4.6-metre kitchen is through the back
+    // wall and in the shot — three camera bodies in a scene with one taking
+    // camera. They go with the paper.
+    this.setStudioGearVisible(inStudio);
+
+    environmentService.setStudioRoom({
+      type: location.room,
+      furnishings: location.furnishings,
+      practicals: location.practicals,
+    });
+    // The room is rebuilt from the service's notification, so the fixtures are
+    // placed against the walls that are actually up.
+    //
+    // A frame is the natural signal that it has landed, but a browser stops
+    // rendering a tab nobody is looking at, and waiting for a frame that never
+    // comes leaves the panel saying "working" with every button disabled, for
+    // good. The clock is the fallback; a promise that has settled cannot
+    // settle twice, so whichever arrives first wins.
+    await new Promise<void>(resolve => {
+      const observer = this.scene.onAfterRenderObservable.addOnce(() => resolve());
+      setTimeout(() => {
+        this.scene.onAfterRenderObservable.remove(observer);
+        resolve();
+      }, 250);
+    });
+    // The camera has to be in the room as well. A studio shot backs off five
+    // metres, which in a six-metre room puts the lens outside the front wall,
+    // filming the back of it — the frame goes black and the place looks
+    // broken. The shot direction is kept and the distance is shortened, the
+    // same way the lights are walked in.
+    if (location.bounds) {
+      const target = this.camera.target;
+      const kept = insideRoom(
+        { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z },
+        { x: target.x, y: target.y, z: target.z },
+        location.bounds,
+        0.5,
+      );
+      this.camera.setPosition(new BABYLON.Vector3(kept.x, kept.y, kept.z));
+      this.camera.setTarget(target.clone());
+    }
+
+    // A place that arrives unlit is half a place, so its lighting decides
+    // whether the move succeeded.
+    const lookForPlace = lookById(location.look);
+    const lit = lookForPlace ? await this.buildLook(location.look, lookForPlace) : false;
+
+    window.dispatchEvent(new CustomEvent('ch-location-changed', {
+      detail: { id, label: location.label },
+    }));
+    return lit;
+  }
+
+  /** The lighting looks on offer, each a place or a situation. */
+  public availableLooks(): LightingLook[] {
+    return LIGHTING_LOOKS;
+  }
+
+  /** The look the rig currently stands in, if it was set from one. */
+  public currentLook(): string | null {
+    return this.currentLookId;
+  }
+
+  /**
+   * Light the scene the way a named place is lit.
+   *
+   * Everything on the stands goes first: a look is the whole rig, not another
+   * light added to whatever was there. Anyone who wants to move a single head
+   * afterwards still can — the look leaves ordinary fixtures behind, not a
+   * locked preset.
+   */
+  public async applyLook(id: string): Promise<boolean> {
+    const look = lookById(id);
+    if (!look) return false;
+
+    return this.queueSceneWork(() => this.buildLook(id, look));
+  }
+
+  /**
+   * Run scene rebuilds one at a time, in the order they were asked for.
+   *
+   * Setting a place rebuilds the room and its rig, and both are long enough
+   * that a person can ask for the next one before the last has finished.
+   * Overlapping rebuilds each took their own snapshot of "the old rig" and
+   * each missed what the other had added, so two quick presses left two rigs
+   * standing with their shadow generators — and every change after that made
+   * it worse until the renderer stopped keeping up.
+   *
+   * Public entry points queue; the work itself calls the unqueued builders, so
+   * setting a place — which sets a look — cannot wait on itself.
+   */
+  private sceneWork: Promise<unknown> = Promise.resolve();
+
+  private queueSceneWork<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.sceneWork.then(work, work);
+    // The chain must survive a failed rebuild, or one error would stop every
+    // later change from ever running.
+    this.sceneWork = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
+  private async buildLook(id: string, look: LightingLook): Promise<boolean> {
+
+    // Build the new rig before taking the old one down. Clearing first left
+    // the scene with no lights at all for the seconds it takes to load three
+    // stands — the studio went black on every change of place or look, and
+    // anything that saved, measured or photographed in that window recorded an
+    // unlit scene with an empty light list.
+    const previous = [...this.lights.keys()];
+    for (const fixture of look.fixtures) {
+      await this.buildLookFixture(look, fixture);
+    }
+    for (const lightId of previous) this.removeLight(lightId);
+    this.currentLookId = id;
+
+    this.scene.materials.forEach(material => {
+      if (material instanceof BABYLON.PBRMaterial || material instanceof BABYLON.StandardMaterial) {
+        material.maxSimultaneousLights = 8;
+      }
+    });
+    this.updateSceneBrightness();
+    // The ambient fill is dimmed against however much studio light is burning,
+    // and clearing the rig recomputed it against an empty room. Without this
+    // the fill stays at its full value over the new rig and flattens every
+    // ratio the look was built to give: an evening pizzeria renders as a grey
+    // room in daylight.
+    this.updateAmbientLightIntensity();
+    this.updateSceneList();
+    // Same notice the default rig sends, so every panel that lists fixtures
+    // refreshes whether the rig came from a look or from setup.
+    window.dispatchEvent(new CustomEvent('lights-updated', {
+      detail: { action: 'look-applied', lightCount: this.lights.size },
+    }));
+    window.dispatchEvent(new CustomEvent('ch-look-changed', { detail: { id, label: look.label } }));
+    return true;
+  }
+
+  private currentLookId: string | null = null;
+  /** Said once per figure: a warning repeated every frame is noise, not help. */
+  private seatedWalkNoticed = false;
+  /** The pose to come back to when the figure stands up again. */
+  private lastStandingPose: string | null = null;
+
+  public async setupDefaultLighting(): Promise<void> {
     // Load the infinity cove backdrop immediately so colored lights have a surface to illuminate
     this.loadBackdrop('seamless-default', { receiveShadow: true });
 
-    // === KEY LIGHT (warm golden, right 45°) ===
-    const keyLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(3.5, 3.2, -2));
-    const keyLight = this.lights.get(keyLightId);
-    if (keyLight) {
-      keyLight.name = 'Key Light (Softbox)';
-      keyLight.powerMultiplier = 1.0;
-      this.aimLightAt(keyLightId, new BABYLON.Vector3(0, 1.3, 0));
-      if (keyLight.light instanceof BABYLON.SpotLight) {
-        keyLight.light.angle = Math.PI / 3;
-        keyLight.light.exponent = 2.0;
-        keyLight.light.intensity = 520;          // stronger key → 2.9:1 key:fill ratio
-        keyLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        // Warm tungsten/HMI colour — 3200K approximation
-        keyLight.light.diffuse  = new BABYLON.Color3(1.0, 0.96, 0.86);
-        keyLight.light.specular = new BABYLON.Color3(1.0, 0.96, 0.86);
-      }
-      if (keyLight.shadowGenerator) {
-        keyLight.shadowGenerator.useBlurExponentialShadowMap = true;
-        keyLight.shadowGenerator.blurKernel = 64;
-        keyLight.shadowGenerator.depthScale = 50;
-        keyLight.shadowGenerator.bias = 0.00004;
-        keyLight.shadowGenerator.normalBias = 0.06;
-        keyLight.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-      }
+    // The studio portrait look: neutral daylight key, fill and rim for judging
+    // materials and light placement.
+    const look = lookById(DEFAULT_LOOK_ID)!;
+    for (const fixture of look.fixtures) {
+      await this.buildLookFixture(look, fixture);
     }
-
-    // === FILL LIGHT (cool blue, left 45°) ===
-    const fillLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(-3.2, 2.2, -3));
-    const fillLight = this.lights.get(fillLightId);
-    if (fillLight) {
-      fillLight.name = 'Fill Light (Octabox)';
-      fillLight.powerMultiplier = 0.45;
-      this.aimLightAt(fillLightId, subjectCenter);
-      if (fillLight.light instanceof BABYLON.SpotLight) {
-        fillLight.light.angle = Math.PI / 2.5;
-        fillLight.light.exponent = 1.5;
-        fillLight.light.intensity = 178;         // 520:178 ≈ 2.9:1 — professional portrait ratio
-        fillLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        // Distinctly cool daylight bias — strong temperature contrast with warm key
-        fillLight.light.diffuse  = new BABYLON.Color3(0.78, 0.86, 1.0);
-        fillLight.light.specular = new BABYLON.Color3(0.78, 0.86, 1.0);
-      }
-      if (fillLight.shadowGenerator) {
-        fillLight.shadowGenerator.useBlurExponentialShadowMap = true;
-        fillLight.shadowGenerator.blurKernel = 80;
-        fillLight.shadowGenerator.bias = 0.00006;
-        fillLight.shadowGenerator.normalBias = 0.08;
-        fillLight.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM;
-      }
-    }
-
-    // === RIM LIGHT (warm separation) ===
-    const rimLightId = await this.addLight('aputure-300d-strip', new BABYLON.Vector3(-2.5, 4, 3.5));
-    const rimLight = this.lights.get(rimLightId);
-    if (rimLight) {
-      rimLight.name = 'Rim Light (Stripbox)';
-      rimLight.powerMultiplier = 0.6;
-      this.aimLightAt(rimLightId, new BABYLON.Vector3(0, 1.5, 0));
-      if (rimLight.light instanceof BABYLON.SpotLight) {
-        rimLight.light.angle = Math.PI / 5;
-        rimLight.light.exponent = 4.0;          // tighter centre hotspot → crisper edge light
-        rimLight.light.intensity = 500;          // stronger separation
-        rimLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        rimLight.light.diffuse = new BABYLON.Color3(1.0, 0.90, 0.72);  // richer warm amber
-        rimLight.light.specular = new BABYLON.Color3(1.0, 0.90, 0.72);
-      }
-      if (rimLight.shadowGenerator) {
-        rimLight.shadowGenerator.blurKernel = 32;
-      }
-    }
+    this.currentLookId = look.id;
 
     // After all lights are created, patch every existing material to accept 8 lights
     this.scene.materials.forEach((mat) => {
@@ -6857,6 +7581,10 @@ class VirtualStudio {
         mat.maxSimultaneousLights = 8;
       }
     });
+
+    // Apply each fixture's output percentage — the rig sets power, not the
+    // fixture's physical intensity, so the rendered levels come from here.
+    this.updateSceneBrightness();
 
     // Update scene list to show all lights
     this.updateSceneList();
@@ -7256,188 +7984,72 @@ class VirtualStudio {
     this.setupRenderModeToggle();
   }
 
-  private finalRenderInterval: ReturnType<typeof setInterval> | null = null;
-
-  /**
-   * Setup render mode toggle (Work Mode / Final Mode)
-   */
+  /** Final mode increases antialiasing; the current renderer is real-time rasterization. */
   private setupRenderModeToggle(): void {
-    const workModeBtn = document.getElementById('workModeBtn');
-    const finalModeBtn = document.getElementById('finalModeBtn');
-    const renderProgress = document.getElementById('renderProgress');
-    const renderProgressBar = document.getElementById('renderProgressBar');
-    const renderProgressText = document.getElementById('renderProgressText');
-    const cancelFinalRender = document.getElementById('cancelFinalRender');
-
-    // Initialize progress elements
-    if (renderProgressBar) renderProgressBar.style.width = '0%';
-    if (renderProgressText) renderProgressText.textContent = '0%';
-
-    // Store original progress HTML for reset
-    const originalProgressHTML = renderProgress?.innerHTML || '';
-
-    const resetProgressUI = () => {
-      if (renderProgress) {
-        renderProgress.innerHTML = originalProgressHTML;
-      }
-      const newProgressBar = document.getElementById('renderProgressBar');
-      const newProgressText = document.getElementById('renderProgressText');
-      if (newProgressBar) newProgressBar.style.width = '0%';
-      if (newProgressText) newProgressText.textContent = '0%';
+    const work = document.getElementById('workModeBtn');
+    const final = document.getElementById('finalModeBtn');
+    const progress = document.getElementById('renderProgress');
+    const update = (mode: 'work' | 'final') => {
+      work?.classList.toggle('active', mode === 'work');
+      final?.classList.toggle('active', mode === 'final');
+      if (progress) progress.style.display = mode === 'final' ? 'block' : 'none';
     };
-
-    const stopFinalRender = () => {
-      if (this.finalRenderInterval) {
-        clearInterval(this.finalRenderInterval);
-        this.finalRenderInterval = null;
-      }
-    };
-
-    const updateModeUI = (mode: 'work' | 'final') => {
-      if (mode === 'work') {
-        stopFinalRender();
-        workModeBtn?.classList.add('active');
-        finalModeBtn?.classList.remove('active');
-        if (workModeBtn) {
-          workModeBtn.style.background = 'rgba(0,212,255,0.3)';
-          workModeBtn.style.color = '#00d4ff';
-        }
-        if (finalModeBtn) {
-          finalModeBtn.style.background = 'transparent';
-          finalModeBtn.style.color = 'rgba(255,255,255,0.6)';
-        }
-        if (renderProgress) renderProgress.style.display = 'none';
-        resetProgressUI();
-      } else {
-        finalModeBtn?.classList.add('active');
-        workModeBtn?.classList.remove('active');
-        if (finalModeBtn) {
-          finalModeBtn.style.background = 'rgba(16,185,129,0.3)';
-          finalModeBtn.style.color = '#10b981';
-        }
-        if (workModeBtn) {
-          workModeBtn.style.background = 'transparent';
-          workModeBtn.style.color = 'rgba(255,255,255,0.6)';
-        }
-        if (renderProgress) renderProgress.style.display = 'block';
-      }
-    };
-
-    const startFinalRender = () => {
-      stopFinalRender();
-      resetProgressUI();
-
-      let progress = 0;
-      const progressBar = document.getElementById('renderProgressBar');
-      const progressText = document.getElementById('renderProgressText');
-      const progressStep = Math.max(1, Math.round(100 / this.finalRenderMaxSamples));
-
-      this.finalRenderInterval = setInterval(() => {
-        progress += progressStep;
-        if (progressBar) progressBar.style.width = `${Math.min(progress, 100)}%`;
-        if (progressText) progressText.textContent = `${Math.min(progress, 100)}%`;
-
-        if (progress >= 100) {
-          stopFinalRender();
-          setTimeout(() => {
-            const rp = document.getElementById('renderProgress');
-            if (rp && this.renderMode === 'final') {
-              rp.innerHTML = `
-                <div style="font-size:11px;color:#10b981;margin-bottom:4px;">Rendering fullført</div>
-                <div style="display:flex;gap:8px;justify-content:center;">
-                  <button id="exportFinalRender" style="padding:6px 16px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">Eksporter Bilde</button>
-                  <button id="rerunFinalRender" style="padding:6px 12px;border:none;background:rgba(255,255,255,0.1);color:#fff;border-radius:6px;cursor:pointer;font-size:11px;">Kjør igjen</button>
-                </div>
-              `;
-              document.getElementById('exportFinalRender')?.addEventListener('click', () => {
-                this.exportScreenshot();
-              });
-              document.getElementById('rerunFinalRender')?.addEventListener('click', () => {
-                resetProgressUI();
-                startFinalRender();
-              });
-            }
-          }, 500);
-        }
-      }, 100);
-    };
-
-    workModeBtn?.addEventListener('click', () => {
-      this.setRenderMode('work');
-      updateModeUI('work');
-    });
-
-    finalModeBtn?.addEventListener('click', () => {
-      this.setRenderMode('final');
-      updateModeUI('final');
-      startFinalRender();
-    });
-
-    cancelFinalRender?.addEventListener('click', () => {
-      this.setRenderMode('work');
-      updateModeUI('work');
-    });
-
-    // Listen for render mode changes from code
-    window.addEventListener('vs-render-mode-changed', ((e: CustomEvent) => {
-      updateModeUI(e.detail.mode);
-    }) as EventListener);
+    if (progress) {
+      progress.innerHTML = '<div style="font-size:11px;margin-bottom:8px">Høy kvalitet · sanntid</div><button type="button" id="exportFinalRender">Eksporter kamerabilde</button>';
+      progress.querySelector('button')?.addEventListener('click', () => this.exportScreenshot());
+    }
+    work?.addEventListener('click', () => this.setRenderMode('work'));
+    final?.addEventListener('click', () => this.setRenderMode('final'));
+    window.addEventListener('vs-render-mode-changed', ((event: CustomEvent) => update(event.detail.mode)) as EventListener);
+    update(this.renderMode);
   }
 
-  /**
-   * Export screenshot of the current viewport
-   */
   private exportScreenshot(): void {
-    BABYLON.Tools.CreateScreenshot(this.engine, this.camera, { width: 1920, height: 1080 }, (data) => {
-      const link = document.createElement('a');
-      link.download = `virtual-studio-render-${Date.now()}.png`;
-      link.href = data;
-      link.click();
-    });
+    this.takeScreenshot();
   }
 
   private currentScopeMode: 'histogram' | 'waveform' | 'vectorscope' | 'skin' | 'zebra' | 'falsecolor' = 'histogram';
   private scopeExpanded: boolean = false;
 
+  /** Switch the scope and keep both selects and the toolbar label in step. */
+  public setScopeMode(mode: typeof this.currentScopeMode): void {
+    this.currentScopeMode = mode;
+
+    const btnText = document.getElementById('scopeToggleBtn')?.querySelector('.toolbar-btn-text');
+    if (btnText) {
+      const modeLabels: Record<string, string> = {
+        'histogram': 'Histogram',
+        'waveform': 'Waveform',
+        'vectorscope': 'Vectorscope',
+        'skin': 'Hudtone',
+        'zebra': 'Zebra',
+        'falsecolor': 'False Color'
+      };
+      btnText.textContent = modeLabels[mode] || 'Histogram';
+    }
+
+    const scopeModeSelect = document.getElementById('scopeModeSelect') as HTMLSelectElement | null;
+    const scopeModeSelectDropdown = document.getElementById('scopeModeSelectDropdown') as HTMLSelectElement | null;
+    if (scopeModeSelect) scopeModeSelect.value = mode;
+    if (scopeModeSelectDropdown) scopeModeSelectDropdown.value = mode;
+
+    const histogramStylePanel = document.getElementById('histogramStylePanel') as HTMLDivElement | null;
+    if (histogramStylePanel) {
+      histogramStylePanel.style.display = mode === 'histogram' ? 'flex' : 'none';
+    }
+  }
+
   private setupScopeControls(): void {
     // Right panel scope controls
     const scopeModeSelect = document.getElementById('scopeModeSelect') as HTMLSelectElement;
     const scopeModeSelectDropdown = document.getElementById('scopeModeSelectDropdown') as HTMLSelectElement;
-    const histogramStylePanel = document.getElementById('histogramStylePanel') as HTMLDivElement;
-
-    // Sync both selects
-    const setScopeMode = (mode: typeof this.currentScopeMode) => {
-      this.currentScopeMode = mode;
-      // Update button text
-      const scopeToggleBtn = document.getElementById('scopeToggleBtn');
-      const btnText = scopeToggleBtn?.querySelector('.toolbar-btn-text');
-      if (btnText) {
-        const modeLabels: Record<string, string> = {
-          'histogram': 'Histogram',
-          'waveform': 'Waveform',
-          'vectorscope': 'Vectorscope',
-          'skin': 'Hudtone',
-          'zebra': 'Zebra',
-          'falsecolor': 'False Color'
-        };
-        btnText.textContent = modeLabels[mode] || 'Histogram';
-      }
-      // Sync both selects
-      if (scopeModeSelect) scopeModeSelect.value = mode;
-      if (scopeModeSelectDropdown) scopeModeSelectDropdown.value = mode;
-
-      // Show/hide histogram style panel
-      if (histogramStylePanel) {
-        histogramStylePanel.style.display = mode === 'histogram' ? 'flex' : 'none';
-      }
-    };
 
     scopeModeSelect?.addEventListener('change', () => {
-      setScopeMode(scopeModeSelect.value as typeof this.currentScopeMode);
+      this.setScopeMode(scopeModeSelect.value as typeof this.currentScopeMode);
     });
 
     scopeModeSelectDropdown?.addEventListener('change', () => {
-      setScopeMode(scopeModeSelectDropdown.value as typeof this.currentScopeMode);
+      this.setScopeMode(scopeModeSelectDropdown.value as typeof this.currentScopeMode);
     });
 
     // Histogram style controls
@@ -7851,41 +8463,28 @@ class VirtualStudio {
   }
 
   public updateSceneBrightness(): void {
-    // Parse shutter speed to get exposure time
-    const shutterMatch = this.cameraSettings.shutter.match(/1\/(\d+)/);
-    const shutterSeconds = shutterMatch ? 1 / parseInt(shutterMatch[1]) : 1/125;
-
-    // Calculate exposure value (EV)
-    const isoFactor = this.cameraSettings.iso / 100;
-    const apertureFactor = 1 / (this.cameraSettings.aperture * this.cameraSettings.aperture);
-    const shutterFactor = shutterSeconds * 125; // Normalize to 1/125s baseline
-    const ndFactor = 1 / Math.pow(2, this.cameraSettings.nd);
-
-    const brightness = isoFactor * apertureFactor * shutterFactor * ndFactor * 2;
-
-    // Update all studio lights - preserve user's intensity settings
-    for (const [, data] of this.lights) {
-      // Initialize baseIntensity if not set
-      if (!data.baseIntensity) {
-        data.baseIntensity = data.type.includes('softbox') || data.type.includes('umbrella') ? 8 : 12;
-      }
-      // Initialize powerMultiplier if not set (default to 100% = 1.0)
-      if (data.powerMultiplier === undefined) {
-        data.powerMultiplier = 1.0;
-      }
-      // Apply: baseIntensity * powerMultiplier * brightness
-      data.light.intensity = data.baseIntensity * data.powerMultiplier * brightness;
+    // Exposure belongs to the camera. A fixture's physical output — the
+    // candela in baseIntensity, scaled by its own power setting — never moves
+    // when ISO, aperture, shutter or ND changes.
+    //
+    // A flash is the one exception, and it is a real one: the burst is over
+    // before the shutter closes, so shutter speed does not change how a strobe
+    // exposes. The frame has a single image-processing exposure that carries
+    // the shutter term for continuous light, so strobes cancel it again here.
+    // Their rendered contribution then depends on aperture and ISO alone,
+    // exactly as on set.
+    const settings = this.cameraSettings;
+    const exposure = studioExposure(settings.iso, settings.aperture, settings.shutter, settings.nd);
+    if (this.renderingPipeline) this.renderingPipeline.imageProcessing.exposure = 0.8 * exposure;
+    const flashCompensation = flashShutterCompensation(shutterSeconds(settings.shutter));
+    for (const data of this.lights.values()) {
+      data.baseIntensity ??= data.light.intensity;
+      data.powerMultiplier ??= 1;
+      data.light.intensity = data.baseIntensity * data.powerMultiplier
+        * (data.isFlash ? flashCompensation : 1);
       data.intensity = data.light.intensity;
-      // Sync visual glow on the softbox/octabox head to the power level
       this.updateLightHeadGlow(data);
     }
-
-    // Update ambient/hemisphere light if exists
-    this.scene.lights.forEach(light => {
-      if (light instanceof BABYLON.HemisphericLight) {
-        light.intensity = 0.3 * brightness;
-      }
-    });
   }
 
   private setupModalListeners(): void {
@@ -11188,16 +11787,84 @@ class VirtualStudio {
   }
 
   // ─── Toast utility ───────────────────────────────────────────────────────
-  private showToast(message: string, type: 'error' | 'warn' | 'info' | 'success' = 'error', durationMs = 5000): void {
+  private showToast(
+    message: string,
+    type: 'error' | 'warn' | 'info' | 'success' = 'error',
+    durationMs = 5000,
+    actions: { label: string; onSelect: () => void }[] = []
+  ): void {
     const el = document.createElement('div');
     el.className = `vs-toast${type === 'error' ? '' : ' ' + type}`;
-    el.textContent = message;
-    document.body.appendChild(el);
-    setTimeout(() => {
+    const text = document.createElement('span');
+    text.textContent = message;
+    el.appendChild(text);
+
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
       el.style.opacity = '0';
       el.style.transition = 'opacity 0.4s ease';
       setTimeout(() => el.remove(), 400);
-    }, durationMs);
+    };
+
+    if (actions.length > 0) {
+      const row = document.createElement('span');
+      row.className = 'vs-toast-actions';
+      for (const action of actions) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'vs-toast-action';
+        button.textContent = action.label;
+        button.addEventListener('click', () => {
+          action.onSelect();
+          dismiss();
+        });
+        row.appendChild(button);
+      }
+      el.appendChild(row);
+    }
+
+    document.body.appendChild(el);
+    setTimeout(dismiss, durationMs);
+  }
+
+  /**
+   * Percentage of clipped highlights that counts as blown rather than a
+   * specular hit. A strobe on full power at a wide aperture passes this
+   * easily, which is correct: the fix is the aperture, not the light.
+   */
+  private static readonly CLIPPING_PROMPT_THRESHOLD = 8;
+  /** Re-arm below this, so one prompt per episode rather than a nag loop. */
+  private static readonly CLIPPING_RESET_THRESHOLD = 3;
+  private clippingPromptArmed = true;
+
+  /**
+   * Offer the scope that answers the question when the frame blows out.
+   *
+   * The photographer stays in control: this never changes the exposure or the
+   * lights, it only offers to show what is clipping.
+   */
+  private offerClippingScope(): void {
+    if (this.highlightClipping < VirtualStudio.CLIPPING_RESET_THRESHOLD) {
+      this.clippingPromptArmed = true;
+      return;
+    }
+    if (!this.clippingPromptArmed) return;
+    if (this.highlightClipping < VirtualStudio.CLIPPING_PROMPT_THRESHOLD) return;
+    // A scope that already shows the clipping answers the question itself.
+    if (this.currentScopeMode === 'zebra' || this.currentScopeMode === 'falsecolor') return;
+
+    this.clippingPromptArmed = false;
+    this.showToast(
+      `Bildet er overeksponert — ${this.highlightClipping.toFixed(0)} % utbrente høylys. Vil du se hvor?`,
+      'warn',
+      12000,
+      [
+        { label: 'Zebra', onSelect: () => this.setScopeMode('zebra') },
+        { label: 'Histogram', onSelect: () => this.setScopeMode('histogram') },
+      ]
+    );
   }
 
   // ─── WebGL context lost recovery ─────────────────────────────────────────
@@ -11534,7 +12201,7 @@ class VirtualStudio {
   }
 
   private async exportPdf(): Promise<void> {
-    BABYLON.Tools.CreateScreenshot(
+    BABYLON.Tools.CreateScreenshotUsingRenderTarget(
       this.engine,
       this.camera,
       { width: 1920, height: 1080 },
@@ -12399,7 +13066,7 @@ class VirtualStudio {
 
       // Update camera FOV based on focal length (35mm full-frame equivalent)
       const focalLength = s.focalLength ?? 50;
-      this.camera.fov = Math.atan2(24, 2 * focalLength) * 2; // vertical FoV in radians
+      this.camera.fov = focalLengthToVerticalFov(focalLength); // vertical FoV in radians
 
       // Apply white balance as scene image processing tint
       const wb = s.whiteBalance ?? 5500;
@@ -12459,7 +13126,7 @@ class VirtualStudio {
     window.addEventListener('ch-load-character', ((e: CustomEvent) => {
       const { modelUrl, name, skinTone, height, position, rotation, storyRigId, additive, tints } = e.detail;
       console.log('Loading character:', name, storyRigId ? `(story: ${storyRigId})` : '');
-      this.loadCharacterModel(modelUrl, name, skinTone, height, { position, rotation, storyRigId, additive, tints });
+      void this.loadCharacterModel(modelUrl, name, skinTone, height, { position, rotation, storyRigId, additive, tints }).catch(() => {});
     }) as EventListener);
 
     window.addEventListener('ch-remove-character', (() => {
@@ -15216,6 +15883,10 @@ class VirtualStudio {
   private resolveControllableCharacterMesh(mesh: BABYLON.AbstractMesh | null): BABYLON.AbstractMesh | null {
     if (!mesh || mesh.isDisposed()) return null;
 
+    // Manipulate the common model root, never an individual skin/clothing surface.
+    const modelRoot = this.resolveRootMesh(mesh);
+    if (modelRoot?.metadata?.isModelRoot || modelRoot?.metadata?.sourceModelUrl) return modelRoot;
+
     if (mesh.skeleton) {
       return mesh;
     }
@@ -15824,7 +16495,7 @@ class VirtualStudio {
       this.scene.pointerX,
       this.scene.pointerY,
       BABYLON.Matrix.Identity(),
-      this.camera
+      this.scene.activeCamera || this.camera
     );
     const groundPlane = BABYLON.Plane.FromPositionAndNormal(BABYLON.Vector3.Zero(), BABYLON.Axis.Y);
     const distance = ray.intersectsPlane(groundPlane);
@@ -15845,7 +16516,7 @@ class VirtualStudio {
 
   private getMeshHierarchyUniqueIds(rootMesh: BABYLON.AbstractMesh): number[] {
     const ids = new Set<number>([rootMesh.uniqueId]);
-    rootMesh.getChildMeshes(true).forEach((mesh) => ids.add(mesh.uniqueId));
+    rootMesh.getChildMeshes().forEach((mesh) => ids.add(mesh.uniqueId));
     return Array.from(ids);
   }
 
@@ -15898,8 +16569,8 @@ class VirtualStudio {
     if (!this.scene.animationGroups || this.scene.animationGroups.length === 0) return [];
 
     const hierarchyIds = new Set<number>([rootMesh.uniqueId]);
-    rootMesh.getChildTransformNodes(true).forEach((node) => hierarchyIds.add(node.uniqueId));
-    rootMesh.getChildMeshes(true).forEach((mesh) => hierarchyIds.add(mesh.uniqueId));
+    rootMesh.getChildTransformNodes().forEach((node) => hierarchyIds.add(node.uniqueId));
+    rootMesh.getChildMeshes().forEach((mesh) => hierarchyIds.add(mesh.uniqueId));
 
     const skeletonCarrier = this.findSkeletonCarrierMesh(rootMesh);
     const skeletonBones = skeletonCarrier?.skeleton
@@ -16060,7 +16731,7 @@ class VirtualStudio {
       return rootMesh;
     }
 
-    for (const child of rootMesh.getChildMeshes(true)) {
+    for (const child of rootMesh.getChildMeshes()) {
       if (child.skeleton) {
         return child;
       }
@@ -16188,8 +16859,8 @@ class VirtualStudio {
     );
 
     const hierarchyIds = new Set<number>([rootMesh.uniqueId]);
-    rootMesh.getChildTransformNodes(true).forEach((node) => hierarchyIds.add(node.uniqueId));
-    rootMesh.getChildMeshes(true).forEach((mesh) => hierarchyIds.add(mesh.uniqueId));
+    rootMesh.getChildTransformNodes().forEach((node) => hierarchyIds.add(node.uniqueId));
+    rootMesh.getChildMeshes().forEach((mesh) => hierarchyIds.add(mesh.uniqueId));
 
     const skeletonCarrier = this.findSkeletonCarrierMesh(rootMesh);
     const skeletonBones = skeletonCarrier?.skeleton
@@ -16332,8 +17003,8 @@ class VirtualStudio {
     }
 
     this.scene.stopAnimation(rootMesh);
-    rootMesh.getChildTransformNodes(true).forEach((node) => this.scene.stopAnimation(node));
-    rootMesh.getChildMeshes(true).forEach((mesh) => this.scene.stopAnimation(mesh));
+    rootMesh.getChildTransformNodes().forEach((node) => this.scene.stopAnimation(node));
+    rootMesh.getChildMeshes().forEach((mesh) => this.scene.stopAnimation(mesh));
 
     const skeletonCarrier = this.findSkeletonCarrierMesh(rootMesh);
     if (skeletonCarrier?.skeleton) {
@@ -17467,6 +18138,20 @@ class VirtualStudio {
       return;
     }
 
+    // Sitting is a state, not a decoration. Walking out of it was possible
+    // because a movement key simply cleared the pose lock below, so a seated
+    // figure slid across the floor with its chair still tracking it. From a
+    // chair the only move is to stand up.
+    if (mesh.metadata?.studioPose === 'StudioSeated') {
+      if (!this.seatedWalkNoticed) {
+        this.seatedWalkNoticed = true;
+        window.dispatchEvent(new CustomEvent('ch-character-seated-blocked', {
+          detail: { message: 'Figuren sitter. Trykk «Reis deg» for å gå.' },
+        }));
+      }
+      return;
+    }
+
     if (state.poseLocked && state.rigId) {
       const store = useSkeletalAnimationStore.getState();
       this.forceStopCharacterAnimations(mesh, state.rigId);
@@ -17532,6 +18217,12 @@ class VirtualStudio {
     if (isMoving) {
       motionWorldPosition.x += movementDirection.x * travel;
       motionWorldPosition.z += movementDirection.z * travel;
+
+      // Stop at the walls of whatever room this is. Without it the figure
+      // walks straight through the front of a pizzeria and keeps going into
+      // nothing, which is a strange thing for a previsualization of a room to
+      // let you do. A margin keeps the body off the wall rather than in it.
+      this.keepInsideRoom(motionWorldPosition);
       this.setMeshYaw(motionMesh, profile, desiredFacingYaw, Math.min(1, dt * 9));
     }
     const facingYaw = this.getMeshYaw(motionMesh, profile);
@@ -18081,6 +18772,14 @@ class VirtualStudio {
       return;
     }
 
+    // A seated figure does not walk to a mark either. The keyboard path
+    // refuses this already; this is the other way in, and both have to agree
+    // or the chair is left behind by whichever one nobody checked.
+    if (mesh.metadata?.studioPose === 'StudioSeated') {
+      this.activeCharacterLocomotion = null;
+      return;
+    }
+
     let motionWorldPosition = this.getMotionNodeWorldPosition(motionMesh);
     const dt = Math.max(0.001, Math.min(0.1, this.engine.getDeltaTime() / 1000));
     const toTarget = locomotion.target.subtract(motionWorldPosition);
@@ -18122,6 +18821,7 @@ class VirtualStudio {
 
     motionWorldPosition.x += direction.x * travel;
     motionWorldPosition.z += direction.z * travel;
+    this.keepInsideRoom(motionWorldPosition);
 
     if (locomotion.snapToGround) {
       const now = performance.now();
@@ -18391,97 +19091,452 @@ class VirtualStudio {
   /**
    * Add a default avatar model to the scene for focus target testing
    */
+  /**
+   * Bring the default figure in, and light the studio around her.
+   *
+   * The order matters. A look is written as angles around the subject's eye
+   * line, so lighting an empty stage aims the rig at an assumed height and the
+   * figure who arrives afterwards stands slightly outside it. Relighting once
+   * she appeared was the obvious repair and the wrong one: it tore the rig
+   * down and rebuilt it while the scene was live, which left the studio dark
+   * for several seconds and raced anything else that was loading. Waiting for
+   * her first costs nothing and needs no repair.
+   */
   private addDefaultMannequin(): void {
-    this.loadDefaultAvatar();
+    void this.loadDefaultAvatar().then(() => this.setupDefaultLighting());
   }
 
   /**
    * Load a default avatar from the library
    */
   private async loadDefaultAvatar(): Promise<void> {
-    const avatarId = 'default_avatar';
-    const avatarCandidates: Array<{
-      url: string;
-      name: string;
-      pbrKey: string;
-      baseRotation: BABYLON.Vector3;
-    }> = [
-      {
-        // Rigged + animated fallback so limbs can move.
-        url: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb',
-        name: 'Avatar (Rigged)',
-        pbrKey: 'cesium_man',
-        baseRotation: new BABYLON.Vector3(0, 0, 0),
+    await this.loadStudioCharacter('woman').catch(() => { /* Loader reports an actionable error. */ });
+  }
+
+  public async loadStudioCharacter(model: 'woman' | 'man'): Promise<void> {
+    const height = model === 'woman' ? 1.72 : 1.82;
+    await this.loadCharacterModel(`/models/avatars/studio/studio-${model}.glb`,
+      model === 'woman' ? 'Studiomodell · Kvinne' : 'Studiomodell · Mann', '', height / 1.7);
+    this.applyStudioPose('StudioStand');
+    useAppStore.getState().selectNode(null);
+    this.gizmoManager?.attachToMesh(null);
+  }
+
+  /**
+   * The rotation the active pose clip writes for a joint, if it writes one.
+   *
+   * A document should carry what the photographer changed, not the whole
+   * skeleton, so edits are stored as the difference from the clip.
+   */
+  private clipJointRotation(mesh: BABYLON.AbstractMesh, node: BABYLON.TransformNode): BABYLON.Quaternion | null {
+    const poseName = mesh.metadata?.studioPose;
+    if (!poseName) return null;
+    const group = (this.getAnimationGroupsForMesh(mesh) || []).find(candidate => candidate.name === poseName);
+    if (!group) return null;
+    for (const targeted of group.targetedAnimations) {
+      if (targeted.target !== node) continue;
+      if (targeted.animation.targetProperty !== 'rotationQuaternion') continue;
+      const keys = targeted.animation.getKeys();
+      if (keys.length > 0 && keys[0].value instanceof BABYLON.Quaternion) return keys[0].value;
+    }
+    return null;
+  }
+
+  /** Editable joints this figure carries, paired with their scene nodes. */
+  private characterJointNodes(mesh: BABYLON.AbstractMesh): { id: string; node: BABYLON.TransformNode }[] {
+    const nodes = new Map(mesh.getChildTransformNodes().map(node => [node.name, node]));
+    return EDITABLE_JOINTS.flatMap(joint => {
+      const node = nodes.get(joint.node);
+      return node ? [{ id: joint.id, node }] : [];
+    });
+  }
+
+  /**
+   * Joint rotations that differ from the pose clip, in radians.
+   *
+   * Returns undefined when the figure is still exactly in its clip, so a
+   * document from an unedited scene is unchanged by this feature.
+   */
+  private getEditedJointRotations(
+    mesh: BABYLON.AbstractMesh,
+  ): Record<string, { x: number; y: number; z: number }> | undefined {
+    const edited: Record<string, { x: number; y: number; z: number }> = {};
+    for (const { id, node } of this.characterJointNodes(mesh)) {
+      const current = node.rotationQuaternion;
+      if (!current) continue;
+      const clip = this.clipJointRotation(mesh, node);
+      if (clip && Math.abs(BABYLON.Quaternion.Dot(current, clip)) > 1 - 1e-6) continue;
+      edited[id] = eulerFromQuat(current);
+    }
+    return Object.keys(edited).length > 0 ? edited : undefined;
+  }
+
+  /** Replay stored joint edits, clamped, so a bad file cannot break a figure. */
+  private applyJointRotations(
+    mesh: BABYLON.AbstractMesh,
+    rotations: Record<string, { x: number; y: number; z: number }>,
+  ): void {
+    if (mesh.isDisposed()) return;
+    for (const { id, node } of this.characterJointNodes(mesh)) {
+      const stored = rotations[id];
+      if (!stored) continue;
+      const child = node.getChildTransformNodes(true)[0];
+      const boneAxis = child
+        ? unitVector({ x: child.position.x, y: child.position.y, z: child.position.z })
+        : { x: 0, y: 1, z: 0 };
+      const clamped = clampJointQuaternion(id, quatFromEuler({
+        x: Number(stored.x), y: Number(stored.y), z: Number(stored.z),
+      }), boneAxis);
+      node.rotationQuaternion = new BABYLON.Quaternion(clamped.x, clamped.y, clamped.z, clamped.w);
+    }
+    this.afterNextFrame(() => {
+      if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+    });
+  }
+
+  /**
+   * Run `work` after the next rendered frame, or shortly after either way.
+   *
+   * Skin matrices are only right once a frame has been drawn, so grounding a
+   * figure, building the portrait chair and reading a skinned bounding box all
+   * wait for one. A browser stops rendering a tab nobody is looking at, and
+   * the work then never happens at all — the figure is left floating in the
+   * pose it was struck in, with no chair under it, which is exactly what a
+   * photographer finds when they come back to the tab.
+   *
+   * The frame is still preferred; the clock only catches the case where no
+   * frame is coming. Whichever arrives first runs the work, once.
+   *
+   * The wait is deliberately long. At 250 ms the clock started winning races
+   * it was never meant to enter: under software rendering a frame can take
+   * half a second, so work that depended on being *after* a render ran before
+   * one, and a document restored its actors into a scene that had not drawn
+   * them yet — they came back as meshes nobody had registered. Two seconds is
+   * far longer than any frame a rendering tab takes, and still instant next to
+   * a tab that has stopped rendering altogether, which is the only case this
+   * exists for.
+   */
+  private afterNextFrame(work: () => void, fallbackMs = 2000): void {
+    let done = false;
+    const run = () => {
+      if (done) return;
+      done = true;
+      work();
+    };
+    const observer = this.scene.onAfterRenderObservable.addOnce(run);
+    setTimeout(() => {
+      this.scene.onAfterRenderObservable.remove(observer);
+      run();
+    }, fallbackMs);
+  }
+
+  /**
+   * Rest the figure on the floor after its skin matrices have been rebuilt.
+   *
+   * Both a pose clip and a joint edit move the surfaces, and both need the feet
+   * back on the ground afterwards — a bent knee otherwise leaves the shoes in
+   * the air or drives them through the floor.
+   */
+  private groundCharacterSurfaces(mesh: BABYLON.AbstractMesh): void {
+    const surfaces = [mesh, ...mesh.getChildMeshes()].filter(child => child.getTotalVertices() > 0);
+    surfaces.forEach(child => {
+      child.computeWorldMatrix(true);
+      if (child instanceof BABYLON.Mesh) child.refreshBoundingInfo(true);
+    });
+    const bottom = Math.min(...surfaces.map(child => child.getBoundingInfo().boundingBox.minimumWorld.y));
+    if (Number.isFinite(bottom)) mesh.position.y += 0.016 - bottom;
+    mesh.computeWorldMatrix(true);
+  }
+
+  private wardrobeCatalogue: WardrobeCatalogue | null = null;
+
+  /**
+   * Everything on set the photographer can take hold of.
+   *
+   * Built on first use, because it needs the gizmo manager, and kept for the
+   * life of the scene: a prop outlives the figure and the room around it.
+   */
+  public studioProps(): StudioProps | null {
+    if (this.props) return this.props;
+    if (!this.gizmoManager) return null;
+    this.props = new StudioProps({
+      scene: this.scene,
+      gizmos: this.gizmoManager,
+      importModel: async url => {
+        const result = await BABYLON.SceneLoader.ImportMeshAsync(
+          '', ...VirtualStudio.splitAssetUrl(url), this.scene);
+        const root = result.meshes[0] ?? result.transformNodes[0] ?? null;
+        if (root) root.name = url.split('/').pop() ?? root.name;
+        return root;
       },
-      {
-        url: resolveModelPath('/models/avatars/avatar_woman.glb'),
-        name: 'Avatar (Woman)',
-        pbrKey: 'avatar_woman',
-        baseRotation: new BABYLON.Vector3(Math.PI, Math.PI, 0),
+      onChanged: (props, selectedId) => {
+        window.dispatchEvent(new CustomEvent('ch-studio-props', { detail: { props, selectedId } }));
       },
-    ];
+    });
+    return this.props;
+  }
 
-    let lastError: unknown = null;
+  /**
+   * How to stop the studio driving an object the photographer has claimed.
+   *
+   * The portrait chair follows the figure every frame; once it is a prop the
+   * document owns where it stands, so the tracking has to end.
+   */
+  private releaseStudioObject(key: string): (() => void) | undefined {
+    if (key !== 'portraitChair') return undefined;
+    const seats = [...this.studioSeats.values()];
+    if (seats.length === 0) return undefined;
+    return () => seats.forEach(seat => seat.release());
+  }
 
-    for (const candidate of avatarCandidates) {
-      try {
-        const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', candidate.url, this.scene);
-        if (result.meshes.length === 0) {
-          throw new Error('No meshes returned from avatar import');
-        }
+  /**
+   * Put a document's claimed objects back, once the scene can offer them.
+   *
+   * Waits for the frames that let derived geometry appear: the portrait chair
+   * is built in an after-render callback, so asking for it any sooner finds
+   * nothing and reports it missing.
+   */
+  private async restoreStudioProps(preset: SceneComposition): Promise<void> {
+    const saved = parseProps((preset as unknown as Record<string, unknown>).studioProps);
+    if (saved.length === 0) return;
+    const props = this.studioProps();
+    if (!props) return;
 
-        const rootMesh = result.meshes[0] as BABYLON.Mesh;
-        rootMesh.name = avatarId;
-        rootMesh.position = new BABYLON.Vector3(0, 0, 0);
-        rootMesh.rotation = candidate.baseRotation.clone();
-        rootMesh.scaling = new BABYLON.Vector3(1, 1, 1);
-        rootMesh.metadata = rootMesh.metadata || {};
-        (rootMesh.metadata as Record<string, unknown>).avatarSourceUrl = candidate.url;
-        (rootMesh.metadata as Record<string, unknown>).pbrKey = candidate.pbrKey;
+    for (let frame = 0; frame < 3; frame++) {
+      await new Promise<void>(resolve => this.afterNextFrame(() => resolve()));
+    }
+    const { missing } = await props.restore(saved, key => this.releaseStudioObject(key));
+    if (missing.length > 0) {
+      console.warn('[props] This scene has nothing to hand back for:', missing.map(prop => prop.name));
+      this.showToast(`${missing.length} objekt(er) finnes ikke i denne scenen og ble utelatt.`, 'warn');
+    }
+  }
 
-        // Keep default avatar grounded and facing camera, independent of source model.
-        const groundedPosition = this.positionMeshOnGround(rootMesh, rootMesh.position.clone());
-        rootMesh.position = groundedPosition;
-        const rotationX = rootMesh.rotation.x;
-        this.rotateMeshTowardCamera(rootMesh);
-        rootMesh.rotation.x = rotationX;
+  /** Take ownership of something the studio built, so it can be moved and saved. */
+  public claimStudioObject(key: string, name?: string): StudioProp | null {
+    return this.studioProps()?.claim(key, name, this.releaseStudioObject(key)) ?? null;
+  }
 
-        this.applyPBRShadingToMeshes(result.meshes, candidate.pbrKey);
-        this.registerModelMeshesInScene(rootMesh, avatarId, candidate.name);
-        this.trackAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
-        this.stopAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
+  /** Bring a model onto the set as a prop. */
+  public async addStudioProp(url: string, name?: string): Promise<StudioProp | null> {
+    const props = this.studioProps();
+    if (!props) return null;
+    return props.add(resolveModelPath(url), name);
+  }
 
-        this.castingCandidates.set(avatarId, {
-          mesh: rootMesh,
-          name: candidate.name,
-          avatarUrl: candidate.url
-        });
+  /**
+   * Split an asset URL into the directory Babylon resolves against and the file.
+   *
+   * Character textures are shared files referenced by relative URI, and the
+   * loader resolves those against its root URL. Passing the whole URL as the
+   * filename leaves that root empty, so every texture is looked for at the site
+   * root and the import never finishes.
+   */
+  private static splitAssetUrl(url: string): [string, string] {
+    const cut = url.lastIndexOf('/');
+    return cut < 0 ? ['', url] : [url.slice(0, cut + 1), url.slice(cut + 1)];
+  }
 
-        await this.ensureRigRegisteredForMesh(rootMesh, candidate.name, result.animationGroups || []);
+  /** The glTF root a figure's body meshes hang from; garments join it there. */
+  private bodyRootFor(mesh: BABYLON.AbstractMesh): BABYLON.TransformNode | null {
+    const name = mesh.metadata?.bodyRootName as string | undefined;
+    const children = mesh.getChildTransformNodes(true);
+    return (name ? children.find(node => node.name === name) : undefined) ?? children[0] ?? null;
+  }
 
-        rootMesh.computeWorldMatrix(true);
-        rootMesh.refreshBoundingInfo(true);
-
-        setTimeout(() => {
-          if (this.autoFocusSystem) {
-            this.autoFocusSystem.addEyeMarkersToModel(rootMesh, 'Avatar');
-          }
-        }, 100);
-
-        setTimeout(() => {
-          this.updateFocusObjectsList();
-        }, 200);
-
-        console.log(`[DefaultAvatar] Loaded ${candidate.name}: ${candidate.url}`);
-        return;
-      } catch (error) {
-        lastError = error;
-        console.warn(`[DefaultAvatar] Failed candidate ${candidate.url}`, error);
+  /**
+   * Put clothes on a studio body.
+   *
+   * Only the bundled studio figures have a wardrobe; any other import is left
+   * exactly as its file describes it. A missing or unreachable catalogue leaves
+   * the figure undressed rather than failing the load, and says so.
+   */
+  private async dressStudioCharacter(
+    mesh: BABYLON.AbstractMesh,
+    modelUrl: string,
+    requested?: string[],
+  ): Promise<void> {
+    const body = bodyIdFromModelUrl(modelUrl);
+    if (!body) {
+      // Every other way of leaving this function undressed says so. This one
+      // did not, and a figure that came back naked from a saved document gave
+      // no clue why — the wardrobe was in the file, the catalogue was loaded,
+      // and nothing was logged. An import that is not a studio body is normal
+      // and silent; a studio body that fails to resolve is not.
+      if (/studio-(woman|man)/.test(modelUrl)) {
+        console.warn('[wardrobe] Studio body not recognised from its url; figure stays undressed', modelUrl);
       }
+      return;
     }
 
-    console.error('Failed to load default avatar candidates, using placeholder:', lastError);
-    this.createSimpleMannequin(avatarId);
+    try {
+      this.wardrobeCatalogue ??= await loadWardrobeCatalogue();
+    } catch (error) {
+      console.warn('[wardrobe] Catalogue unavailable; figure stays undressed', error);
+      this.showToast('Garderoben kunne ikke lastes. Figuren vises uten klær.', 'warn');
+      return;
+    }
+
+    const bodyRoot = this.bodyRootFor(mesh);
+    const skin = mesh.getChildMeshes().find(child => child.name === 'Skin') as BABYLON.Mesh | undefined;
+    const skeleton = skin?.skeleton ?? mesh.getChildMeshes().find(child => child.skeleton)?.skeleton;
+    if (!bodyRoot || !skin || !skeleton) {
+      console.warn('[wardrobe] Body is missing its skin or skeleton; nothing to dress');
+      return;
+    }
+
+    const wanted = requested ?? defaultWardrobeFor(this.wardrobeCatalogue, body);
+    const garments = resolveWardrobe(this.wardrobeCatalogue, body, wanted);
+    if (wanted.length > 0 && garments.length === 0) {
+      // Asked for clothes this body does not own: worth saying, because the
+      // figure will stand there in nothing and look like a loading failure.
+      console.warn('[wardrobe] None of the requested garments fit this body', { body, wanted });
+    }
+    await dressFigure({
+      scene: this.scene,
+      characterRoot: mesh,
+      bodyRoot,
+      skin,
+      skeleton,
+      garments,
+      resolveUrl: garment => ({
+        root: resolveModelPath('/models/avatars/studio/') ,
+        file: `wardrobe/${garment.body}/${garment.file}`,
+      }),
+      importMesh: (root, file) => BABYLON.SceneLoader.ImportMeshAsync('', root, file, this.scene),
+    });
+    mesh.metadata = { ...mesh.metadata, wardrobe: garments.map(garment => garment.id) };
+    mesh.onDisposeObservable.addOnce(() => forgetFigure(mesh));
+    window.dispatchEvent(new CustomEvent('ch-character-wardrobe', {
+      detail: { wearing: garments.map(garment => garment.id) },
+    }));
+  }
+
+  /** Change what the figure on set is wearing. */
+  public async setCharacterWardrobe(items: string[]): Promise<string[]> {
+    const mesh = this.getPrimaryCharacterMesh();
+    const modelUrl = mesh?.metadata?.sourceModelUrl as string | undefined;
+    if (!mesh || !modelUrl) return [];
+    await this.dressStudioCharacter(mesh, modelUrl, items);
+    // Clothes change the silhouette, so the figure may need setting down again.
+    this.afterNextFrame(() => {
+      if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+    });
+    return wornGarments(mesh);
+  }
+
+  /** Garments the figure on set can wear, labelled for the studio UI. */
+  public getWardrobeOptions(): { id: string; label: string; slot: string }[] {
+    const mesh = this.getPrimaryCharacterMesh();
+    const body = bodyIdFromModelUrl((mesh?.metadata?.sourceModelUrl as string) ?? '');
+    if (!body || !this.wardrobeCatalogue) return [];
+    return garmentsForBody(this.wardrobeCatalogue, body).map(garment => ({
+      id: garment.id, label: garmentLabel(garment.id), slot: garment.slot,
+    }));
+  }
+
+  /** The garments the figure on set has on. */
+  public getCharacterWardrobe(): string[] {
+    const mesh = this.getPrimaryCharacterMesh();
+    return mesh ? wornGarments(mesh) : [];
+  }
+
+  /**
+   * Turn joint handles on or off for the figure on set.
+   *
+   * The editor is built lazily against the current character and thrown away
+   * with it, so a model swap can never leave handles pointing at a dead
+   * skeleton.
+   */
+  public setPoseEditing(enabled: boolean): boolean {
+    const mesh = this.getPrimaryCharacterMesh();
+    if (!mesh) return false;
+
+    // A handle that drifts under the cursor is worse than a still figure, so
+    // the breath stops while joints are being placed by hand.
+    this.setIdleBreathing(!enabled);
+
+    if (this.poseEditor && this.poseEditor.characterId !== mesh.uniqueId) {
+      this.poseEditor.dispose();
+      this.poseEditor = null;
+    }
+    if (!this.poseEditor) {
+      if (!enabled) return false;
+      this.poseEditor = new PoseEditor(this.scene, mesh, mesh.uniqueId, () => {
+        // A moved joint lifts or drops the figure, but the skin matrices only
+        // reach the surfaces on the next render — grounding now would measure
+        // the previous pose and leave the feet in the air. One request per
+        // frame is enough however long the drag lasts.
+        if (this.poseGroundingPending) return;
+        this.poseGroundingPending = true;
+        this.afterNextFrame(() => {
+          this.poseGroundingPending = false;
+          if (!mesh.isDisposed()) this.groundCharacterSurfaces(mesh);
+        });
+      });
+      mesh.onDisposeObservable.addOnce(() => {
+        this.poseEditor?.dispose();
+        this.poseEditor = null;
+      });
+    }
+
+    this.poseEditor.setEnabled(enabled);
+    window.dispatchEvent(new CustomEvent('ch-pose-editing-changed', {
+      detail: { enabled, joints: this.poseEditor.jointCount },
+    }));
+    return true;
+  }
+
+  public get poseEditing(): PoseEditor | null {
+    return this.poseEditor;
+  }
+
+  public applyStudioPose(
+    name: 'StudioStand' | 'StudioPortrait' | 'StudioSeated',
+    // A scene with a crew in it has more than one figure to pose, so the one
+    // being posed can be named rather than assumed to be the primary.
+    target?: BABYLON.AbstractMesh,
+  ): boolean {
+    const mesh = target ?? this.getPrimaryCharacterMesh();
+    if (!mesh) return false;
+    const groups = this.getAnimationGroupsForMesh(mesh) || [];
+    const pose = groups.find(group => group.name === name);
+    if (!pose) return false;
+    this.stopCharacterWalk(false);
+    this.clearCharacterKeyboardInput();
+    this.stopCharacterKeyboardControl(false);
+    groups.forEach(group => group.stop());
+    pose.start(false, 1, pose.from, pose.to);
+    pose.goToFrame(pose.from);
+    pose.pause();
+    this.characterKeyboardState.poseLocked = true;
+    this.characterKeyboardState.locomotionMode = 'pose';
+    mesh.metadata = { ...mesh.metadata, studioPose: name };
+    // Linked glTF joints reach the skin matrices during the next render. Ground
+    // the posed surfaces afterwards; rest-pose bounds would leave seated feet in the air.
+    this.afterNextFrame(() => {
+      if (mesh.isDisposed() || mesh.metadata?.studioPose !== name) return;
+      this.groundCharacterSurfaces(mesh);
+      this.studioSeats.get(mesh.uniqueId)?.dispose();
+      this.studioSeats.delete(mesh.uniqueId);
+      if (name === 'StudioSeated') {
+        // A room with chairs in it already has somewhere to sit. Building the
+        // portrait stool as well puts a stool on top of a dining chair, which
+        // is not sitting down — so the body comes down to the chair the room
+        // built instead.
+        const seatHeight = mesh.metadata?.studioSeatHeight as number | undefined;
+        if (seatHeight !== undefined) {
+          this.sitOnExistingSeat(mesh, seatHeight);
+        } else {
+          const chair = new StudioSeat(this.scene, mesh, () => [...this.lights.values()].flatMap(light => light.shadowGenerator ? [light.shadowGenerator] : []));
+          this.studioSeats.set(mesh.uniqueId, chair);
+          mesh.onDisposeObservable.addOnce(() => this.studioSeats.delete(mesh.uniqueId));
+        }
+      }
+      this.syncCharacterNodeTransform(mesh, true);
+      window.dispatchEvent(new CustomEvent('ch-character-pose-applied', { detail: { poseId: name } }));
+    });
+    return true;
   }
 
   /**
@@ -18915,21 +19970,30 @@ class VirtualStudio {
       rotation?: [number, number, number];
       storyRigId?: string;
       additive?: boolean;
+      /** Garment ids to open wearing; the body's default set when absent. */
+      wardrobe?: string[];
       tints?: { skin: string; top: string; bottom: string; accent: string } | null;
     },
   ): Promise<void> {
-    if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
 
     let meshPosition = new BABYLON.Vector3(0, 0, 0);
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
 
     try {
-      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
+      const result = await BABYLON.SceneLoader.ImportMeshAsync(
+        '', ...VirtualStudio.splitAssetUrl(modelUrl), this.scene);
       importedAnimationGroups = result.animationGroups || [];
-      this.characterMesh = result.meshes[0];
+      if (!result.meshes.some(mesh => mesh.getTotalVertices() > 0)) throw new Error('Modellfilen inneholder ingen geometri');
+      if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
+      // Keep glTF's handedness conversion and skeleton transforms under an editable wrapper.
+      const importedRoot = result.meshes[0];
+      this.characterMesh = new BABYLON.Mesh(name, this.scene);
+      importedRoot.parent = this.characterMesh;
       this.characterMesh.name = name;
       this.characterMesh.metadata = this.characterMesh.metadata || {};
       (this.characterMesh.metadata as Record<string, unknown>).sourceModelUrl = modelUrl;
+      // Garments join the figure under the same glTF root the body meshes use.
+      (this.characterMesh.metadata as Record<string, unknown>).bodyRootName = importedRoot.name;
       this.trackAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
       this.stopAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
 
@@ -18943,6 +20007,7 @@ class VirtualStudio {
 
       // Target human height (1.7m default, can be adjusted by height parameter)
       const targetHeight = 1.7 * (height || 1.0);
+      this.characterMesh.metadata.heightMeters = targetHeight;
 
       // Scale model to target height if it's too small or too large
       if (modelHeight > 0.001) {
@@ -18953,7 +20018,7 @@ class VirtualStudio {
 
       // SAM 3D Body exports are upside-down → need Math.PI X-flip.
       // Ready Player Me, Tripo, Cesium and other Y-up models are already correct.
-      const isSamModel = /\/avatar_\w+\.glb(\?.*)?$/.test(modelUrl);
+      const isSamModel = /\/avatar_\w+\.glb(\?.*)?$/.test(modelUrl) && !result.meshes.some(mesh => mesh.material?.getActiveTextures().length);
       const isRpmModel = /models\.readyplayer\.me|api\.readyplayer\.me|readyplayer\.me.*\.glb/i.test(modelUrl);
       const preserveOriginalMaterials = !isSamModel;
       this.characterMesh.rotation = new BABYLON.Vector3(isSamModel ? Math.PI : 0, 0, 0);
@@ -18985,13 +20050,13 @@ class VirtualStudio {
       this.characterMesh.computeWorldMatrix(true);
 
       // Get all meshes including root
-      const allMeshes = this.characterMesh.getChildMeshes(true);
+      const allMeshes = this.characterMesh.getChildMeshes();
       allMeshes.push(this.characterMesh);
       let meshCount = 0;
 
       if (preserveOriginalMaterials) {
         const tints = options?.tints;
-        if (tints) {
+        if (tints && !allMeshes.some(mesh => mesh.material?.getActiveTextures().length)) {
           // Variant character: apply tint colors using Y-position heuristic (same logic as SAM).
           console.log(`[loadCharacterModel] variant tints — applying procedural tint materials`);
           const skinMat  = this.createProceduralCharacterMaterial(`${name}_skin_mat`,  BABYLON.Color3.FromHexString(tints.skin),   'skin');
@@ -19075,7 +20140,9 @@ class VirtualStudio {
       }
 
       // Add eyes to the character model
-      this.addEyesToMesh(this.characterMesh, name);
+      if (!allMeshes.some(mesh => mesh.material?.getActiveTextures().length)) {
+        this.addEyesToMesh(this.characterMesh, name);
+      }
 
       // Reposition mesh on ground after adding eyes (eyes change the bounding box)
       // Use positionMeshOnGround to ensure correct positioning
@@ -19096,35 +20163,10 @@ class VirtualStudio {
 
       console.log(`Loaded character: ${name} at position (${meshPosition.x}, ${meshPosition.y}, ${meshPosition.z})`);
     } catch (error) {
-      console.warn(`Character model not found: ${modelUrl}, creating placeholder`, error);
-      const capsule = BABYLON.MeshBuilder.CreateCapsule(name, { height: 1.75, radius: 0.22 }, this.scene);
-
-      // Position capsule on ground
-      meshPosition = this.positionMeshOnGround(capsule, new BABYLON.Vector3(0, 0, 0));
-      capsule.position = meshPosition;
-
-      // Rotate capsule toward camera
-      this.rotateMeshTowardCamera(capsule);
-
-      const skinColor = BABYLON.Color3.FromHexString(skinTone || '#EAC086');
-      const pbrMaterial = this.createProceduralCharacterMaterial(`${name}_pbr_mat`, skinColor, 'skin');
-      capsule.material = pbrMaterial;
-
-      // Enable shadows
-      capsule.receiveShadows = true;
-      capsule.castShadows = true;
-
-      // Add to shadow generators
-      this.lights.forEach((lightData) => {
-        if (lightData.shadowGenerator) {
-          lightData.shadowGenerator.addShadowCaster(capsule);
-        }
-      });
-
-      // Add eyes to placeholder capsule
-      this.addEyesToActor(capsule, 1.75, skinTone || '#EAC086');
-
-      this.characterMesh = capsule;
+      console.error(`Kunne ikke laste 3D-modellen: ${modelUrl}`, error);
+      this.showNotification('Kunne ikke laste 3D-modellen. Prøv igjen eller velg en annen GLB-fil.', 'error');
+      window.dispatchEvent(new CustomEvent('ch-character-load-error', { detail: { modelUrl } }));
+      throw error;
     }
 
     // Add to scene hierarchy store
@@ -19148,8 +20190,8 @@ class VirtualStudio {
       locked: false,
       transform: {
         position: [meshPosition.x, meshPosition.y, meshPosition.z],
-        rotation: [0, 0, 0],
-        scale: [1, 1, 1]
+        rotation: this.characterMesh?.rotation.asArray() as [number, number, number] || [0, 0, 0],
+        scale: this.characterMesh?.scaling.asArray() as [number, number, number] || [1, 1, 1]
       },
       userData: {
         meshNames: this.characterMesh ? this.getChildMeshNames(this.characterMesh) : []
@@ -19166,6 +20208,16 @@ class VirtualStudio {
     }));
 
     if (this.characterMesh) {
+      // A studio body ships with no clothes of its own, so dress it before
+      // anything else looks at it. A wardrobe that will not load must not stop
+      // the figure being usable, so this never throws past here.
+      try {
+        await this.dressStudioCharacter(this.characterMesh, modelUrl, options?.wardrobe);
+      } catch (error) {
+        console.error('[wardrobe] Could not dress the figure', error);
+        this.showToast('Klærne kunne ikke lastes. Figuren vises uten.', 'warn');
+      }
+
       await this.ensureRigRegisteredForMesh(this.characterMesh, name, importedAnimationGroups);
 
       // Notify story loader which rig was created for this character
@@ -19202,11 +20254,11 @@ class VirtualStudio {
       this.gizmoManager.attachToMesh(this.characterMesh as BABYLON.Mesh);
     }
 
-    this.applyCurrentActorParams();
+    // Authored anatomy and texture atlases must not be rescaled/recoloured by generic actor sliders.
 
     if (this.characterMesh) {
-      const meshesToTune: BABYLON.AbstractMesh[] = [this.characterMesh, ...this.characterMesh.getChildMeshes(true)];
-      this.applyPortraitMaterialTuning(meshesToTune);
+      const meshesToTune: BABYLON.AbstractMesh[] = [this.characterMesh, ...this.characterMesh.getChildMeshes()];
+      AvatarMaterialService.applyEnhancedPBR(meshesToTune, 'studio-import', this.scene);
     }
 
     console.log(`Added model "${name}" to scene hierarchy`);
@@ -19226,7 +20278,7 @@ class VirtualStudio {
    * This ensures geometry_0, geometry_1, etc. are properly registered
    */
   private registerModelMeshesInScene(rootMesh: BABYLON.AbstractMesh, modelId: string, modelName: string): void {
-    const childMeshes = rootMesh.getChildMeshes(true);
+    const childMeshes = rootMesh.getChildMeshes();
     const registeredMeshes: string[] = [];
 
     childMeshes.forEach((mesh, _index) => {
@@ -19274,7 +20326,7 @@ class VirtualStudio {
    * Get all child mesh names from a model
    */
   private getChildMeshNames(rootMesh: BABYLON.AbstractMesh): string[] {
-    return rootMesh.getChildMeshes(true).map(m => m.name);
+    return rootMesh.getChildMeshes().map(m => m.name);
   }
 
   /**
@@ -19334,6 +20386,12 @@ class VirtualStudio {
   }
 
   private removeCharacterModel(): void {
+    // Workwear hangs on the rig, so it has to come off before the rig goes.
+    for (const [id, uniform] of this.studioUniforms) {
+      uniform.dispose();
+      this.studioUniforms.delete(id);
+    }
+
     this.stopCharacterWalk(false);
     this.stopCharacterKeyboardControl(false);
     this.clearCharacterKeyboardInput();
@@ -19346,9 +20404,13 @@ class VirtualStudio {
     this.characterKeyboardState.rigResolvePending = false;
     this.characterKeyboardState.cachedGroundY = null;
     if (this.characterMesh) {
+      const groups = this.getAnimationGroupsForMesh(this.characterMesh) || [];
+      const skeletons = new Set(this.characterMesh.getChildMeshes().map(mesh => mesh.skeleton).filter(Boolean));
       this.clearTrackedAnimationGroupsForMesh(this.characterMesh);
       this.unloadRigForMesh(this.characterMesh);
-      this.characterMesh.dispose();
+      groups.forEach(group => group.dispose());
+      this.characterMesh.dispose(false, true);
+      skeletons.forEach(skeleton => skeleton?.dispose());
       this.characterMesh = null;
     }
     if (this.characterModelId) {
@@ -19385,7 +20447,8 @@ class VirtualStudio {
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
 
     try {
-      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
+      const result = await BABYLON.SceneLoader.ImportMeshAsync(
+        '', ...VirtualStudio.splitAssetUrl(modelUrl), this.scene);
       importedAnimationGroups = result.animationGroups || [];
       mesh = result.meshes[0];
       mesh.name = `story_${storyRigId}`;
@@ -23111,6 +24174,7 @@ class VirtualStudio {
         shadowEl.style.color = this.shadowClipping > 5 ? '#ff6b6b' : '#00d4ff';
       }
 
+      this.offerClippingScope();
       this.isReadingPixels = false;
     }).catch(() => {
       this.isReadingPixels = false;
@@ -25474,6 +26538,9 @@ class VirtualStudio {
   }
 
   private calculateLightIntensity(specs: LightSpecs): number {
+    // Same photometric scale as addLight. A log10 compression used to live
+    // here, which put a 200 Ws strobe and a 1000 Ws strobe within a few
+    // percent of each other and made the two light paths disagree.
     const lux1m = LightingPhysics.calculateLux1mFromSpecs({
       lux1m: specs.lux1m,
       lumens: specs.lumens,
@@ -25483,9 +26550,7 @@ class VirtualStudio {
       beamAngle: specs.beamAngle
     });
 
-    const babylonIntensity = Math.log10(lux1m + 1) * 0.5;
-
-    return Math.max(0.5, Math.min(babylonIntensity, 50));
+    return sceneIntensityFromCandela(Math.max(0, lux1m));
   }
 
   private getLightModelUrl(type: string): string | null {
@@ -25709,6 +26774,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -25723,6 +26789,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -25810,6 +26877,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -25826,6 +26894,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -26036,7 +27105,7 @@ class VirtualStudio {
       this.camera.setTarget(target);
 
       if (camConfig.focalLength) {
-        const fov = 2 * Math.atan(18 / camConfig.focalLength);
+        const fov = focalLengthToVerticalFov(camConfig.focalLength);
         this.camera.fov = fov;
       }
     }
@@ -26953,6 +28022,7 @@ class VirtualStudio {
       // Soft modifiers use PointLight for soft, diffused lighting
       light = new BABYLON.PointLight(id, position.clone(), this.scene);
       light.intensity = intensity * 0.6;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
       (light as BABYLON.PointLight).range = 15;
     } else {
@@ -26965,6 +28035,7 @@ class VirtualStudio {
         this.scene
       );
       light.intensity = intensity;
+      light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       light.diffuse = color;
     }
 
@@ -26977,18 +28048,18 @@ class VirtualStudio {
       try {
         shadowGenerator = new BABYLON.ShadowGenerator(2048, light);
 
-        // Use PCF (Percentage Closer Filtering) for soft, realistic shadows
-        shadowGenerator.usePercentageCloserFiltering = true;
-        shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-
         // Shadow quality settings - softer, more subtle shadows
         shadowGenerator.setDarkness(0.35); // More subtle shadows
         shadowGenerator.bias = 0.00005;
         shadowGenerator.normalBias = 0.02;
 
-        // Enable contact hardening for distance-based shadow softness (more realistic)
-        shadowGenerator.useContactHardeningShadow = true;
-        shadowGenerator.contactHardeningLightSizeUVRatio = 0.05;
+        // Penumbra from the fixture's own emitting size. A fixed light-size
+        // ratio here gave a snoot and a 150 cm octabox the same shadow edge.
+        this.configureStudioShadowSoftness(shadowGenerator, {
+          light,
+          name,
+          sourceSizeMetres: modifierSizeMetres(name, this.getLightModelUrl(type) ?? undefined),
+        });
 
         // Add all meshes in the scene as shadow casters (except ground and light meshes)
         this.scene.meshes.forEach(mesh => {
@@ -28783,9 +29854,10 @@ class VirtualStudio {
     }
   }
 
-  private setFocalLength(mm: number): void {
+  public setFocalLength(mm: number): void {
+    if (!Number.isFinite(mm) || mm <= 0) return;
     this.cameraSettings.focalLength = mm;
-    this.camera.fov = (50 / mm) * 0.8;
+    this.camera.fov = focalLengthToVerticalFov(mm);
 
     const quickFocal = document.getElementById('quickFocal');
     if (quickFocal) quickFocal.textContent = `${mm} mm`;
@@ -30927,36 +31999,55 @@ class VirtualStudio {
     nextBtn?.addEventListener('click', () => this.jumpToNextKeyframe());
   }
 
-  private addKeyframe(type: 'position' | 'rotation'): void {
-    if (!this.selectedLightId) return;
-    const data = this.lights.get(this.selectedLightId);
-    if (!data) return;
+  /**
+   * What the photographer is keyframing, whatever kind of thing it is.
+   *
+   * Keyframing used to demand a selected light, which is why nothing else in
+   * the scene could be given a track from the interface even after the
+   * timeline learned to move anything. A prop takes precedence because
+   * claiming or picking one is the most recent explicit act.
+   */
+  private keyframeTarget(): { id: string; node: BABYLON.TransformNode } | null {
+    const propId = this.props?.selected;
+    if (propId) {
+      const node = this.props?.nodeFor(propId);
+      if (node) return { id: propId, node };
+    }
+    if (this.selectedLightId) {
+      const light = this.lights.get(this.selectedLightId);
+      if (light) return { id: this.selectedLightId, node: light.mesh };
+    }
+    const nodeId = useAppStore.getState().selectedNodeId;
+    if (nodeId) {
+      const mesh = this.resolveMeshForNodeId(nodeId);
+      if (mesh) return { id: nodeId, node: mesh };
+    }
+    return null;
+  }
 
-    const trackId = `${this.selectedLightId}_${type}`;
-    let track = this.animationState.tracks.find(t => t.id === trackId);
-
+  /** The track for one thing and one channel, created on first use. */
+  private trackFor(id: string, type: 'position' | 'rotation', suffix = ''): AnimationTrack {
+    const trackId = `${id}_${type}${suffix}`;
+    let track = this.animationState.tracks.find(candidate => candidate.id === trackId);
     if (!track) {
-      track = {
-        id: trackId,
-        nodeId: this.selectedLightId,
-        type: type,
-        keyframes: []
-      };
+      track = { id: trackId, nodeId: id, type, keyframes: [] };
       this.animationState.tracks.push(track);
     }
+    return track;
+  }
 
-    const value = type === 'position' 
-      ? { x: data.mesh.position.x, y: data.mesh.position.y, z: data.mesh.position.z }
-      : { x: data.mesh.rotation.x * 180 / Math.PI, y: data.mesh.rotation.y * 180 / Math.PI, z: data.mesh.rotation.z * 180 / Math.PI };
+  private addKeyframe(type: 'position' | 'rotation'): void {
+    const target = this.keyframeTarget();
+    if (!target) return;
+    const track = this.trackFor(target.id, type);
 
-    // Check if keyframe exists at current time
-    const existingIdx = track.keyframes.findIndex(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.01);
-    if (existingIdx >= 0) {
-      track.keyframes[existingIdx].value = value;
-    } else {
-      track.keyframes.push({ time: this.animationState.currentTime, value });
-      track.keyframes.sort((a, b) => a.time - b.time);
-    }
+    // Radians, like every other angle a document holds. This recorder stored
+    // degrees while the per-axis one stored radians, so keyframing all three
+    // axes at once meant something else entirely from keyframing them singly.
+    const source = type === 'position' ? target.node.position : target.node.rotation;
+    const value = { x: source.x, y: source.y, z: source.z };
+
+    track.keyframes = upsertKeyframe(track.keyframes, this.animationState.currentTime, value);
 
     this.updateTimelineUI(false);
     this.renderTimelineTracks();
@@ -30967,39 +32058,21 @@ class VirtualStudio {
   }
 
   private addKeyframeForAxis(type: 'position' | 'rotation', axis: 'x' | 'y' | 'z'): void {
-    if (!this.selectedLightId) return;
-    const data = this.lights.get(this.selectedLightId);
-    if (!data) return;
+    const target = this.keyframeTarget();
+    if (!target) return;
+    const track = this.trackFor(target.id, type, `_${axis}`);
 
-    const trackId = `${this.selectedLightId}_${type}_${axis}`;
-    let track = this.animationState.tracks.find(t => t.id === trackId);
+    // Radians for rotation, as above. The other two axes are left at zero:
+    // this track speaks for one axis only.
+    const source = type === 'position' ? target.node.position : target.node.rotation;
+    const axisValue = source[axis];
+    const value = {
+      x: axis === 'x' ? axisValue : 0,
+      y: axis === 'y' ? axisValue : 0,
+      z: axis === 'z' ? axisValue : 0,
+    };
 
-    if (!track) {
-      track = {
-        id: trackId,
-        nodeId: this.selectedLightId,
-        type: type,
-        keyframes: []
-      };
-      this.animationState.tracks.push(track);
-    }
-
-    let value: { x: number; y: number; z: number };
-    if (type === 'position') {
-      const axisVal = axis === 'x' ? data.mesh.position.x : axis === 'y' ? data.mesh.position.y : data.mesh.position.z;
-      value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
-    } else {
-      const axisVal = axis === 'x' ? data.mesh.rotation.x * 180 / Math.PI : axis === 'y' ? data.mesh.rotation.y * 180 / Math.PI : data.mesh.rotation.z * 180 / Math.PI;
-      value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
-    }
-
-    const existingIdx = track.keyframes.findIndex(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.01);
-    if (existingIdx >= 0) {
-      track.keyframes[existingIdx].value = value;
-    } else {
-      track.keyframes.push({ time: this.animationState.currentTime, value });
-      track.keyframes.sort((a, b) => a.time - b.time);
-    }
+    track.keyframes = upsertKeyframe(track.keyframes, this.animationState.currentTime, value);
 
     this.updateTimelineUI(false);
     this.renderTimelineTracks();
@@ -31070,18 +32143,162 @@ class VirtualStudio {
     this.applyAnimationAtTime(0);
   }
 
+  /**
+   * Whatever a track addresses: a light, a prop, or an actor.
+   *
+   * The timeline used to look only in the light table, so nothing else in the
+   * scene could be made to move -- an arriving vehicle was not expressible.
+   */
+  private animatedNode(nodeId: string): BABYLON.TransformNode | null {
+    const light = this.lights.get(nodeId);
+    if (light) return light.mesh;
+    const prop = this.props?.nodeFor(nodeId);
+    if (prop) return prop;
+    return this.resolveMeshForNodeId(nodeId);
+  }
+
+  /** The id a track uses to address the taking camera. */
+  public static readonly CAMERA_NODE_ID = 'takingCamera';
+
+  private moveCounter = 0;
+
+  /** Every named move that can be added, for the panel to offer. */
+  public availableMoves(): MoveDescription[] {
+    return ALL_MOVES;
+  }
+
+  /** The sequence as it stands: what happens, and when. */
+  public sequence(): AnimationCue[] {
+    return [...this.animationState.cues].sort((a, b) => a.start - b.start);
+  }
+
+  /**
+   * Add a named move to the sequence, built from where the scene stands now.
+   *
+   * A camera move reads the shot it is starting from, so the same button suits
+   * a tight portrait and a wide hangar. A light move reads the fixture's own
+   * output, so dimming a weak lamp does not brighten it first.
+   */
+  public addMove(move: string, options?: { start?: number; duration?: number }): AnimationCue | null {
+    const description = ALL_MOVES.find(candidate => candidate.id === move);
+    if (!description) return null;
+    const start = options?.start ?? this.animationState.currentTime;
+    const duration = Math.max(0.1, options?.duration ?? 3);
+    const id = `${move}-${++this.moveCounter}`;
+
+    let cue: AnimationCue | null = null;
+    if (description.kind === 'camera') {
+      cue = buildCameraMove(move, {
+        id, start, duration,
+        cameraNodeId: VirtualStudio.CAMERA_NODE_ID,
+        camera: {
+          position: { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z },
+          target: { x: this.camera.target.x, y: this.camera.target.y, z: this.camera.target.z },
+        },
+      });
+    } else {
+      const lightId = this.selectedLightId ?? [...this.lights.keys()][0];
+      const light = lightId ? this.lights.get(lightId) : undefined;
+      // A light move needs a fixture to act on; there may be none on set yet.
+      if (!lightId || !light) return null;
+      cue = buildLightMove(move, {
+        id, start, duration,
+        lightNodeId: lightId,
+        intensity: light.powerMultiplier ?? 1,
+        color: { x: light.light.diffuse.r, y: light.light.diffuse.g, z: light.light.diffuse.b },
+      });
+    }
+    if (!cue) return null;
+
+    this.animationState.cues.push(cue);
+    this.animationState.duration = Math.max(this.animationState.duration, sequenceDuration(this.animationState));
+    this.sequenceChanged();
+    return cue;
+  }
+
+  /** Mute a beat while the rest is worked on, or bring it back. */
+  public setCueEnabled(id: string, enabled: boolean): boolean {
+    const cue = this.animationState.cues.find(candidate => candidate.id === id);
+    if (!cue) return false;
+    cue.enabled = enabled;
+    this.sequenceChanged();
+    return true;
+  }
+
+  /** Move a beat to another moment, carrying everything in it. */
+  public setCueStart(id: string, start: number): boolean {
+    const cue = this.animationState.cues.find(candidate => candidate.id === id);
+    if (!cue) return false;
+    cue.start = Math.max(0, start);
+    this.animationState.duration = Math.max(this.animationState.duration, sequenceDuration(this.animationState));
+    this.sequenceChanged();
+    return true;
+  }
+
+  public removeCue(id: string): boolean {
+    const before = this.animationState.cues.length;
+    this.animationState.cues = this.animationState.cues.filter(cue => cue.id !== id);
+    if (this.animationState.cues.length === before) return false;
+    this.sequenceChanged();
+    return true;
+  }
+
+  private sequenceChanged(): void {
+    this.applyAnimationAtTime(this.animationState.currentTime);
+    window.dispatchEvent(new CustomEvent('ch-sequence-changed', {
+      detail: { cues: this.sequence(), duration: this.animationState.duration },
+    }));
+  }
+
+  /**
+   * Put the scene where the sequence says it should be at `time`.
+   *
+   * Every channel a track can drive is applied here: where a thing stands, how
+   * it is turned, how brightly a fixture burns and what colour it is, and
+   * where the camera looks. Without the last three a flickering bulb, a police
+   * light and a moving shot were not expressible at all.
+   */
   private applyAnimationAtTime(time: number): void {
-    for (const track of this.animationState.tracks) {
-      const data = this.lights.get(track.nodeId);
-      if (!data) continue;
+    for (const { nodeId, channel, value } of sampleAnimation(this.animationState, time)) {
+      // The camera is not a mesh, and an arc-rotate camera recomputes its
+      // position from alpha, beta and radius every frame, so assigning
+      // position directly would be undone. setPosition and setTarget are the
+      // supported way in.
+      if (nodeId === VirtualStudio.CAMERA_NODE_ID) {
+        if (channel === 'position') this.camera.setPosition(new BABYLON.Vector3(value.x, value.y, value.z));
+        else if (channel === 'target') this.camera.setTarget(new BABYLON.Vector3(value.x, value.y, value.z));
+        continue;
+      }
 
-      const value = this.interpolateKeyframes(track.keyframes, time);
-      if (!value) continue;
+      const light = this.lights.get(nodeId);
+      if (light && (channel === 'intensity' || channel === 'color')) {
+        if (channel === 'intensity') {
+          // The fixture's own output, not its physical candela: the document
+          // keeps what the photographer dialled, and exposure stays separate.
+          light.powerMultiplier = Math.max(0, value.x);
+          light.baseIntensity ??= light.light.intensity;
+          light.light.intensity = light.baseIntensity * light.powerMultiplier;
+          light.intensity = light.light.intensity;
+          this.updateLightHeadGlow(light);
+        } else {
+          light.light.diffuse = new BABYLON.Color3(
+            Math.min(1, Math.max(0, value.x)),
+            Math.min(1, Math.max(0, value.y)),
+            Math.min(1, Math.max(0, value.z)));
+          light.useCustomColor = true;
+        }
+        continue;
+      }
 
-      if (track.type === 'position') {
-        data.mesh.position.set(value.x, value.y, value.z);
-      } else {
-        data.mesh.rotation.set(value.x * Math.PI / 180, value.y * Math.PI / 180, value.z * Math.PI / 180);
+      const node = this.animatedNode(nodeId);
+      if (!node) continue;
+      if (channel === 'position') {
+        node.position.set(value.x, value.y, value.z);
+      } else if (channel === 'rotation') {
+        // Radians, as everywhere else in a scene document. A quaternion left
+        // by a gizmo drag would otherwise win over the angles set here.
+        node.rotationQuaternion = null;
+        node.rotation.set(value.x, value.y, value.z);
       }
     }
 
@@ -31313,15 +32530,21 @@ class VirtualStudio {
   }
 
   private takeScreenshot(): void {
-    BABYLON.Tools.CreateScreenshot(
+    BABYLON.Tools.CreateScreenshotUsingRenderTarget(
       this.engine, 
       this.camera, 
       { width: 1920, height: 1080 }, 
       (data: string) => {
+        // Blob URLs also handle detailed room renders exceeding Chromium's data-URL download limit.
+        const bytes = Uint8Array.from(atob(data.split(',')[1]), character => character.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
         const link = document.createElement('a');
         link.download = `studio-${Date.now()}.png`;
-        link.href = data;
+        link.href = url;
+        document.body.append(link);
         link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
       }
     );
   }
@@ -32393,7 +33616,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ghostMesh.setEnabled(true);
       } else {
         // Fallback: place at camera target with raycast to ground plane
-        const ray = studio.scene.createPickingRay(x, y, BABYLON.Matrix.Identity(), studio.camera);
+        const ray = studio.scene.createPickingRay(x, y, BABYLON.Matrix.Identity(), studio.scene.activeCamera || studio.camera);
         const groundPlane = BABYLON.Plane.FromPositionAndNormal(BABYLON.Vector3.Zero(), BABYLON.Vector3.Up());
         const distance = ray.intersectsPlane(groundPlane);
 
@@ -33137,7 +34360,7 @@ window.addEventListener('DOMContentLoaded', () => {
           const focal = parseFloat(focalLengthSlider.value);
           const camera = studioInstance.getCamera();
           if (camera) {
-            camera.fov = (50 / focal) * 0.8;
+            studioInstance.setFocalLength(focal);
           }
           if (focalLengthValue) focalLengthValue.textContent = `${Math.round(focal)}mm`;
         });
@@ -34162,37 +35385,35 @@ window.addEventListener('DOMContentLoaded', () => {
               //   Low  (1-3): near-uniform field across the whole modifier face — softbox/octabox.
               //   Mid  (4-8): slight centre hotspot — beauty dish, barndoors.
               //   High (12+): concentrated beam with sharp edges — fresnel, snoot, grid.
-              // shadowKernel: larger = softer shadow penumbra.
-              //   Octabox/umbrella → 96   (maximum beauty softness)
-              //   Softbox/stripbox → 64   (clean portrait shadow)
-              //   Beauty dish      → 32   (defined but soft)
-              //   Barndoors/grid   → 16   (crisp spill control)
-              //   Fresnel          → 8    (sharp theatrical beam)
-              //   Snoot/gobo       → 4    (hard accent/hair light)
-              type ModProfile = { angle: number; exponent: number; kernel: number };
+              // sizeMetres: the modifier's emitting surface. Penumbra width
+              // scales with it, so this is what separates a wrapping octabox
+              // from a hard snoot. Rectangular sources use the geometric mean
+              // of their two sides, as modifierSizeMetres does.
+              type ModProfile = { angle: number; exponent: number; sizeMetres: number };
               const modProfiles: { [k: string]: ModProfile } = {
-                'softbox':            { angle: Math.PI / 3,    exponent: 2.0,  kernel: 64  },
-                'stripbox':           { angle: Math.PI / 3,    exponent: 2.0,  kernel: 64  },
-                'octabox':            { angle: Math.PI / 2.5,  exponent: 1.5,  kernel: 96  },
-                'umbrella':           { angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
-                'umbrella-reflective':{ angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
-                'silkframe':          { angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
-                'beautydish':         { angle: Math.PI / 4,    exponent: 3.5,  kernel: 32  },
-                'barndoors':          { angle: Math.PI / 5,    exponent: 4.0,  kernel: 16  },
-                'reflector-silver':   { angle: Math.PI / 4,    exponent: 5.0,  kernel: 24  },
-                'reflector-gold':     { angle: Math.PI / 4,    exponent: 5.0,  kernel: 24  },
-                'reflector-white':    { angle: Math.PI / 3,    exponent: 3.5,  kernel: 32  },
-                'fresnel':            { angle: Math.PI / 6,    exponent: 10.0, kernel: 8   },
-                'grid':               { angle: Math.PI / 8,    exponent: 12.0, kernel: 12  },
-                'snoot':              { angle: Math.PI / 12,   exponent: 20.0, kernel: 4   },
-                'gobo':               { angle: Math.PI / 10,   exponent: 18.0, kernel: 4   },
-                'none':               { angle: Math.PI / 4,    exponent: 4.0,  kernel: 32  },
+                'softbox':            { angle: Math.PI / 3,    exponent: 2.0,  sizeMetres: 1.04 }, // 90×120 cm
+                'stripbox':           { angle: Math.PI / 3,    exponent: 2.0,  sizeMetres: 0.60 }, // 30×120 cm
+                'octabox':            { angle: Math.PI / 2.5,  exponent: 1.5,  sizeMetres: 1.20 },
+                'umbrella':           { angle: Math.PI / 2,    exponent: 1.0,  sizeMetres: 1.00 },
+                'umbrella-reflective':{ angle: Math.PI / 2,    exponent: 1.0,  sizeMetres: 1.00 },
+                'silkframe':          { angle: Math.PI / 2,    exponent: 1.0,  sizeMetres: 1.22 }, // 4×4 ft
+                'beautydish':         { angle: Math.PI / 4,    exponent: 3.5,  sizeMetres: 0.42 },
+                'barndoors':          { angle: Math.PI / 5,    exponent: 4.0,  sizeMetres: 0.25 },
+                'reflector-silver':   { angle: Math.PI / 4,    exponent: 5.0,  sizeMetres: 0.30 },
+                'reflector-gold':     { angle: Math.PI / 4,    exponent: 5.0,  sizeMetres: 0.30 },
+                'reflector-white':    { angle: Math.PI / 3,    exponent: 3.5,  sizeMetres: 0.35 },
+                'fresnel':            { angle: Math.PI / 6,    exponent: 10.0, sizeMetres: 0.20 },
+                'grid':               { angle: Math.PI / 8,    exponent: 12.0, sizeMetres: 0.15 },
+                'snoot':              { angle: Math.PI / 12,   exponent: 20.0, sizeMetres: 0.10 },
+                'gobo':               { angle: Math.PI / 10,   exponent: 18.0, sizeMetres: 0.10 },
+                'none':               { angle: Math.PI / 4,    exponent: 4.0,  sizeMetres: 0.30 },
               };
               const prof = modProfiles[modifier] ?? modProfiles['none'];
               light.light.angle    = prof.angle;
               light.light.exponent = prof.exponent;
+              light.sourceSizeMetres = prof.sizeMetres;
               if (light.shadowGenerator) {
-                light.shadowGenerator.blurKernel = prof.kernel;
+                studio.configureStudioShadowSoftness(light.shadowGenerator, light);
               }
               // Gold reflector also warms the colour temperature
               if (modifier === 'reflector-gold') {
@@ -34501,10 +35722,12 @@ window.addEventListener('DOMContentLoaded', () => {
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
-            // Map 0-100% → kernel 4-128 (PCF softness)
-            light.shadowGenerator.blurKernel = Math.max(4, Math.floor((value / 100) * 128));
-            light.shadowGenerator.usePercentageCloserFiltering = value > 0;
-            light.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+            // Shadow softness is the size of the emitting surface, so the
+            // slider scales that rather than a filter kernel: 0% is a bare
+            // 5 cm source, 100% a 2 m silk. Switching the generator to PCF
+            // here used to throw away the modifier's own penumbra.
+            light.sourceSizeMetres = 0.05 + (value / 100) * 1.95;
+            studio.configureStudioShadowSoftness(light.shadowGenerator, light);
           }
         }
       });
@@ -34538,10 +35761,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Copy settings
             newGenerator.setDarkness(oldGenerator.getDarkness());
-            newGenerator.blurKernel = oldGenerator.blurKernel;
             newGenerator.bias = oldGenerator.bias;
-            newGenerator.usePercentageCloserFiltering = true;
-            newGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+            newGenerator.normalBias = oldGenerator.normalBias;
+            studio.configureStudioShadowSoftness(newGenerator, light);
 
             // Add shadow casters
             studio.scene.meshes.forEach(mesh => {

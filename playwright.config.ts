@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5173';
 const managedServerEnabled = process.env.PLAYWRIGHT_MANAGED_SERVER !== '0';
@@ -33,8 +34,9 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
-          executablePath: SYSTEM_CHROMIUM,
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+          executablePath: existsSync(SYSTEM_CHROMIUM) ? SYSTEM_CHROMIUM : undefined,
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
+            ...(process.env.PLAYWRIGHT_SOFTWARE_GL === '1' ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : [])],
         },
       },
     },

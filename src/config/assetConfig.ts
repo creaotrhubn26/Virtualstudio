@@ -1,15 +1,28 @@
 /**
- * Asset Configuration for Cloudflare R2 CDN
- * 
- * This module provides centralized configuration for loading assets
- * from either local paths (development) or Cloudflare R2 CDN (production).
- * 
- * R2 Buckets:
- * - ml-models (public): https://pub-957cc1572eca43cfb57af6fc3a8a4394.r2.dev
- * 
- * In development, we use a Vite proxy (/r2-assets) to bypass CORS restrictions.
- * In production, assets are loaded directly from R2.
+ * Where the studio loads models, audio, images and textures from.
+ *
+ * Three sources, in order of preference:
+ *
+ * 1. `VITE_ASSET_CDN_BASE` — the CloudFront distribution in front of the
+ *    Virtualstudio S3 bucket. Set it and everything resolves there.
+ * 2. Cloudflare R2, the previous home, kept working while assets move across.
+ * 3. Local paths under `public/`, which is what development uses.
+ *
+ * The bucket keeps content under `assets/<kind>/` and the manifests that
+ * describe a set under `system/`. Those prefixes are the contract this module
+ * resolves against; see `scripts/aws/provision-assets.sh`.
+ *
+ * In development against R2 we use a Vite proxy (/r2-assets) to bypass CORS.
  */
+
+/**
+ * CloudFront in front of the S3 asset bucket, when one is configured.
+ *
+ * Empty until the distribution is provisioned, which is what keeps the R2 path
+ * working while the assets move rather than breaking both at once.
+ */
+// @ts-ignore - Vite provides import.meta.env
+const ASSET_CDN_BASE: string = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ASSET_CDN_BASE) || '';
 
 // R2 CDN Base URLs
 export const R2_PUBLIC_CDN = 'https://pub-957cc1572eca43cfb57af6fc3a8a4394.r2.dev';
@@ -21,6 +34,11 @@ export const R2_PRIVATE_ENDPOINT = 'https://bbda9f467577de94fefbc4f2954db032.r2.
 const USE_R2 = (typeof import.meta !== 'undefined' && import.meta.env?.PROD) || 
                (typeof import.meta !== 'undefined' && import.meta.env?.VITE_USE_R2_ASSETS === 'true') ||
                false;
+
+/** True once assets are served from the S3 bucket's distribution. */
+export function usingAssetCdn(): boolean {
+  return ASSET_CDN_BASE.length > 0;
+}
 
 // @ts-ignore - Vite provides import.meta.env
 const IS_DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
@@ -38,6 +56,27 @@ function getR2BaseUrl(): string {
 }
 
 /**
+ * The base every asset kind hangs off, and whether a path needs a prefix.
+ *
+ * The CDN serves the bucket's own layout, so it is used in development too:
+ * there is no CORS proxy to arrange, because the bucket allows GET from
+ * anywhere.
+ */
+function assetBase(): { base: string; prefixed: boolean } {
+  if (ASSET_CDN_BASE) return { base: ASSET_CDN_BASE.replace(/\/$/, ''), prefixed: true };
+  if (USE_R2) return { base: getR2BaseUrl(), prefixed: true };
+  return { base: '', prefixed: false };
+}
+
+/** Resolve one asset kind, stripping the kind's own prefix from a local path. */
+function resolve(kind: keyof typeof R2_PATHS, localPath: string, folder: string): string {
+  const { base, prefixed } = assetBase();
+  if (!prefixed) return localPath;
+  const clean = localPath.replace(new RegExp(`^/?(${folder}/)?`), '');
+  return `${base}/${R2_PATHS[kind]}/${clean}`;
+}
+
+/**
  * Asset path prefixes for R2
  */
 const R2_PATHS = {
@@ -52,7 +91,7 @@ const R2_PATHS = {
  * Get the base URL for assets based on environment
  */
 export function getAssetBaseUrl(): string {
-  return USE_R2 ? getR2BaseUrl() : '';
+  return assetBase().base;
 }
 
 /**
@@ -61,11 +100,7 @@ export function getAssetBaseUrl(): string {
  * @returns Full URL for the asset
  */
 export function resolveModelPath(localPath: string): string {
-  if (!USE_R2) return localPath;
-  
-  // Strip leading slash and 'models/' prefix
-  const cleanPath = localPath.replace(/^\/?(models\/)?/, '');
-  return `${getR2BaseUrl()}/${R2_PATHS.models}/${cleanPath}`;
+  return resolve('models', localPath, 'models');
 }
 
 /**
@@ -74,11 +109,7 @@ export function resolveModelPath(localPath: string): string {
  * @returns Full URL for the asset
  */
 export function resolveAudioPath(localPath: string): string {
-  if (!USE_R2) return localPath;
-  
-  // Strip leading slash and 'audio/' prefix
-  const cleanPath = localPath.replace(/^\/?(audio\/)?/, '');
-  return `${getR2BaseUrl()}/${R2_PATHS.audio}/${cleanPath}`;
+  return resolve('audio', localPath, 'audio');
 }
 
 /**
@@ -87,11 +118,7 @@ export function resolveAudioPath(localPath: string): string {
  * @returns Full URL for the asset
  */
 export function resolveImagePath(localPath: string): string {
-  if (!USE_R2) return localPath;
-  
-  // Strip leading slash and 'images/' prefix
-  const cleanPath = localPath.replace(/^\/?(images\/)?/, '');
-  return `${getR2BaseUrl()}/${R2_PATHS.images}/${cleanPath}`;
+  return resolve('images', localPath, 'images');
 }
 
 /**
@@ -100,11 +127,7 @@ export function resolveImagePath(localPath: string): string {
  * @returns Full URL for the asset
  */
 export function resolveTexturePath(localPath: string): string {
-  if (!USE_R2) return localPath;
-  
-  // Strip leading slash and 'textures/' prefix
-  const cleanPath = localPath.replace(/^\/?(textures\/)?/, '');
-  return `${getR2BaseUrl()}/${R2_PATHS.textures}/${cleanPath}`;
+  return resolve('textures', localPath, 'textures');
 }
 
 /**
@@ -113,10 +136,7 @@ export function resolveTexturePath(localPath: string): string {
  * @returns Full URL for the asset
  */
 export function resolvePatternPath(localPath: string): string {
-  if (!USE_R2) return localPath;
-  
-  const cleanPath = localPath.replace(/^\/?(pattern-thumbnails\/)?/, '');
-  return `${getR2BaseUrl()}/${R2_PATHS.patterns}/${cleanPath}`;
+  return resolve('patterns', localPath, 'pattern-thumbnails');
 }
 
 /**

@@ -3,6 +3,7 @@
  * Integrates with VirtualStudio via events
  */
 
+import { DEFAULT_STUDIO_ROOM, type StudioRoomOptions } from '../rendering/StudioRoom';
 import { WallMaterial, getWallById, WALL_MATERIALS } from '../../data/wallDefinitions';
 import { FloorMaterial, getFloorById, FLOOR_MATERIALS } from '../../data/floorDefinitions';
 import { EnvironmentPreset, getEnvironmentById, ENVIRONMENT_PRESETS } from '../../data/environmentPresets';
@@ -12,6 +13,7 @@ import { undoRedoService } from './undoRedoService';
 import settingsService, { getCurrentUserId } from '../../services/settingsService';
 
 export interface EnvironmentState {
+  room?: StudioRoomOptions;
   walls: {
     backWall: { materialId: string; visible: boolean };
     leftWall: { materialId: string; visible: boolean };
@@ -29,6 +31,7 @@ export interface EnvironmentState {
 
 class EnvironmentService {
   private state: EnvironmentState = {
+    room: { ...DEFAULT_STUDIO_ROOM },
     walls: {
       backWall: { materialId: 'gray-medium', visible: false },
       leftWall: { materialId: 'gray-dark', visible: true },
@@ -36,7 +39,7 @@ class EnvironmentService {
       rearWall: { materialId: 'gray-dark', visible: true },
     },
     floor: {
-      materialId: 'herringbone',
+      materialId: 'concrete-polished',
       visible: true,
       gridVisible: false,
     },
@@ -94,6 +97,17 @@ class EnvironmentService {
     this.setFloorMaterial(this.state.floor.materialId);
     this.toggleFloor(this.state.floor.visible);
     this.toggleGrid(this.state.floor.gridVisible);
+  }
+
+  setStudioRoom(patch: Partial<StudioRoomOptions>): void {
+    const before = { ...(this.state.room || DEFAULT_STUDIO_ROOM) };
+    const after = { ...before, ...patch };
+    const apply = (room: StudioRoomOptions) => { this.state.room = { ...room }; this.notify(); };
+    undoRedoService.registerAction({
+      id: `studio-room-${Date.now()}`, type: 'UPDATE_PROPERTY', description: 'Endret studioets omgivelser',
+      timestamp: Date.now(), data: { before, after }, undo: () => apply(before), redo: () => apply(after),
+    });
+    apply(after);
   }
 
   // Wall methods
@@ -339,6 +353,7 @@ class EnvironmentService {
       redo: () => {
         // Re-apply preset directly
         this.state.activePresetId = presetId;
+        this.state.room = preset.room ? { ...preset.room } : { type: 'none', furnishings: true, practicals: true };
         Object.entries(preset.walls).forEach(([wallId, config]) => {
           const wallKey = wallId as keyof typeof this.state.walls;
           this.state.walls[wallKey].materialId = config.materialId;
@@ -367,6 +382,7 @@ class EnvironmentService {
     });
     
     this.state.activePresetId = presetId;
+        this.state.room = preset.room ? { ...preset.room } : { type: 'none', furnishings: true, practicals: true };
 
     // Apply walls
     Object.entries(preset.walls).forEach(([wallId, config]) => {
@@ -530,6 +546,7 @@ class EnvironmentService {
         this.stopAllAmbientSounds();
         window.dispatchEvent(new CustomEvent('ch-clear-environment'));
         this.state.activePresetId = undefined;
+        this.state.room = { type: 'none', furnishings: true, practicals: false };
         this.state.ambientSounds = [];
         this.notify();
       },
@@ -543,6 +560,7 @@ class EnvironmentService {
 
     // Reset state
     this.state.activePresetId = undefined;
+        this.state.room = { type: 'none', furnishings: true, practicals: false };
     this.state.ambientSounds = [];
 
     this.notify();
@@ -569,6 +587,7 @@ class EnvironmentService {
       nameNo: name,
       category: 'studio',
       description: 'Custom environment preset',
+      room: this.state.room ? { ...this.state.room } : undefined,
       descriptionNo: 'Tilpasset miljøpreset',
       walls: { ...this.state.walls },
       floor: { ...this.state.floor },

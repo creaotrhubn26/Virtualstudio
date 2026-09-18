@@ -156,7 +156,6 @@ export const ExportPanel: FC<ExportPanelProps> = ({ scene }) => {
   
   const formatGroups = {
     '3D Models': ['glb', 'gltf', 'obj', 'stl', 'babylon'] as ExportFormat[],
-    'USD Formats': ['usda', 'usdz'] as ExportFormat[],
     'Images': ['screenshot-png', 'screenshot-exr'] as ExportFormat[]
   };
   
