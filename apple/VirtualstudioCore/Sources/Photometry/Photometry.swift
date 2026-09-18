@@ -317,9 +317,11 @@ public func glbFallbackSizeMetres(_ glbFile: String?) -> Double {
 /// produce a wide penumbra and a snoot a crisp edge — the same relationship as
 /// the real set.
 ///
-/// This is the one number RealityKit has nowhere to put: `SpotLightComponent.Shadow`
-/// has no properties at all. Keeping the maths here means a custom shadow pass
-/// has something exact to consume, rather than a constant somebody tuned.
+/// This is the one number RealityKit has nowhere to put. Its
+/// `SpotLightComponent.Shadow` takes a depth bias, a cull mode and two clipping
+/// planes; nothing anywhere in the framework describes how soft an edge is.
+/// Keeping the maths here means a custom shadow pass has something exact to
+/// consume, rather than a constant somebody tuned.
 public func contactHardeningRatio(
     sourceSizeMetres: Double,
     beamAngleRad: Double,

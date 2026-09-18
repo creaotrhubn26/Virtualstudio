@@ -1,0 +1,279 @@
+import Foundation
+import RealityKit
+import Photometry
+import StudioContent
+
+/// A rig on a stage, built from the same catalogue the web studio uses.
+///
+/// Nothing here invents content. The place, the look, every fixture's angle and
+/// every level in stops come out of `StudioContent`, which is the table the
+/// TypeScript wrote; the conversion from a level in stops to something a light can
+/// be told is `Photometry`. So what this renders is the studio's own lighting, and
+/// a disagreement is a disagreement about RealityKit rather than about taste.
+///
+/// **What it is for.** `docs/ipad-plan.md` asks four questions of a device, and
+/// this stage is built to answer the two that need geometry: does a modifier's size
+/// change the shadow, and does one stop of difference render as a factor of two.
+/// Everything in it is a measuring instrument first and a scene second — which is
+/// why there is a bare rod standing in front of the wall.
+@MainActor
+final class StudioStage {
+    let root = Entity()
+
+    /// Where the taking camera stands. The same shot the web studio opens on.
+    /// Far enough back to hold the figure, the floor it stands on and the rod: a
+    /// full-body frame, because everything being measured is an edge somewhere in
+    /// the picture rather than a face.
+    static let cameraPosition = SIMD3<Float>(-0.9, 1.45, -5.2)
+    static let cameraTarget = SIMD3<Float>(0.25, 1.0, 0.4)
+
+    /// A subject 1.72 m tall, like the bundled woman.
+    ///
+    /// Eye height is 0.936 × stature, which is the figure the web studio meters to
+    /// and the height every `PolarPlacement` elevation is measured from.
+    static let stature: Double = 1.72
+    static var eyeHeight: Double { stature * 0.936 }
+
+    private var lights: [Entity] = []
+    private let catalogue = StudioCatalogue.shipped
+
+    /// What each fixture was asked to deliver, so the panel can show the rig in the
+    /// units it was written in instead of the units it was given to RealityKit.
+    private(set) var report: [FixtureReport] = []
+
+    struct FixtureReport: Identifiable {
+        let id: String
+        let name: String
+        /// Level below the look's key, in stops.
+        let stops: Double
+        /// Metres from the subject, after being walked into the room.
+        let distance: Double
+        /// Degrees off the lens axis. Never under 25.
+        let offAxisDegrees: Double
+        /// On-axis intensity, candela.
+        let candela: Double
+        /// What RealityKit was told, lumens.
+        let lumens: Double
+        /// What the shadow edge would be worth, if RealityKit could be told.
+        let hardeningRatio: Double
+    }
+
+    init() {
+        buildStage()
+    }
+
+    /// Nothing but the rig.
+    ///
+    /// RealityKit lights a scene from an image-based light whether or not you ask,
+    /// and that ambient is flat: it fills every shadow, so the ratio a look was
+    /// written in never reaches the picture. An empty image-based light, declared on
+    /// a holder that everything points at, is how it is switched off.
+    ///
+    /// This is a real difference from the web renderer, where ambient is a light you
+    /// add. Here it has to be taken away.
+    private func removeAmbient() {
+        let holder = Entity()
+        holder.name = "noAmbient"
+        holder.components.set(ImageBasedLightComponent(source: .none))
+        root.addChild(holder)
+        for entity in root.children where entity !== holder {
+            apply(ImageBasedLightReceiverComponent(imageBasedLight: holder), to: entity)
+        }
+    }
+
+    private func apply(_ component: ImageBasedLightReceiverComponent, to entity: Entity) {
+        entity.components.set(component)
+        for child in entity.children { apply(component, to: child) }
+    }
+
+    // MARK: - The stage
+
+    /// Floor, wall, a figure and a gauge.
+    ///
+    /// The rod is the instrument: a 2 cm bar standing 30 cm off the wall throws a
+    /// shadow whose edge is wide or narrow in direct proportion to the source, which
+    /// is the one thing being measured. A figure alone would not show it — a face has
+    /// no straight edge to read a penumbra against.
+    private func buildStage() {
+        let concrete = SimpleMaterial(color: .init(white: 0.55, alpha: 1), roughness: 0.9, isMetallic: false)
+
+        let floor = ModelEntity(mesh: .generatePlane(width: 16, depth: 17), materials: [concrete])
+        floor.name = "floor"
+        // A floor casts nothing and catches everything: the shadow is the reading.
+        floor.components.set(GroundingShadowComponent(castsShadow: false, receivesShadow: true))
+        root.addChild(floor)
+
+        let wall = ModelEntity(mesh: .generatePlane(width: 16, height: 4), materials: [concrete])
+        wall.name = "wall"
+        wall.position = [0, 2, 3]
+        wall.components.set(GroundingShadowComponent(castsShadow: false, receivesShadow: true))
+        root.addChild(wall)
+
+        // The figure: a stand-in, not a character. The GLBs are not converted to USD
+        // yet, and the shadow question does not need a face to answer.
+        let skin = SimpleMaterial(color: .init(red: 0.78, green: 0.66, blue: 0.58, alpha: 1), roughness: 0.7, isMetallic: false)
+        let torso = ModelEntity(
+            mesh: .generateBox(width: 0.42, height: 0.92, depth: 0.24, cornerRadius: 0.1),
+            materials: [skin]
+        )
+        torso.position = [0, 1.02, 0]
+        let legs = ModelEntity(
+            mesh: .generateBox(width: 0.34, height: 0.86, depth: 0.22, cornerRadius: 0.08),
+            materials: [skin]
+        )
+        legs.position = [0, 0.44, 0]
+        let head = ModelEntity(mesh: .generateSphere(radius: 0.115), materials: [skin])
+        head.position = [0, 1.62, 0]
+        let figure = Entity()
+        figure.name = "figure"
+        for part in [legs, torso, head] {
+            part.components.set(GroundingShadowComponent(castsShadow: true, receivesShadow: true))
+            figure.addChild(part)
+        }
+        root.addChild(figure)
+
+        // The gauge. Plain white so nothing about the material affects the reading.
+        let white = SimpleMaterial(color: .white, roughness: 1, isMetallic: false)
+        let rod = ModelEntity(mesh: .generateBox(width: 0.02, height: 2.0, depth: 0.02), materials: [white])
+        rod.name = "penumbraGauge"
+        rod.position = [1.1, 1.0, 2.7]
+        rod.components.set(GroundingShadowComponent(castsShadow: true, receivesShadow: false))
+        root.addChild(rod)
+
+        let camera = PerspectiveCamera()
+        camera.name = "takingCamera"
+        // 35 mm on full frame: 2·atan(24 / (2·35)) = 37.8° vertically, which is
+        // what RealityKit's field of view means and what the web studio computes.
+        camera.camera.fieldOfViewInDegrees = 37.8
+        camera.camera.near = 0.05
+        camera.camera.far = 120
+        camera.look(at: Self.cameraTarget, from: Self.cameraPosition, relativeTo: nil)
+        root.addChild(camera)
+
+        removeAmbient()
+    }
+
+    // MARK: - The rig
+
+    /// Light the stage the way a named place is lit.
+    ///
+    /// `modifierLabel` is the key's modifier, and it is the point of the exercise:
+    /// the two labels the panel offers have the same area to within a few per cent
+    /// and very different shapes, so `contactHardeningRatio` separates them by a
+    /// factor of three. If the rendered shadow does not change between them, the
+    /// product's central claim has no RealityKit primitive to stand on.
+    /// `keyOffsetStops` dims or lifts the whole rig by that many stops.
+    ///
+    /// Question two of the plan: does one stop render as a factor of two? The web
+    /// renderer's answer is exactly yes, because an earlier ceiling that made every
+    /// bright fixture identical was treated as a bug rather than a look. Whether
+    /// RealityKit answers the same is measured by rendering the same frame twice.
+    func light(locationId: String, modifierLabel: String, keyOffsetStops: Double = 0) {
+        for light in lights { light.removeFromParent() }
+        lights.removeAll()
+        report.removeAll()
+
+        guard let location = catalogue.location(id: locationId),
+              let look = catalogue.look(id: location.look) else { return }
+
+        let subject = SubjectStand(x: 0, z: 0, eyeHeight: Self.eyeHeight)
+        let cameraAt = Vec3Value(
+            x: Double(Self.cameraPosition.x),
+            y: Double(Self.cameraPosition.y),
+            z: Double(Self.cameraPosition.z)
+        )
+
+        for (index, fixture) in look.fixtures.enumerated() {
+            // Only the working lights. A motivating source is a lamp in the room,
+            // and the room is not built here.
+            guard let placement = fixture.placement else { continue }
+
+            let resolved = resolvePlacement(placement, subject: subject, camera: (x: cameraAt.x, z: cameraAt.z))
+            var position = clearOfCamera(position: resolved.position, aim: resolved.aim, camera: cameraAt)
+            if let bounds = location.bounds {
+                position = insideRoom(position: position, aim: resolved.aim, bounds: bounds)
+            }
+
+            let distance = metres(from: position, to: resolved.aim)
+            let beamDeg = fixture.beamDeg ?? DEFAULT_BEAM_ANGLE_DEG
+            // The level a look asks for, as an intensity a light can be given.
+            //
+            // A look is written in stops from the studio key, in the web renderer's
+            // scene units. Undo that calibration to get candela, then spread the
+            // candela over the beam to get the lumens RealityKit wants. The ratios
+            // between fixtures are exact whatever the absolute scale turns out to
+            // be; the scale itself is the thing to calibrate on device, against one
+            // known fixture, exactly as SCENE_INTENSITY_PER_CANDELA was.
+            let sceneUnits = fixtureIlluminance(look, fixture: fixture, studioKey: catalogue.studioKeyIlluminance)
+                * pow(2, keyOffsetStops)
+            let candela = (sceneUnits / SCENE_INTENSITY_PER_CANDELA) * distance * distance
+            let solidAngle = (try? coneSolidAngle(beamDeg)) ?? 1
+            let lumens = candela * solidAngle
+
+            let entity = Entity()
+            entity.name = "light-\(fixture.name)"
+            var spot = SpotLightComponent(
+                color: .white,
+                intensity: Float(lumens),
+                innerAngleInDegrees: Float(beamDeg * 0.6),
+                outerAngleInDegrees: Float(beamDeg),
+                attenuationRadius: 60
+            )
+            // Physical falloff, so doubling the distance costs exactly two stops.
+            // The radius above is far past the set so the windowed cut-off never
+            // bites inside it.
+            spot.attenuationFalloffExponent = 2
+            entity.components.set(spot)
+
+            // Everything the shadow can be told. Depth and clipping only: there is
+            // nothing anywhere in RealityKit about how soft the edge is, which is
+            // what this app exists to demonstrate.
+            var shadow = SpotLightComponent.Shadow()
+            shadow.zNear = .fixed(0.2)
+            shadow.zFar = .fixed(20)
+            shadow.depthBias = 1
+            entity.components.set(shadow)
+
+            entity.look(
+                at: SIMD3(Float(resolved.aim.x), Float(resolved.aim.y), Float(resolved.aim.z)),
+                from: SIMD3(Float(position.x), Float(position.y), Float(position.z)),
+                relativeTo: nil
+            )
+            root.addChild(entity)
+            lights.append(entity)
+
+            // The key carries the modifier being compared; the others keep their own.
+            let label = index == 0 ? modifierLabel : fixture.name
+            let size = modifierSizeMetres(label)
+            let hardening = (try? contactHardeningRatio(
+                sourceSizeMetres: size,
+                beamAngleRad: (try? spotConeRadians(beamDeg)) ?? 1
+            )) ?? 0
+
+            report.append(FixtureReport(
+                id: "\(look.id)-\(index)",
+                name: index == 0 ? "\(fixture.name) · \(label)" : fixture.name,
+                stops: fixture.stops,
+                distance: distance,
+                offAxisDegrees: offAxisDegrees(position: position, aim: resolved.aim, camera: cameraAt),
+                candela: candela,
+                lumens: lumens,
+                hardeningRatio: hardening
+            ))
+        }
+    }
+
+    private func metres(from position: Vec3Value, to aim: Vec3Value) -> Double {
+        let dx = position.x - aim.x, dy = position.y - aim.y, dz = position.z - aim.z
+        return (dx * dx + dy * dy + dz * dz).squareRoot()
+    }
+
+    private func offAxisDegrees(position: Vec3Value, aim: Vec3Value, camera: Vec3Value) -> Double {
+        let light = atan2(position.z - aim.z, position.x - aim.x)
+        let lens = atan2(camera.z - aim.z, camera.x - aim.x)
+        var difference = light - lens
+        while difference > .pi { difference -= 2 * .pi }
+        while difference < -.pi { difference += 2 * .pi }
+        return abs(difference) * 180 / .pi
+    }
+}

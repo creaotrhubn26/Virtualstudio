@@ -34,8 +34,8 @@ Superseded by [`ipad-plan.md`](ipad-plan.md), which is staged and grounded in th
 installed iOS SDK rather than in expectations about it. Two paragraphs here were
 wrong in a way worth recording: the eight-light figure in Apple's documentation
 describes lit lights, not shadow-casting ones, and RealityKit turns out to expose
-no control over shadow softness at all — `SpotLightComponent.Shadow` has no
-properties. The recommendation to keep the web editor and reuse the character
+no control over shadow softness at all — `SpotLightComponent.Shadow` can be told
+about depth bias and clipping planes, and nothing about how soft its edge is. The recommendation to keep the web editor and reuse the character
 source pipeline and the scene document still stands, and is the foundation of
 that plan.
 

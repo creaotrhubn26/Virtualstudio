@@ -79,28 +79,48 @@ grep -n 'LightComponent\|jointTransforms\|LowLevelMesh.Part\|isToneMappingEnable
 
 ## The one hard finding
 
-The shadow API, verbatim:
+Everything a spot light's shadow can be told, on iOS 18 and later, counting the
+availability-gated extensions:
 
 ```swift
-public struct SpotLightComponent {
-  public struct Shadow : Component, Equatable {
-    public init()          // ← no properties at all
-  }
-  public var intensity: Float
-  public var innerAngleInDegrees: Float
-  public var outerAngleInDegrees: Float
-  public var attenuationRadius: Float
+extension SpotLightComponent {
+  var attenuationFalloffExponent: Float
+}
+extension SpotLightComponent.Shadow {
+  var depthBias: Float
+  var cullModeOverride: FaceCulling?
+  var zNear: ShadowClippingPlane      // .automatic or .fixed(Float)
+  var zFar:  ShadowClippingPlane
 }
 
 public struct PointLightComponent { … }   // ← no Shadow type; cannot cast one
-
-public struct DirectionalLightComponent {
-  public struct Shadow { public var depthBias: Float /* + deprecated maximumDistance */ }
-}
 ```
 
-There is no penumbra control, no light-size control, no shadow-map resolution.
-A spot light's shadow is whatever RealityKit decides it is.
+Depth, clipping and culling. Not one word about softness: searching the whole
+interface for `penumbra`, `softShadow`, `shadowMapSize`, `lightSize`,
+`shadowResolution` or `softness` returns nothing at all.
+
+```sh
+SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+grep -ciE 'penumbra|softshadow|shadowmapsize|lightsize|shadowresolution|softness' \
+  "$SDK/System/Library/Frameworks/RealityFoundation.framework/Modules/RealityFoundation.swiftmodule/arm64e-apple-ios.swiftinterface"
+# 0
+```
+
+So there is no penumbra control, no light-size control and no shadow-map
+resolution. A spot light's shadow is whatever RealityKit decides it is; what can
+be set is how deep it reaches and where it is clipped.
+
+**Now measured rather than inferred.** The app in `apple/Virtualstudio` renders
+the same frame with the key on a 90 × 120 cm softbox and on a 10 cm snoot — a
+1.04 m source and a 0.10 m source, a factor of ten apart in
+`contactHardeningRatio`. Across 3 296 896 pixels of the scene the two images
+differ by a maximum of **zero**. See
+[`measurements/README.md`](measurements/README.md).
+
+`zNear`/`zFar` do map cleanly onto the web renderer's `shadowMinZ = 0.2` and
+`shadowMaxZ = 20`, which is worth having. It is the softness that has nowhere to
+go.
 
 This matters more here than in most apps, because it is the specific claim the
 product makes. `contactHardeningRatio` in `photometry.ts` derives the penumbra
@@ -193,19 +213,21 @@ The scene: two bundled figures, one room, the default studio portrait look —
 key, fill and rim, each casting a shadow — plus the live taking-camera preview
 rendered beside the navigation view.
 
-1. **Does a modifier's size change anything?** Render the same key at 30 × 120 cm
-   and at 90 × 120 cm. Photograph the penumbra width in pixels at a fixed
-   distance. If the two are the same image, the differentiator is gone, and a
-   custom Metal shadow pass through `postProcess` is not optional — it is the
-   feature. Port `contactHardeningRatio` into that pass; the maths already exists
-   and is tested.
-2. **Is light linear?** Place two fixtures one stop apart by
-   `stopsBetween` and measure the on-screen luminance ratio. Expect 2.0. Do this
-   with tone mapping off. An earlier Babylon ceiling made every fixture above
-   8000 cd render identically and that was treated as a bug, not a look; the same
-   standard applies here. Then calibrate RealityKit's intensity unit against one
-   known fixture, the way `SCENE_INTENSITY_PER_CANDELA` was fixed on the
-   Aputure LS 300d II.
+1. **Does a modifier's size change anything?** *(Answered, and the answer is no:
+   the same image to the last bit.)* So the custom Metal shadow pass through
+   `renderingEffects.customPostProcessing` is not optional — it is the feature.
+   Port `contactHardeningRatio` into that pass; the maths already exists and is
+   tested. What remains for the device is only whether it is affordable.
+2. **Is light linear?** *(Answered, and the answer is no.)* The same rig one stop
+   apart reads 0.581 of the pixel value, and two stops apart 0.300 — three
+   quarters of a stop and one and three quarters. sRGB gamma alone would give
+   0.729 and 0.532, so the rest is tone mapping. `RealityRenderer.CameraSettings`
+   can switch it off; `RealityView` cannot, and searching the whole
+   `_RealityKit_SwiftUI` interface for "tonemap" returns nothing. This does not
+   make the preview wrong to look at, it makes it wrong to meter, and it points at
+   the same place finding 1 does. Still to do: calibrate the intensity unit
+   against one known fixture, the way `SCENE_INTENSITY_PER_CANDELA` was fixed on
+   the Aputure LS 300d II.
 3. **Does it hold up?** Frame time and `ProcessInfo.thermalState`, sampled for
    thirty minutes of ordinary editing, in Stage Manager alongside another app.
    The failure that matters is not a crash — it is the preview quietly ceasing to
@@ -304,11 +326,18 @@ the room.
 
 ## What this plan does not claim
 
-- No native performance, thermal or memory figure exists yet. Stage 2 is where
-  the first one comes from.
+- No native performance, thermal or memory figure exists yet. The two findings
+  recorded in [`measurements/README.md`](measurements/README.md) are about what
+  the API can do, which a simulator can answer; frame time, thermals and
+  `os_proc_available_memory` need the hardware, and the app puts all three on
+  screen for when it has it.
 - RealityKit's shadow softness cannot be driven from a modifier's real size.
   That is measured from the SDK, not estimated, and it is not worked around by
-  choosing better numbers.
+  choosing better numbers. An earlier draft of this document said
+  `SpotLightComponent.Shadow` had no properties at all; it has four on iOS 18 and
+  later, through an availability-gated extension that reading the struct body
+  alone misses. They govern depth bias, clipping and culling. The conclusion is
+  unchanged and the reason is narrower: softness is the thing with nowhere to go.
 - The Apple documentation figure of eight dynamic lights, relaxed on later GPU
   families, describes *lit*, not *shadow-casting*. Take the shadow count from
   stage 2 and from nothing else.

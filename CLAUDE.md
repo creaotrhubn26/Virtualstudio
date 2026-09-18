@@ -285,6 +285,14 @@ Validate an entire file before clearing the current scene. Maintain legacy v1 re
 
 ## The native core
 
+[`apple/Virtualstudio`](apple/README.md) is the iPad app, generated from
+`apple/project.yml` with `xcodegen generate` — the `.xcodeproj` is not in git. It
+is a measuring instrument at this stage, and it has already answered two of the
+plan's questions in the negative: a modifier's size changes the rendered shadow by
+exactly zero pixels, and one stop of light arrives as three quarters of a stop on
+screen. Both are recorded with their screenshots in
+[`docs/measurements/README.md`](docs/measurements/README.md).
+
 [`apple/VirtualstudioCore`](apple/README.md) holds the renderer-free arithmetic as
 Swift packages: `Photometry`, `SceneDocument`, `PoseRig`, `LimbIK`,
 `StudioContent` and `Storyboard` — the whole renderer-free core. It is the
@@ -308,7 +316,7 @@ the fixture in the same change.
 
 `StudioContent` is the one exception to porting as Swift. The looks, places,
 marks and moves are *tables*, so they are exported from the TypeScript into
-`Sources/StudioContent/Resources/content.json` and decoded rather than restated —
+`Sources/StudioContent/Catalogue/content.json` and decoded rather than restated —
 one source of truth, and no mistyped azimuth that a test written from the same
 typo would miss. Add a look in `lightingLooks.ts`, regenerate, and it is on both
 platforms. Because `Codable` silently drops undeclared keys, a test re-encodes the
@@ -366,7 +374,7 @@ Work in this order unless the user changes priorities:
 3. **Broader real character variation.** *(Wardrobe is now a layer; see "Wardrobe as a layer".)* Remaining: body archetypes and the 50 figures built on them, using the pinned pack's 22 usable skins (six ethnicities across three ages), 10 hairstyles and 12 outfits. Garments are fitted per body shape, so a new archetype means refitting the wardrobe for it — keep the number of archetypes small and vary skin, hair, face and height freely on top. Add facial expression blend shapes only when the source and export path are verified.
 4. **Studio object editing.** *(The general prop system and the timeline have landed; see "Objects on set" and "Movement".)* Remaining: give room furniture stable keys so individual pieces can be claimed, which means keeping them as separate meshes rather than batched; a panel for browsing and placing props; and a way to author a track for something other than a light, which today means editing the timeline by hand.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
-6. **iPad edition after the scene contract stabilizes.** Staged in [`docs/ipad-plan.md`](docs/ipad-plan.md). *(Landed: the false USD export is gone, and the whole renderer-free core — `Photometry`, `SceneDocument`, `PoseRig`, `LimbIK`, `StudioContent` and `Storyboard` — is ported to Swift and checked against the TypeScript implementation through shared JSON fixtures. See [`apple/README.md`](apple/README.md).)* Remaining: a real USD export from the character builder; then the device measurement that decides RealityKit, RealityKit with a custom Metal shadow pass, or Metal. The shadow question is already partly answered: `SpotLightComponent.Shadow` has no properties, so a modifier's real size cannot drive the penumbra there.
+6. **iPad edition after the scene contract stabilizes.** Staged in [`docs/ipad-plan.md`](docs/ipad-plan.md). *(Landed: the false USD export is gone, and the whole renderer-free core — `Photometry`, `SceneDocument`, `PoseRig`, `LimbIK`, `StudioContent` and `Storyboard` — is ported to Swift and checked against the TypeScript implementation through shared JSON fixtures. See [`apple/README.md`](apple/README.md).)* Remaining: a real USD export from the character builder; then the device measurement that decides RealityKit, RealityKit with a custom Metal shadow pass, or Metal. The shadow question is already partly answered: `SpotLightComponent.Shadow` takes a depth bias and clipping planes and nothing about softness, so a modifier's real size cannot drive the penumbra there.
 
 Acceptance criteria for each feature should include a real workflow test, scene round-trip when state is persisted, resource cleanup after replacement and a screenshot or numeric result that demonstrates the intended photographic behavior.
 

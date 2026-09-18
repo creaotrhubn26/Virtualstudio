@@ -1,0 +1,69 @@
+# The iPad edition, generated rather than checked in as a .xcodeproj.
+#
+# An Xcode project file is a large plist that merge-conflicts on every change and
+# that nobody reads. This says the same thing in thirty lines, and
+# `xcodegen generate` rebuilds it, so the repository carries the description and
+# not the artefact.
+#
+#   brew install xcodegen
+#   cd apple && xcodegen generate && open Virtualstudio.xcodeproj
+name: Virtualstudio
+options:
+  bundleIdPrefix: no.holycrust.virtualstudio
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+packages:
+  VirtualstudioCore:
+    path: VirtualstudioCore
+
+targets:
+  Virtualstudio:
+    type: application
+    platform: iOS
+    # iPad first, and a phone gets the same app rather than a cut-down one.
+    deploymentTarget: "18.0"
+    sources:
+      - path: Virtualstudio
+    dependencies:
+      - package: VirtualstudioCore
+        product: Photometry
+      - package: VirtualstudioCore
+        product: SceneDocument
+      - package: VirtualstudioCore
+        product: PoseRig
+      - package: VirtualstudioCore
+        product: LimbIK
+      - package: VirtualstudioCore
+        product: StudioContent
+      - package: VirtualstudioCore
+        product: Storyboard
+    settings:
+      base:
+        # Xcode writes the Info.plist from the INFOPLIST_KEY_* settings below
+        # rather than the repository carrying a file nobody edits by hand.
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: no.holycrust.virtualstudio
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Landscape first: the studio is a wide picture, and a photographer holds
+        # an iPad the way they hold a camera.
+        # Landscape only, for now. The studio is a wide picture and a photographer
+        # holds an iPad the way they hold a camera. A call sheet is a tall page and
+        # will want portrait back when there is one to show.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: >-
+          UIInterfaceOrientationLandscapeLeft
+          UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: >-
+          UIInterfaceOrientationLandscapeLeft
+          UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UIRequiresFullScreen: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        CODE_SIGN_STYLE: Automatic

@@ -18,7 +18,7 @@ import { ALL_MOVES, buildCameraMove, buildLightMove } from './movePresets';
  *
  * Two files come out of here, and they are different in kind.
  *
- * `Sources/StudioContent/Resources/content.json` is the **content itself** —
+ * `Sources/StudioContent/Catalogue/content.json` is the **content itself** —
  * twelve looks, five places with their marks, twenty named moves. The Swift
  * package decodes it rather than restating it, because these tables are data and
  * hand-copying them would buy nothing and risk a mistyped azimuth that no test
@@ -34,7 +34,7 @@ import { ALL_MOVES, buildCameraMove, buildLightMove } from './movePresets';
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CONTENT = resolve(HERE, '../../apple/VirtualstudioCore/Sources/StudioContent/Resources/content.json');
+const CONTENT = resolve(HERE, '../../apple/VirtualstudioCore/Sources/StudioContent/Catalogue/content.json');
 const FIXTURE = resolve(HERE, '../../apple/VirtualstudioCore/Tests/StudioContentTests/Fixtures/studioContent.json');
 
 /** Marks from every place at once, so `facesMark` is resolved across rooms too. */

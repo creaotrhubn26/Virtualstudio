@@ -1,4 +1,34 @@
-# The native core
+# The iPad edition
+
+`Virtualstudio` is the app; `VirtualstudioCore` is what it is built out of.
+
+## The app
+
+```sh
+brew install xcodegen          # once
+cd apple && xcodegen generate  # writes Virtualstudio.xcodeproj, which is gitignored
+open Virtualstudio.xcodeproj
+```
+
+The project is described by [`project.yml`](project.yml) and generated, so the
+repository carries the description and not a large plist that merge-conflicts on
+every change.
+
+It is at the stage the plan calls a measurement rather than a prototype: it puts
+a rig on a stage, built from the same catalogue and the same arithmetic the web
+studio uses, and reports what the device is doing while it renders. It has
+already answered two of the plan's four questions, both in the negative — see
+[`../docs/measurements/README.md`](../docs/measurements/README.md).
+
+Two launch arguments drive the comparison without a finger, because a measurement
+that can only be taken by hand is a measurement that gets taken once:
+
+```sh
+xcrun simctl launch <udid> no.holycrust.virtualstudio --modifier "Snute 10 cm"
+xcrun simctl launch <udid> no.holycrust.virtualstudio --stops -1
+```
+
+## The core
 
 Swift packages holding the photographic and anatomical arithmetic of
 Virtualstudio, and nothing else. No RealityKit, no Metal, no SwiftUI. This is
@@ -89,11 +119,13 @@ Twelve looks, five places with thirteen marks, twenty named moves: those tables
 *are* the content of the product. Hand-copying them into Swift would buy nothing
 and risk a mistyped azimuth that no test would catch, because the test would have
 been written from the same typo. So the tables stay in TypeScript and are exported
-into `Sources/StudioContent/Resources/content.json`, which the package carries as
-a resource and decodes:
+into `Sources/StudioContent/Catalogue/content.json`, which the package carries as
+a resource and decodes (the folder is not called `Resources` — a directory by that
+name at a bundle's root collides with the bundle layout and `codesign` refuses the
+result):
 
 ```
-studioContent.fixtures.test.ts ──writes──→ Sources/StudioContent/Resources/content.json
+studioContent.fixtures.test.ts ──writes──→ Sources/StudioContent/Catalogue/content.json
                                                       │
                                StudioCatalogue.shipped ┘  (decoded, not restated)
 ```

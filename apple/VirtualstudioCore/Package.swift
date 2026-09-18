@@ -42,7 +42,7 @@ let package = Package(
             dependencies: ["LimbIK"],
             resources: [.copy("Fixtures")]
         ),
-        .target(name: "StudioContent", resources: [.copy("Resources")]),
+        .target(name: "StudioContent", resources: [.copy("Catalogue")]),
         .testTarget(
             name: "StudioContentTests",
             dependencies: ["StudioContent"],

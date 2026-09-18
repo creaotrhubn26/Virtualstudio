@@ -8,8 +8,11 @@ import Foundation
 /// buy nothing and risk a mistyped azimuth that no test would notice, because the
 /// test would be written from the same typo.
 ///
-/// So the tables stay in TypeScript and are exported into `content.json`, which
-/// this package carries as a resource and decodes. One source of truth: add a
+/// So the tables stay in TypeScript and are exported into `Catalogue/content.json`,
+/// which this package carries as a resource and decodes. (The directory is not
+/// called `Resources`: a folder by that name at a bundle's root collides with the
+/// bundle layout, and `codesign` refuses the result — "bundle format
+/// unrecognized, invalid, or unsuitable".) One source of truth: add a
 /// look on the web, regenerate, and the same look is on the iPad — labels, hints,
 /// stops and all. "Kjøkken · morgen" means the same thing on both platforms
 /// rather than the iPad inventing separate content.
@@ -217,7 +220,7 @@ public extension StudioCatalogue {
     /// bundle, and the check that matters is that nothing in the file is dropped
     /// on the way into the model.
     static let shippedJSON: Data = {
-        guard let url = Bundle.module.url(forResource: "content", withExtension: "json", subdirectory: "Resources") else {
+        guard let url = Bundle.module.url(forResource: "content", withExtension: "json", subdirectory: "Catalogue") else {
             fatalError("content.json is missing. Generate it with UPDATE_FIXTURES=1 npm test -- studioContent.fixtures")
         }
         do {
