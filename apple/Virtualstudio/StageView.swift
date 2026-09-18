@@ -74,35 +74,19 @@ struct StageView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            RealityView { content in
-                content.camera = .virtual
-                content.environment = .default
-                // No motion blur, no grain, no depth of field: this is a
-                // measurement, and an effect that softens an edge would be
-                // measured as softness.
-                content.renderingEffects.motionBlur = .disabled
-                content.renderingEffects.cameraGrain = .disabled
-                content.renderingEffects.depthOfField = .disabled
-                // The shadow RealityKit will not draw. Everything else on this
-                // stage is RealityKit's; this one pass is ours, and it is the
-                // difference between a lighting tool and a viewer.
-                if #available(iOS 26.0, *), softShadows {
-                    content.renderingEffects.customPostProcessing =
-                        .effect(SoftShadowPass(state: stage.shadowState))
+            StudioView(stage: stage, report: report)
+                .ignoresSafeArea()
+                .task {
+                    // The rig first, so there is something to see while the figure's
+                    // textures are read; she arrives into a lit stage rather than a
+                    // blank one.
+                    stage.shadowDebugMode = Self.launchDebugMode
+                    stage.softShadowKey = softShadows
+                    stage.shadowRadiusOverride = Self.launchRadius
+                    stage.light(locationId: locationId, modifierLabel: modifier,
+                                keyOffsetStops: keyOffsetStops)
+                    await stage.addFigure()
                 }
-                stage.shadowDebugMode = Self.launchDebugMode
-                stage.softShadowKey = softShadows
-                stage.shadowRadiusOverride = Self.launchRadius
-                content.add(stage.root)
-                stage.light(locationId: locationId, modifierLabel: modifier, keyOffsetStops: keyOffsetStops)
-
-                await stage.addFigure()
-
-                _ = content.subscribe(to: SceneEvents.Update.self, on: nil, componentType: nil) { event in
-                    MainActor.assumeIsolated { report.tick(deltaTime: event.deltaTime) }
-                }
-            }
-            .ignoresSafeArea()
 
             controls
         }

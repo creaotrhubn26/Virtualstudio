@@ -252,7 +252,7 @@ rendered beside the navigation view.
    [`measurements/README.md`](measurements/README.md). What remains for the
    device is whether the depth buffer reads there at all, and then whether the
    pass is affordable.
-2. **Is light linear?** *(Answered, and the answer is no.)* The same rig one stop
+2. **Is light linear?** *(Answered no, then fixed: it is now, to three decimal places.)* The same rig one stop
    apart reads 0.581 of the pixel value, and two stops apart 0.300 — three
    quarters of a stop and one and three quarters. sRGB gamma alone would give
    0.729 and 0.532, so the rest is tone mapping. `RealityRenderer.CameraSettings`

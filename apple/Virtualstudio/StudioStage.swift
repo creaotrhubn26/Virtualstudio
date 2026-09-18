@@ -35,6 +35,9 @@ final class StudioStage {
     static let stature: Double = 1.72
     static var eyeHeight: Double { stature * 0.936 }
 
+    /// The taking camera, which the renderer is pointed at.
+    private(set) var camera = PerspectiveCamera()
+
     private var lights: [Entity] = []
     private let catalogue = StudioCatalogue.shipped
 
@@ -224,7 +227,6 @@ final class StudioStage {
     }
 
     private func buildCamera() {
-        let camera = PerspectiveCamera()
         camera.name = "takingCamera"
         // 35 mm on full frame: 2·atan(24 / (2·35)) = 37.8° vertically, which is
         // what RealityKit's field of view means and what the web studio computes.

@@ -43,33 +43,55 @@ Metal for the scene.
 The rod standing in front of the wall is in the frame for this reason. A face has
 no straight edge to read a penumbra against.
 
-## 2. The picture is not linear in the light
+## 2. The picture is now linear in the light
 
-`stops0.png` and `stops-1.png` are the same rig one stop apart. Mean pixel value
-over a patch of lit floor:
+*Answered, and then fixed.*
 
-| Rig | Mean pixel | Ratio | Stops, measured |
+`stops0.png` and `stops-1.png` are the same rig one stop apart. Read as raw pixel
+values they looked like this, and the conclusion drawn from them — that some of the
+difference was display gamma and the rest was tone mapping — was right:
+
+| Rig | Mean pixel |
+|---|---|
+| as written | 41.69 |
+| one stop down | 24.21 |
+| two stops down | 12.53 |
+
+But a pixel value is not a quantity of light. Decoded through the sRGB transfer,
+which is what a display encodes with, the same frames say exactly how much the
+curve was costing:
+
+| Rig | Linear mean | Ratio | Stops measured |
 |---|---|---|---|
-| as written | 41.69 | 1.000 | +0.000 |
-| one stop down | 24.21 | 0.581 | −0.784 |
-| two stops down | 12.53 | 0.300 | −1.735 |
+| as written | 0.02435 | 1.000 | +0.000 |
+| one stop down | 0.00984 | 0.404 | **−1.307** |
+| two stops down | 0.00399 | 0.164 | **−2.608** |
 
-One stop of light arrives as three quarters of a stop on screen, two as one and
-three quarters. Some of that is display gamma, which is expected and correct —
-sRGB alone would give 0.729 and 0.532. The rest is tone mapping, which is not:
-0.581 is darker than gamma explains.
+A third of a stop lost per stop. A photographer judging a two-to-one ratio would
+have been shown nearer five to two.
 
-`RealityRenderer.CameraSettings` has `isToneMappingEnabled` and can be told to
-stop. `RealityView` does not expose it — searching the whole
-`_RealityKit_SwiftUI` interface for "tonemap" returns nothing — and its
-`renderingEffects` offers motion blur, depth of field, camera grain,
-antialiasing, dynamic range and a custom post-process, but no curve control.
+`RealityRenderer.CameraSettings.isToneMappingEnabled` turns it off, and
+`RealityView` does not expose it — searching the whole `_RealityKit_SwiftUI`
+interface for "tonemap" returns nothing. So the studio is rendered by hand:
+`StudioRenderer` owns a `RealityRenderer`, renders into a half-float texture the app
+owns and composites that to the drawable.
 
-This does not make the preview wrong to look at; it makes it wrong to *measure*.
-A photographer judging a two-to-one ratio needs the ratio to be two to one. So
-the rendering path for judging light is the offscreen `RealityRenderer`, where
-the curve can be switched off, rather than the `RealityView` the interface is
-built on — or the same custom pass finding 1 already calls for.
+The same three frames, through that:
+
+| Rig | Linear mean | Ratio | Stops measured |
+|---|---|---|---|
+| as written | 0.04756 | 1.000 | +0.000 |
+| one stop down | 0.02378 | 0.500 | **−1.000** |
+| two stops down | 0.01189 | 0.250 | **−2.000** |
+
+To three decimal places. One stop of light is one stop on the screen.
+
+![The studio rendered through RealityRenderer, with no curve between the rig and the pixels](linear-renderer.png)
+
+Rendering into a texture the app owns rather than straight to the drawable is also
+what the shadow pass needs: the second render and its composite hang there, which
+is how the Campfire Games project gets a depth buffer RealityKit will not hand
+over.
 
 ## 3. The custom pass, unfinished
 
