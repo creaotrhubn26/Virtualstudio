@@ -21,6 +21,7 @@ let package = Package(
         .library(name: "PoseRig", targets: ["PoseRig"]),
         .library(name: "LimbIK", targets: ["LimbIK"]),
         .library(name: "StudioContent", targets: ["StudioContent"]),
+        .library(name: "Storyboard", targets: ["Storyboard"]),
     ],
     targets: [
         .target(name: "Photometry"),
@@ -48,6 +49,12 @@ let package = Package(
             resources: [.copy("Fixtures")]
         ),
         .target(name: "SceneDocument"),
+        .target(name: "Storyboard", dependencies: ["SceneDocument"]),
+        .testTarget(
+            name: "StoryboardTests",
+            dependencies: ["Storyboard"],
+            resources: [.copy("Fixtures")]
+        ),
         .testTarget(
             name: "SceneDocumentTests",
             dependencies: ["SceneDocument"],

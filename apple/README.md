@@ -21,11 +21,10 @@ run on every commit next to `npm test`.
 | `PoseRig` | `src/core/rendering/poseRig.ts` | complete, 816 clamp cases plus the joint table |
 | `LimbIK` | `src/core/rendering/limbIk.ts` | complete, 14 solved limbs |
 | `StudioContent` | `studioLocations.ts`, `lightingLooks.ts`, `movePresets.ts` | complete: the catalogue as data, 234 placements, 48 cues |
+| `Storyboard` | `src/services/storyboard.ts` | complete, 14 badly written boards |
 
-Still to come: the storyboard and its call sheets. `storyboard.ts` is portable
-the same way; `storyboardSheet.ts` writes HTML, which a native app would not use
-— a call sheet there is a SwiftUI view, not a generated page — so it stays where
-it is.
+That is the whole renderer-free core. `storyboardSheet.ts` stays where it is: it
+writes HTML, and a call sheet on a device is a SwiftUI view, not a generated page.
 
 ## Why the tests read a JSON file
 
@@ -114,6 +113,30 @@ The arithmetic *around* the tables is ported as code and pinned as usual: 234
 resolved fixture positions (every look's working lights, three subject heights,
 three camera angles, walked inside the walls and swung clear of the lens) and 48
 built cues. Flipping one pan's turn direction fails five assertions.
+
+## Two divergences the fixtures caught
+
+Both in `Storyboard`, and both worth recording, because they are the kind of
+thing a port loses in silence.
+
+**An array was a shot.** `typeof [] === 'object'` and an array is truthy, so
+`parseShot`'s `typeof` check let a stray array through: `{ shots: [[]] }` came
+back with a fully defaulted "Opptak 1" on the board, camera and all, ready to be
+printed on a call sheet and handed to somebody. Swift dropped it, because an
+array is not a dictionary there. The fixture disagreed, and **the TypeScript was
+the one that was wrong** — it now uses an `isRecord` guard.
+
+**`printf` is not `toFixed`.** JavaScript rounds a tie to the larger value; C
+rounds it to even. A 6.25-second shot reads "6,3 s" in the browser and would have
+read "6,2 s" through `String(format:)` — the same shot, two different sheets, and
+nobody would ever look for the cause there. `Storyboard.toFixed` implements
+JavaScript's rule, and the rounding cases are generated from the TypeScript so
+they cannot drift.
+
+Text limits are counted in UTF-16 units for the same reason:
+`String.prototype.slice` counts them that way, so a direction with 200 fire emoji
+in it is cut to 240 units — 120 emoji — on both, rather than 240 characters on
+one and 240 units on the other.
 
 ## Two places the Swift deliberately differs
 

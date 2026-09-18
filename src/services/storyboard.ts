@@ -159,13 +159,26 @@ export function isUsableDirection(direction: Pick<ShotDirection, 'action'>): boo
   return action.length >= 8 && action.split(/\s+/).length >= 2;
 }
 
+/**
+ * An object with fields, as opposed to an array.
+ *
+ * `typeof [] === 'object'` and an array is truthy, so a plain `typeof` check let
+ * a stray array through as a shot: `{ shots: [[]] }` came back with a fully
+ * defaulted "Opptak 1" on the board, camera and all, and it would have been
+ * printed on a call sheet and handed to somebody. Found by porting this parser
+ * to Swift, where an array is not a dictionary and the shot was dropped instead.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function text(value: unknown, fallback: string, limit = 240): string {
   const candidate = typeof value === 'string' ? value.trim() : '';
   return candidate ? candidate.slice(0, limit) : fallback;
 }
 
 function vec(raw: unknown, fallback: { x: number; y: number; z: number }) {
-  const value = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const value = isRecord(raw) ? raw : {};
   const read = (key: 'x' | 'y' | 'z') =>
     typeof value[key] === 'number' && Number.isFinite(value[key] as number)
       ? (value[key] as number)
@@ -174,14 +187,14 @@ function vec(raw: unknown, fallback: { x: number; y: number; z: number }) {
 }
 
 function parseShot(raw: unknown, index: number): StudioShot | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const value = raw as Record<string, unknown>;
-  const camera = (value.camera && typeof value.camera === 'object' ? value.camera : {}) as Record<string, unknown>;
+  if (!isRecord(raw)) return null;
+  const value = raw;
+  const camera = isRecord(value.camera) ? value.camera : {};
 
   const directions: ShotDirection[] = [];
   for (const entry of Array.isArray(value.directions) ? value.directions : []) {
-    if (!entry || typeof entry !== 'object') continue;
-    const direction = entry as Record<string, unknown>;
+    if (!isRecord(entry)) continue;
+    const direction = entry;
     const markId = typeof direction.markId === 'string' ? direction.markId.trim() : '';
     // A direction addressed to nobody cannot be handed to anybody.
     if (!markId) continue;
@@ -224,8 +237,8 @@ function parseShot(raw: unknown, index: number): StudioShot | null {
  * everything else is renumbered so the sheet is still 1, 2, 3.
  */
 export function parseStoryboard(raw: unknown): Storyboard {
-  if (!raw || typeof raw !== 'object') return { ...EMPTY_STORYBOARD, shots: [] };
-  const value = raw as Record<string, unknown>;
+  if (!isRecord(raw)) return { ...EMPTY_STORYBOARD, shots: [] };
+  const value = raw;
 
   const shots: StudioShot[] = [];
   for (const entry of Array.isArray(value.shots) ? value.shots : []) {
