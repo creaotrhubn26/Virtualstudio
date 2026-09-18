@@ -192,18 +192,26 @@ directory's files**. The directory is 76 MB; the app carries 40.
 
 ### Fixed, by handing the job to RealityKit
 
-![The same figure, loaded from the USDZ the builder now writes](figure-usdz.png)
+![The bundled woman, dressed, from the USDZ the builder now writes](figure-dressed-usdz.png)
 
-Hair draws and the eyes are eyes. Nothing about the material configuration was
-solved — it was **removed**. The builder now writes a USDZ beside the glTF, with
-`UsdPreviewSurface` saying in one line what two attempts in Swift could not:
-`opacity` connected to the texture's alpha channel, `opacityThreshold` beside it.
-RealityKit's own loader obeys it, and does the skinning too.
+Hair draws, the eyes are eyes, and the clothes cover the body. Nothing about the
+material configuration was solved — it was **removed**. The builder writes a USDZ
+beside the glTF, and `UsdPreviewSurface` says in one line what two attempts in
+Swift could not: `opacity` connected to the texture's alpha channel,
+`opacityThreshold` beside it. RealityKit's own loader obeys it, and does the
+skinning too.
 
-What is left in the picture is the body showing through the clothes. The glTF path
-hides a garment's covered triangles with `visibleParts`; the USD path does not hide
-them yet. That is the next piece, and it is the only thing the older screenshot
-below does better.
+The wardrobe is regions rather than a rebuilt buffer. Every triangle of the body is
+labelled at build time with the set of garments that hide it, triangles sharing a
+label become one prim — **eleven of them for a body with six garments** — and
+dressing the figure means leaving those parts out of the mesh.
+
+Leaving them out, not switching them off: RealityKit's USD loader merges every mesh
+prim of a model into one `ModelEntity` whose mesh carries a part per prim, so the
+prim's own entity is an empty wrapper and disabling it changes nothing at all. The
+parts keep the prim names, and `MeshResource.Contents` is rebuilt without the
+covered ones — instances as well as models, since an instance pointing at a model
+that is gone is a mesh that will not build. Skinning survives it.
 
 ### What it looked like built by hand
 

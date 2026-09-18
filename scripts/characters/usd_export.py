@@ -98,7 +98,7 @@ def _material(stage, name, diffuse, roughness, normal=None, ao=None, alpha=False
     return material
 
 
-def _mesh(stage, path, surface, skeleton, material, joint_names):
+def _mesh(stage, path, surface, skeleton, material, joint_names, keep=None):
     """One skinned mesh, with the same seam splitting the glTF writer does.
 
     A vertex is split where its UV differs and nowhere else, so the anatomical
@@ -116,6 +116,12 @@ def _mesh(stage, path, surface, skeleton, material, joint_names):
             a, b, c = (point[0] for point in triangle)
             normals[[a, b, c]] += np.cross(positions[b] - positions[a], positions[c] - positions[a])
     normals /= np.maximum(np.linalg.norm(normals, axis=1)[:, None], 1e-10)
+
+    # Normals are summed over every face first and only then are the triangles
+    # narrowed to this region, so a region's edge keeps the anatomy's own smooth
+    # normal instead of creasing where the split happens to fall.
+    if keep is not None:
+        triangles = [triangles[index] for index in keep]
 
     seen, points, point_normals, texcoords, indices, weights = {}, [], [], [], [], []
     joint_indices, joint_weights = [], []
@@ -205,16 +211,24 @@ def write_usd(path, cache, name, joints, joint_names, parents, surfaces, poses=N
     ])
 
     triangles = 0
+    regions = []
     for index, surface in enumerate(surfaces):
         material = _material(
             stage, surface["name"].replace("-", "_"),
             surface["diffuse"], surface.get("roughness", 0.8),
             surface.get("normal"), surface.get("ao"), surface.get("alpha", False),
         )
-        triangles += _mesh(
-            stage, "/Character/" + surface["name"].replace("-", "_"),
-            surface, skeleton, material, list(joint_names),
-        )
+        base = "/Character/" + surface["name"].replace("-", "_")
+        # A body is split into the regions its wardrobe covers, so putting clothes
+        # on is a matter of switching prims off rather than rebuilding an index
+        # buffer. See the note where the regions are written out.
+        for part, (covers, keep) in enumerate(surface.get("regions") or [((), None)]):
+            path_part = base if keep is None else f"{base}_r{part}"
+            triangles += _mesh(stage, path_part, surface, skeleton, material,
+                               list(joint_names), keep)
+            if keep is not None:
+                regions.append({"prim": path_part.rsplit("/", 1)[-1], "covers": list(covers),
+                                "triangles": len(keep)})
 
     binary = cache / (name + ".usdc")
     stage.GetRootLayer().Export(str(binary))
@@ -224,12 +238,23 @@ def write_usd(path, cache, name, joints, joint_names, parents, surfaces, poses=N
 
     if poses is not None:
         # Beside the package, in the shape the Swift side already reads: a rotation
-        # per joint per clip, in the skeleton's own order.
-        path.with_name(name + "-poses.json").write_text(json.dumps({
+        # per joint per clip, in the skeleton's own order, and which garments cover
+        # each region of the body.
+        #
+        # The regions are why a figure can change clothes without a new mesh. Every
+        # triangle of the body is labelled with the set of garments that hide it,
+        # triangles sharing a label become one prim, and dressing the figure is
+        # switching off the prims whose label names something being worn. Eleven
+        # prims for a body with six garments, decided here where the coverage is
+        # already known rather than in the app.
+        path.with_name(name + "-rig.json").write_text(json.dumps({
             "name": name,
             "joints": [display[key] for key in joint_names],
             "poses": {clip: [list(map(float, rotation)) for rotation in rotations]
                       for clip, rotations in poses.items()},
+            "regions": regions,
         }, indent=2) + "\n")
 
-    return {"triangles": triangles, "meshes": len(surfaces), "joints": len(joint_names)}
+    return {"triangles": triangles, "joints": len(joint_names),
+            "meshes": sum(1 for prim in stage.Traverse() if prim.IsA(UsdGeom.Mesh)),
+            "regions": len(regions)}

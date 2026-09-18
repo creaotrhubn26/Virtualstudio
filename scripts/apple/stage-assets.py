@@ -81,7 +81,7 @@ def main() -> None:
         # The USDZ is what RealityKit draws — it carries its own textures inside the
         # package — and the poses travel beside it, because a skeleton binds one
         # animation source at a time and these are stances to switch between.
-        for extra in (STUDIO / f'{body}.usdz', STUDIO / f'{body}-poses.json'):
+        for extra in (STUDIO / f'{body}.usdz', STUDIO / f'{body}-rig.json'):
             if extra.exists():
                 total += stage(extra, STAGE / extra.name)
                 staged += 1

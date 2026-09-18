@@ -428,6 +428,31 @@ def summarise(path, extra):
     return {'file': path.name, **extra, 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
 
 
+def coverage_regions(body, faces):
+    """Split the body's triangles by which garments hide them.
+
+    Every triangle is labelled with the set of garments that cover it, and
+    triangles sharing a label become one region. Dressing a figure is then
+    switching off the regions whose label names something being worn — eleven
+    prims for a body with six garments, instead of a rebuilt index buffer.
+
+    Decided here, where the coverage is already known, rather than in the app.
+    """
+    total = sum(len(face) - 2 for face in faces)
+    labels = [()] * total
+    for item, _slot in WARDROBE[body]:
+        _bindings, hidden = asset_bindings('clothes', item)
+        ranges, _ = covered_triangles(faces, hidden)
+        for start, end in ranges:
+            for triangle in range(max(0, start), min(total, end)):
+                labels[triangle] = labels[triangle] + (item,)
+    groups = {}
+    for triangle, label in enumerate(labels):
+        groups.setdefault(label, []).append(triangle)
+    # Largest first, so the region a naked figure shows is prim zero.
+    return sorted(groups.items(), key=lambda pair: -len(pair[1]))
+
+
 def build_body(name, male, height, hair, skin_asset):
     """A figure with skin, eyes and hair, and no clothes of its own."""
     g = GLB()
@@ -437,7 +462,8 @@ def build_body(name, male, height, hair, skin_asset):
     # Collected as they are written, so the USD stage is built from the same
     # vertices rather than from the glTF afterwards. See usd_export.
     surfaces = [dict(name='Skin', positions=convert(raw), faces=faces, uvs=base_uv,
-                     bindings=skin_weights, diffuse=system_file(skin_asset), roughness=0.58)]
+                     bindings=skin_weights, diffuse=system_file(skin_asset), roughness=0.58,
+                     regions=coverage_regions(name, faces))]
     g.add_mesh('Skin', convert(raw), faces, base_uv, skin_weights,
                g.material('Skin', system_file(skin_asset), 0.58), names)
     for kind, item, label in [('eyes', 'low-poly', 'Eyes'), ('hair', hair, 'Hair')]:
@@ -536,6 +562,9 @@ if __name__ == '__main__':
     wardrobe = {'garments': garments, 'defaults': DEFAULT_WARDROBE}
     (OUT / 'wardrobe.json').write_text(json.dumps(wardrobe, indent=2) + '\n')
     (OUT / 'manifest.json').write_text(json.dumps(
-        {'revision': REV, 'license': 'CC0-1.0', 'sources': sources,
+        # Sorted, so the manifest does not change when a source happens to be
+        # touched in a different order — the regions now read the garments before
+        # the body, and an unsorted dict made that look like an asset change.
+        {'revision': REV, 'license': 'CC0-1.0', 'sources': dict(sorted(sources.items())),
          'models': models, 'wardrobe': [{k: v for k, v in g.items() if k != 'hidesBodyTriangles'} for g in garments]},
         indent=2) + '\n')

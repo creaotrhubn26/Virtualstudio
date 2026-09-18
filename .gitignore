@@ -98,7 +98,7 @@ test-results/
 public/models/avatars/studio/*.glb
 # Built beside the glTF by the same run, and just as large
 public/models/avatars/studio/*.usdz
-public/models/avatars/studio/*-poses.json
+public/models/avatars/studio/*-rig.json
 public/models/avatars/studio/wardrobe/
 public/models/avatars/studio/textures/
 

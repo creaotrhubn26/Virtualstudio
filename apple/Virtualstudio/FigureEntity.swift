@@ -1,6 +1,7 @@
 import Foundation
 import RealityKit
 import simd
+import os
 
 /// The figure, drawn by RealityKit from the package the builder writes.
 ///
@@ -21,11 +22,21 @@ import simd
 enum FigureEntity {
     private static let assets = "Assets"
 
-    struct Poses: Decodable {
+    /// What travels beside the package: the stances, and which garments hide which
+    /// part of the body.
+    struct Rig: Decodable {
+        struct Region: Decodable {
+            /// The prim, and so the entity, this region became.
+            let prim: String
+            /// The garments that hide it. Empty means nothing ever does.
+            let covers: [String]
+            let triangles: Int
+        }
         let name: String
         /// In the skeleton's own order, by the names the runtime looks them up by.
         let joints: [String]
         let poses: [String: [[Float]]]
+        let regions: [Region]
     }
 
     /// Load a figure, dress it, strike a pose and ground it.
@@ -43,7 +54,21 @@ enum FigureEntity {
             }
         }
 
-        if let rotations = poses(for: name)?.poses[pose] {
+        // Take the clothes off the body underneath.
+        //
+        // The builder split the body into the regions its wardrobe covers, so this
+        // is a matter of leaving parts out rather than rebuilding an index buffer.
+        // What it is *not* is switching entities off: RealityKit's USD loader merges
+        // every mesh prim of a model into one `ModelEntity` whose mesh has a part per
+        // prim, so the prim's own entity is an empty wrapper and disabling it changes
+        // nothing at all. The parts keep the prim names, which is how they are found.
+        if let regions = rig(for: name)?.regions {
+            let worn = Set(garments)
+            let hide = Set(regions.filter { !worn.isDisjoint(with: $0.covers) }.map(\.prim))
+            if !hide.isEmpty { undress(figure, hiding: hide) }
+        }
+
+        if let rotations = rig(for: name)?.poses[pose] {
             // Every skinned model in the package and in the clothes takes the same
             // stance: a garment carries a copy of the rig and no clips of its own.
             apply(rotations, to: root)
@@ -68,10 +93,37 @@ enum FigureEntity {
         return try? await Entity(contentsOf: url)
     }
 
-    private static func poses(for name: String) -> Poses? {
-        guard let url = Bundle.main.url(forResource: "\(name)-poses", withExtension: "json", subdirectory: assets),
-              let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(Poses.self, from: data)
+    /// Leave out the mesh parts a garment covers.
+    ///
+    /// Instances reference models by name, so both have to go: an instance left
+    /// pointing at a model that is no longer there is a mesh that will not build.
+    private static func undress(_ figure: Entity, hiding parts: Set<String>) {
+        for model in models(under: figure) {
+            guard var contents = model.model?.mesh.contents else { continue }
+            let kept = contents.models.filter { !parts.contains($0.id) }
+            guard kept.count != contents.models.count else { continue }
+            contents.models = .init(kept)
+            contents.instances = .init(contents.instances.filter { !parts.contains($0.model) })
+            guard let mesh = try? MeshResource.generate(from: contents) else {
+                // Rather than a figure with holes in it: if the mesh will not
+                // rebuild, she keeps her skin and wears the clothes over it.
+                Logger(subsystem: "no.holycrust.virtualstudio", category: "figure")
+                    .error("could not leave out \(parts.count) covered regions")
+                continue
+            }
+            model.model?.mesh = mesh
+        }
+    }
+
+    private static var cache: [String: Rig] = [:]
+
+    private static func rig(for name: String) -> Rig? {
+        if let known = cache[name] { return known }
+        guard let url = Bundle.main.url(forResource: "\(name)-rig", withExtension: "json", subdirectory: assets),
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode(Rig.self, from: data) else { return nil }
+        cache[name] = decoded
+        return decoded
     }
 
     /// Write a stance onto every skinned model under `root`.
@@ -104,7 +156,7 @@ enum FigureEntity {
 
     static func prepare(_ name: String) {
         defaultWardrobe = FigureMesh.defaultWardrobe(for: name)
-        order = poses(for: name)?.joints ?? []
+        order = rig(for: name)?.joints ?? []
     }
 
     private static func models(under entity: Entity) -> [ModelEntity] {

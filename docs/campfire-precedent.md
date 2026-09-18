@@ -174,10 +174,11 @@ The poses travel as a `-poses.json` beside the package rather than inside it,
 because a skeleton binds one animation source at a time and the studio's three
 stances are things to switch between.
 
-Still open: the wardrobe's covered triangles are not hidden on the USD path, so the
-body shows through the clothes. `visibleParts` does it for the glTF path, and the
-USD answer is probably to split the body mesh by coverage region at build time and
-switch prims rather than rebuild a buffer.
+The wardrobe went the same way: the body is split at build time into the regions
+its wardrobe covers — eleven prims for six garments — and dressing the figure means
+leaving those parts out of the mesh. Not switching entities off: the USD loader
+merges every mesh prim into one `ModelEntity` with a part per prim, so the prim's
+entity is an empty wrapper.
 
 ## What this changes
 
