@@ -287,11 +287,47 @@ Validate an entire file before clearing the current scene. Maintain legacy v1 re
 
 [`apple/Virtualstudio`](apple/README.md) is the iPad app, generated from
 `apple/project.yml` with `xcodegen generate` — the `.xcodeproj` is not in git. It
-is a measuring instrument at this stage, and it has already answered two of the
-plan's questions in the negative: a modifier's size changes the rendered shadow by
-exactly zero pixels, and one stop of light arrives as three quarters of a stop on
-screen. Both are recorded with their screenshots in
-[`docs/measurements/README.md`](docs/measurements/README.md).
+runs on a physical iPad Pro (M5) and puts the bundled figure on a lit stage,
+dressed, posed, grounded and casting her own shadow.
+
+It began as a measuring instrument and it still is one. Every claim about the
+native edition in this repository is a number in
+[`docs/measurements/README.md`](docs/measurements/README.md), taken from that app:
+
+- **RealityKit cannot vary a shadow by the modifier's size.** A 90 × 120 cm softbox
+  and a 10 cm snoot render an identical frame, maximum difference zero across three
+  million pixels. That is the product's central claim, so the shadow is drawn by
+  hand — and with it, the same comparison differs over 373 165 pixels.
+- **`RealityView` puts a tone-mapping curve between the rig and the pixels**, and
+  exposes no way to remove it: one stop of light arrived as −1.307 stops. The studio
+  is rendered through `RealityRenderer` with `isToneMappingEnabled` false, and reads
+  −1.000 and −2.000 stops, to three decimal places.
+- **It costs 4.02 ms of GPU**, of which 0.99 is the entire scene — two figures, a
+  room, three shadow-casting lights and the taking camera. The shadow is the rest,
+  and that is where any optimisation belongs.
+- **Forty-four minutes of continuous rendering**, thirty-two of them at thermal
+  state `serious`, cost four hundredths of a millisecond. Memory flat at 947 MB with
+  headroom never below 3907 MB.
+
+The rendering path, and why each piece is where it is:
+
+```
+StudioRenderer          owns a RealityRenderer, tone mapping off, renders into its
+                        own half-float texture rather than the drawable
+  StudioPositionPass    the same scene again, from the lens, writing world position
+                        — RealityKit's depth texture cannot be read at all
+  StudioPositionPass    the same scene again, from the key light, at the beam's own
+                        angle: a 1024² map of what the light can see
+  shadowFactor          percentage-closer soft shadows at half resolution, the
+                        penumbra sized by the source's real metres
+  softShadow            the picture, darkened by that
+```
+
+Three things in there were each learned by a failed attempt, and each is commented
+where it bit: RealityKit's depth texture discards any shader that touches it;
+`CustomMaterial` does not apply `opacityThreshold` on its own; and a mesh prim's
+entity is an empty wrapper because the USD loader merges prims into one model with a
+part each.
 
 [`apple/VirtualstudioCore`](apple/README.md) holds the renderer-free arithmetic as
 Swift packages: `Photometry`, `SceneDocument`, `PoseRig`, `LimbIK`,
@@ -353,6 +389,15 @@ PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build
 python3 scripts/characters/validate_studio_characters.py
 (cd apple/VirtualstudioCore && swift test)   # the native core; no simulator or device
+
+# The iPad edition. XcodeGen writes the project; the assets are staged rather than
+# bundled wholesale, because the studio's texture directory is 76 MB of clothes
+# nobody in this app is wearing.
+brew install xcodegen
+python3 scripts/apple/stage-assets.py
+(cd apple && xcodegen generate)
+(cd apple && xcodebuild -scheme Virtualstudio -destination 'generic/platform=iOS' \
+   -configuration Debug build CODE_SIGNING_ALLOWED=NO)
 PLAYWRIGHT_SOFTWARE_GL=1 PATH=/opt/homebrew/opt/node@22/bin:$PATH \
   npm run test:e2e -- e2e/studio-scene.spec.ts e2e/light-accuracy.spec.ts e2e/pose-editing.spec.ts \
     e2e/wardrobe.spec.ts e2e/studio-props.spec.ts e2e/scene-animation.spec.ts \
@@ -374,7 +419,9 @@ Work in this order unless the user changes priorities:
 3. **Broader real character variation.** *(Wardrobe is now a layer; see "Wardrobe as a layer".)* Remaining: body archetypes and the 50 figures built on them, using the pinned pack's 22 usable skins (six ethnicities across three ages), 10 hairstyles and 12 outfits. Garments are fitted per body shape, so a new archetype means refitting the wardrobe for it — keep the number of archetypes small and vary skin, hair, face and height freely on top. Add facial expression blend shapes only when the source and export path are verified.
 4. **Studio object editing.** *(The general prop system and the timeline have landed; see "Objects on set" and "Movement".)* Remaining: give room furniture stable keys so individual pieces can be claimed, which means keeping them as separate meshes rather than batched; a panel for browsing and placing props; and a way to author a track for something other than a light, which today means editing the timeline by hand.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
-6. **iPad edition after the scene contract stabilizes.** Staged in [`docs/ipad-plan.md`](docs/ipad-plan.md). *(Landed: the false USD export is gone, and the whole renderer-free core — `Photometry`, `SceneDocument`, `PoseRig`, `LimbIK`, `StudioContent` and `Storyboard` — is ported to Swift and checked against the TypeScript implementation through shared JSON fixtures. See [`apple/README.md`](apple/README.md).)* Remaining: the reader's output reaching a `MeshResource` on the device. There is no
+6. **iPad edition.** *(The plan's four measurements are answered; see "The native core" and [`docs/measurements/README.md`](docs/measurements/README.md).)* Remaining, in order of value: the app is one screen — one place, one figure, one pose — and the documents, the marks and the storyboard are all ported and tested but wired to nothing anyone can press; 947 MB for two figures, because the textures are large PNGs and they are decompressed; only the key light casts a shadow; a penumbra width in millimetres still needs the gauge lit; and RoomPlan, which is the product argument, is not started. The old wording of this item follows, for the record:
+
+   **iPad edition after the scene contract stabilizes.** Staged in [`docs/ipad-plan.md`](docs/ipad-plan.md). *(Landed: the false USD export is gone, and the whole renderer-free core — `Photometry`, `SceneDocument`, `PoseRig`, `LimbIK`, `StudioContent` and `Storyboard` — is ported to Swift and checked against the TypeScript implementation through shared JSON fixtures. See [`apple/README.md`](apple/README.md).)* Remaining: the reader's output reaching a `MeshResource` on the device. There is no
 USD step: the plan called for one until it turned out `build_studio_characters.py`
 has no Blender scene to export — it imports NumPy and writes glTF by hand — so
 `StudioAssets` reads the GLB the builder already writes instead. Also remaining from the character builder; then the device measurement that decides RealityKit, RealityKit with a custom Metal shadow pass, or Metal. The shadow question is already partly answered: `SpotLightComponent.Shadow` takes a depth bias and clipping planes and nothing about softness, so a modifier's real size cannot drive the penumbra there.
@@ -395,6 +442,9 @@ Acceptance criteria for each feature should include a real workflow test, scene 
 - Flash exposure is modelled as independent of shutter speed, but flash duration itself is not simulated: motion is never frozen by a short burst, and high-speed sync, sync-speed limits and modelling-lamp contribution are not represented.
 - Backend-dependent workflows require a separately running service and verification.
 - There is no geometry export. The `ExporterService` stub that answered every format with an empty blob, and the USD/USDZ export that wrote element declarations with no vertex data and a `.usdz` extension on a `text/plain` blob, have both been removed rather than left to look like features. The character builder's GLB export is the real one, and a USD export belongs beside it.
-- Native iPad behavior and performance have not been tested on hardware. The renderer-free core is ported and agrees with the web implementation; no native app, renderer or interface exists yet.
+- Native iPad behaviour is measured on an iPad Pro 13-inch (M5), iPadOS 27: 4.02 ms of GPU per frame, unchanged through thirty-two minutes at thermal state `serious`, memory flat at 947 MB. What has not been measured is Stage Manager beside another app, more than one figure, or a scanned room.
+- The native app is one screen. It shows a place, a figure and a rig, and nothing can be saved, staged or directed from it yet — the documents, marks, moves and storyboard are ported and tested but reach no control.
+- Only the key light casts the custom shadow. One map, one light.
+- The soft shadow's penumbra responds to the modifier's real size, but its width in millimetres is unmeasured: the rod put in the frame as a gauge stands against an unlit wall.
 
 Keep claims in documentation and PRs aligned with those limits. The goal is steady progress toward a professional photographic planning tool, with every shipped capability demonstrably working.
