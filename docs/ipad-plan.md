@@ -151,20 +151,41 @@ Delete both entries from the export panel, or write a real exporter. Do not
 leave an iPad plan resting on an export path that does not exist. This is a
 small change and it comes first, because everything downstream reads USD.
 
-Then: extend `build_studio_characters.py` to call `bpy.ops.wm.usd_export` from
-the same morphed, rigged, posed Blender scene that already writes the validated
-GLB. One authoring run, two formats, hash-pinned sources. Not a GLB→USDZ
-conversion afterwards — that is a second lossy hop through exactly the
-properties this pipeline is careful about (four-influence skin weights,
-Mixamo joint names, clip boundaries). Extend
-`validate_studio_characters.py` to assert the USD the same way it asserts the
-GLB: 53 joints, five surfaces, embedded maps, complete pose rotations,
-normalised weights — and additionally that the material graph survived, because
-Blender's USD material translation silently drops anything outside
-`UsdPreviewSurface`, and hair is an alpha cutout.
+### And then: no USD at all
 
-**Done when** a validator asserts the USD, and no format is offered that cannot
-be opened.
+The paragraph that stood here said to extend `build_studio_characters.py` to call
+`bpy.ops.wm.usd_export` from the same morphed, rigged, posed Blender scene that
+writes the GLB. **There is no Blender scene.** The builder imports NumPy and
+nothing else from Blender and writes the glTF document by hand, accessor by
+accessor; Blender is a Python runtime there, not a modeller. `bpy.ops.wm.usd_export`
+would have nothing to export.
+
+That left converting the finished GLB to USD — the second lossy hop this document
+already warned against, through exactly the properties the pipeline is careful
+about: four-influence skin weights, Mixamo joint names, clip boundaries. Or
+reading the GLB.
+
+Reading it wins, and not only by elimination. The wardrobe needs
+`LowLevelMesh.Part` whatever the format, because a garment hides a sorted list of
+body triangles and parts are how one mesh is drawn in pieces. A `MeshResource`
+built from raw buffers is therefore required either way — and once the buffers are
+being assembled by hand, there is no reason to route them through a second file
+format on the way. One pipeline, one set of hashes, no conversion to validate, and
+the builder stays the single place a figure is defined.
+
+`StudioAssets` is that reader, and it is done: the GLB container, the document, the
+five surfaces, the 53-joint skeleton and the three pose clips, checked against the
+real bundled figure — 26 756 triangles, normalised weights, unit quaternions in
+every clip — and against the same wardrobe ranges the browser uses, through a
+shared fixture like every other module.
+
+It also turns the wardrobe from a rebuild into a selection. The browser rebuilds
+the whole index buffer when a garment changes; `visibleParts` turns
+`female_casualsuit01`'s 102 hidden ranges into **103 mesh parts** over the one
+buffer the figure already has.
+
+**Done when** no format is offered that cannot be opened — which is now true — and
+the reader's output reaches a `MeshResource` on the device.
 
 ## Stage 1 — the portable core, as Swift packages, with no user interface
 

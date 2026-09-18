@@ -52,6 +52,15 @@ run on every commit next to `npm test`.
 | `LimbIK` | `src/core/rendering/limbIk.ts` | complete, 14 solved limbs |
 | `StudioContent` | `studioLocations.ts`, `lightingLooks.ts`, `movePresets.ts` | complete: the catalogue as data, 234 placements, 48 cues |
 | `Storyboard` | `src/services/storyboard.ts` | complete, 14 badly written boards |
+| `StudioAssets` | the GLB the character builder writes | reader complete, checked against the real figure |
+
+`StudioAssets` is the exception to "ported from TypeScript": there is nothing to
+port, because the browser lets Babylon read the GLB. It exists because the plan's
+USD step turned out to rest on a Blender scene that does not exist — the builder
+writes glTF by hand — and because the wardrobe needs `LowLevelMesh.Part` whatever
+the format. `visibleParts` turns a garment's 102 hidden triangle ranges into 103
+parts over the buffer the figure already has, instead of rebuilding the buffer the
+way the browser does.
 
 That is the whole renderer-free core. `storyboardSheet.ts` stays where it is: it
 writes HTML, and a call sheet on a device is a SwiftUI view, not a generated page.
