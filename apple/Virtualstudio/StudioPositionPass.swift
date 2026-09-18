@@ -21,14 +21,19 @@ final class StudioPositionPass {
 
     private let renderer: RealityRenderer
     private let camera = PerspectiveCamera()
-    private let source: PerspectiveCamera
+    /// The camera this pass follows, or nil when it is placed by hand — which is
+    /// what the shadow map does, standing at the light rather than at the lens.
+    private let source: PerspectiveCamera?
+
+    /// Where this pass renders from, for a pass that is placed rather than following.
+    var viewpoint: PerspectiveCamera { camera }
     private let device: any MTLDevice
     private let root = Entity()
     private var pairs: [(source: Entity, copy: Entity)] = []
     private var skins: [(source: ModelEntity, copy: ModelEntity)] = []
     private var output: RealityRenderer.CameraOutput?
 
-    init?(source scene: Entity, camera: PerspectiveCamera, device: any MTLDevice) {
+    init?(source scene: Entity, camera: PerspectiveCamera?, device: any MTLDevice) {
         guard let renderer = try? RealityRenderer(),
               let library = device.makeDefaultLibrary(),
               let shader = try? CustomMaterial.SurfaceShader(named: "studioPosition", in: library) else { return nil }
@@ -110,8 +115,10 @@ final class StudioPositionPass {
         for (source, copy) in skins where source.isEnabledInHierarchy {
             copy.jointTransforms = source.jointTransforms
         }
-        camera.camera = source.camera
-        camera.transform = Transform(matrix: source.transformMatrix(relativeTo: nil))
+        if let source {
+            camera.camera = source.camera
+            camera.transform = Transform(matrix: source.transformMatrix(relativeTo: nil))
+        }
     }
 
     func render(deltaTime: TimeInterval) {

@@ -21,16 +21,17 @@ enum SoftShadow {
     }
 
     struct Uniforms {
-        /// Kept so the two layouts stay the same size while the pass no longer needs
-        /// a matrix: the position comes out of a texture now, not out of a depth
-        /// buffer and an inverse.
-        var unusedReserved: float4x4
+        /// World to the light's clip space. A surface is tested by projecting it
+        /// into this and asking the shadow map what the light can see there.
+        var lightViewProjection: float4x4
         var cameraPosition: SIMD4<Float>
         var lightPosition: SIMD4<Float>
         /// The emitting source's real size, in metres. The number everything follows.
         var lightRadius: Float
         /// How dark a fully shadowed pixel becomes.
         var shadowDepth: Float
+        var lightNear: Float
+        var lightFar: Float
         var occluderCount: UInt32
         /// 0 draws the picture, 1 the shadow factor, 2 the position map.
         var debugMode: UInt32 = 0
@@ -45,6 +46,12 @@ enum SoftShadow {
 
         struct Settings {
             var lightPosition = SIMD3<Float>(2, 2.5, -2)
+            /// Where the key is pointed. The shadow map is rendered from the light
+            /// looking at this.
+            var lightAim = SIMD3<Float>(0, 1.6, 0)
+            /// The beam's full angle in degrees, which is the field of view the
+            /// shadow map is rendered with.
+            var lightBeamDeg: Float = 60
             var lightRadius: Float = 0.9
             var occluders: [Occluder] = []
             var view = matrix_identity_float4x4
@@ -60,7 +67,7 @@ enum SoftShadow {
 
     static func assertLayout() {
         assert(MemoryLayout<Occluder>.stride == 48, "occluder layout drifted from SoftShadow.metal")
-        assert(MemoryLayout<Uniforms>.stride == 496, "uniform layout drifted from SoftShadow.metal")
+        assert(MemoryLayout<Uniforms>.stride == 512, "uniform layout drifted from SoftShadow.metal")
     }
 }
 

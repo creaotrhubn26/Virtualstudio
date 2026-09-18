@@ -361,6 +361,8 @@ final class StudioStage {
                 // the one whose modifier the photographer is choosing.
                 shadowState.settings = SoftShadow.State.Settings(
                     lightPosition: SIMD3(Float(position.x), Float(position.y), Float(position.z)),
+                    lightAim: SIMD3(Float(resolved.aim.x), Float(resolved.aim.y), Float(resolved.aim.z)),
+                    lightBeamDeg: Float(beamDeg),
                     lightRadius: Float(shadowRadiusOverride ?? size),
                     occluders: occluders,
                     view: Self.view,
@@ -393,7 +395,7 @@ final class StudioStage {
         var list = settings.occluders
         while list.count < 8 { list.append(empty) }
         return SoftShadow.Uniforms(
-            unusedReserved: matrix_identity_float4x4,
+            lightViewProjection: settings.view,
             cameraPosition: SIMD4(Self.cameraPosition, 1),
             lightPosition: SIMD4(settings.lightPosition, 1),
             lightRadius: settings.lightRadius,
@@ -401,6 +403,8 @@ final class StudioStage {
             // fully shadowed pixel keeps a little of its light rather than claiming
             // a darkness the room would never have.
             shadowDepth: 0.18,
+            lightNear: 0.2,
+            lightFar: 40,
             occluderCount: UInt32(min(settings.occluders.count, 8)),
             debugMode: shadowDebugMode,
             occluders: (list[0], list[1], list[2], list[3], list[4], list[5], list[6], list[7])

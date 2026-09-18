@@ -26,6 +26,8 @@ using namespace metal;
 
 constant uint kMaxOccluders = 8;
 constant uint kShadowRays = 24;
+// How many samples look for something in the way before the penumbra is sized.
+constant uint kBlockerSamples = 12;
 
 struct Occluder {
     float3 centre;
@@ -38,7 +40,7 @@ struct Occluder {
 };
 
 struct ShadowUniforms {
-    float4x4 unusedReserved;
+    float4x4 lightViewProjection;
     float3 cameraPosition;
     float3 lightPosition;
     /// The emitting source's real size, in metres. The number everything follows.
@@ -46,6 +48,8 @@ struct ShadowUniforms {
     /// How dark a fully shadowed pixel becomes. Not zero: a real set has bounce,
     /// and this pass models none of it.
     float shadowDepth;
+    float lightNear;
+    float lightFar;
     uint occluderCount;
     /// 0 draws the picture. 1 shows the shadow factor, 2 shows the reconstructed
     /// world position, 3 shows raw depth. A shader that produces nothing visible
@@ -113,40 +117,74 @@ constant float kStageHalfExtent = 4.0;
 // by definition, and a gradient upsamples honestly where a silhouette would not.
 // The position it reads is still full resolution and sampled nearest, so no pixel
 // is ever given a place halfway between a near edge and a far floor.
+/// How far the light can see in a direction, in metres, from the map it rendered.
+///
+/// The map holds a world position per texel, the same encoding the camera's pass
+/// uses, so the distance is read rather than decoded from a depth curve.
+static float lightReach(texture2d<float> map, sampler s, float2 uv, float3 lightPosition, float far) {
+    float3 encoded = map.sample(s, uv).rgb;
+    // Nothing drawn: the light reaches as far as it likes.
+    if (all(encoded < 1e-5)) return far;
+    float3 world = (encoded - 0.5) * (2 * kStageHalfExtent) + kStageCentre;
+    return length(world - lightPosition);
+}
+
+// The shadow term, from the light's own view of the scene.
+//
+// Percentage-closer soft shadows: find what is blocking, measure how far in front
+// of the receiver it is, and let the penumbra grow with that distance and with the
+// size of the source. That last factor is the product's whole claim — a 90 cm
+// softbox and a 10 cm snoot differ by it and by nothing else — and it is the same
+// relationship `contactHardeningRatio` encodes for the web renderer.
+//
+// The occluders are now the scene's own geometry rather than four analytic boxes
+// standing in for a figure, which is what makes the shadow of a hand look like a
+// hand.
 fragment float shadowFactor(FullScreen in [[stage_in]],
                             texture2d<float> surfacePosition [[texture(0)]],
+                            texture2d<float> lightMap [[texture(1)]],
                             constant ShadowUniforms &uniforms [[buffer(0)]]) {
     constexpr sampler pointSampler(filter::nearest, address::clamp_to_edge);
     float3 encoded = surfacePosition.sample(pointSampler, in.uv).rgb;
-    // Black is what the position pass clears to: nothing was drawn here.
     if (all(encoded < 1e-5)) return 1.0;
 
     float3 surface = (encoded - 0.5) * (2 * kStageHalfExtent) + kStageCentre;
-    float3 toLight = uniforms.lightPosition - surface;
-    float3 direction = toLight / max(length(toLight), 1e-5);
+    float4 clip = uniforms.lightViewProjection * float4(surface, 1);
+    if (clip.w <= 0) return 1.0;
+    float3 ndc = clip.xyz / clip.w;
+    float2 uv = float2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
+    // Outside the beam there is no light to block.
+    if (any(uv < 0.0) || any(uv > 1.0)) return 1.0;
 
-    // Two axes across the light's face, to spread the samples over its disc.
-    float3 up = abs(direction.y) < 0.9 ? float3(0, 1, 0) : float3(1, 0, 0);
-    float3 right = normalize(cross(direction, up));
-    float3 across = cross(right, direction);
+    float receiver = length(surface - uniforms.lightPosition);
 
-    // Lift off the surface so a face does not shadow itself.
-    float3 origin = surface + direction * 0.02;
+    // How wide to look for a blocker: the source's own size, as it projects at the
+    // receiver's distance.
+    float searchRadius = uniforms.lightRadius / max(receiver, 0.1) * 0.35;
+
+    float blockerSum = 0;
+    uint blockerCount = 0;
+    for (uint step = 0; step < kBlockerSamples; step++) {
+        float2 offset = discSample(step, kBlockerSamples) * searchRadius;
+        float reach = lightReach(lightMap, pointSampler, uv + offset, uniforms.lightPosition, uniforms.lightFar);
+        // A bias in metres, so a surface does not shadow itself at a grazing angle.
+        if (reach < receiver - 0.02) { blockerSum += reach; blockerCount++; }
+    }
+    if (blockerCount == 0) return 1.0;
+
+    float blocker = blockerSum / float(blockerCount);
+    // The penumbra a source of this size casts, given how far the blocker stands in
+    // front of what catches its shadow. This is the whole photographic claim in one
+    // line: double the source, double the softness; move the blocker away from the
+    // floor, the same.
+    float penumbra = uniforms.lightRadius * (receiver - blocker) / max(blocker, 0.1);
+    float radius = clamp(penumbra / max(receiver, 0.1) * 0.5, 0.0005, 0.25);
 
     uint blocked = 0;
-    for (uint ray = 0; ray < kShadowRays; ray++) {
-        float2 disc = discSample(ray, kShadowRays) * uniforms.lightRadius * 0.5;
-        float3 target = uniforms.lightPosition + right * disc.x + across * disc.y;
-        float3 towards = target - origin;
-        float reach = length(towards);
-        float3 unit = towards / max(reach, 1e-5);
-        for (uint index = 0; index < uniforms.occluderCount; index++) {
-            Occluder occluder = uniforms.occluders[index];
-            bool hit = occluder.kind == 0
-                ? hitsBox(origin, unit, reach, occluder.centre, occluder.halfExtent)
-                : hitsSphere(origin, unit, reach, occluder.centre, occluder.halfExtent.x);
-            if (hit) { blocked++; break; }
-        }
+    for (uint step = 0; step < kShadowRays; step++) {
+        float2 offset = discSample(step, kShadowRays) * radius;
+        float reach = lightReach(lightMap, pointSampler, uv + offset, uniforms.lightPosition, uniforms.lightFar);
+        if (reach < receiver - 0.02) blocked++;
     }
     return 1.0 - float(blocked) / float(kShadowRays);
 }

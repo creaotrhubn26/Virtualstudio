@@ -28,6 +28,9 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
     private var colour: (any MTLTexture)?
     private var output: RealityRenderer.CameraOutput?
     private var positions: StudioPositionPass?
+    /// The same scene again, seen from the key light. What it can see is lit; what
+    /// it cannot is in shadow, and how softly depends on the source's real size.
+    private var lightMap: StudioPositionPass?
     private var composite: (any MTLRenderPipelineState)?
     private var factorPipeline: (any MTLRenderPipelineState)?
     private var factor: (any MTLTexture)?
@@ -61,6 +64,7 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
         // is rendered by hand.
         if #available(iOS 18.0, *), softShadows {
             positions = StudioPositionPass(source: stage.root, camera: stage.camera, device: device)
+            lightMap = StudioPositionPass(source: stage.root, camera: nil, device: device)
         }
         if softShadows, let library = device.makeDefaultLibrary() {
             let descriptor = MTLRenderPipelineDescriptor()
@@ -113,6 +117,10 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
         coarse.storageMode = .private
         factor = device.makeTexture(descriptor: coarse)
         factor?.label = "Studio — how much of the light each place can see"
+
+        // Square, and at a resolution of its own: the shadow map is a map of what
+        // the light can see, and the beam is round.
+        lightMap?.resize(to: CGSize(width: 1024, height: 1024), format: .rgba16Float)
     }
 
     func draw(in view: MTKView) {
@@ -133,14 +141,31 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
 
         positions?.render(deltaTime: delta)
 
+        // Stand the shadow map's camera at the light, opened to the beam's own
+        // angle, and render what it sees.
+        if let lightMap {
+            let settings = stage.shadowState.settings
+            let eye = lightMap.viewpoint
+            eye.camera.fieldOfViewInDegrees = max(10, min(120, settings.lightBeamDeg))
+            eye.camera.near = 0.2
+            eye.camera.far = 40
+            eye.look(at: settings.lightAim, from: settings.lightPosition, relativeTo: nil)
+            lightMap.render(deltaTime: delta)
+        }
+
         if let composite, let factorPipeline, let factor,
-           let surface = positions?.texture {
+           let surface = positions?.texture, let lightTexture = lightMap?.texture {
             var uniforms = stage.shadowUniforms
+            // What the light sees, as a matrix the term can project into.
+            if let eye = lightMap?.viewpoint {
+                uniforms.lightViewProjection = Self.viewProjection(of: eye, aspect: 1)
+            }
 
             // The term first, at its own resolution.
             if let encoder = shadowEncoder(buffer: buffer, into: factor) {
                 encoder.setRenderPipelineState(factorPipeline)
                 encoder.setFragmentTexture(surface, index: 0)
+                encoder.setFragmentTexture(lightTexture, index: 1)
                 encoder.setFragmentBytes(&uniforms, length: MemoryLayout<SoftShadow.Uniforms>.stride, index: 0)
                 encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
                 encoder.endEncoding()
@@ -169,6 +194,26 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
         }
         buffer.present(drawable)
         buffer.commit()
+    }
+
+    /// World to clip, for a camera placed in the scene.
+    ///
+    /// RealityKit does not hand over its matrices, and this one has to be the same
+    /// one the shadow map was rendered with or every shadow lands somewhere else.
+    /// Reverse-Z to match, and the same near and far the camera was given.
+    private static func viewProjection(of camera: PerspectiveCamera, aspect: Float) -> float4x4 {
+        let view = camera.transformMatrix(relativeTo: nil).inverse
+        let fov = camera.camera.fieldOfViewInDegrees * .pi / 180
+        let near = camera.camera.near, far = camera.camera.far
+        let y = 1 / tan(fov / 2)
+        let x = y / aspect
+        let projection = float4x4(columns: (
+            SIMD4(x, 0, 0, 0),
+            SIMD4(0, y, 0, 0),
+            SIMD4(0, 0, near / (far - near), -1),
+            SIMD4(0, 0, far * near / (far - near), 0)
+        ))
+        return projection * view
     }
 
     private func shadowEncoder(buffer: any MTLCommandBuffer, into target: any MTLTexture) -> (any MTLRenderCommandEncoder)? {

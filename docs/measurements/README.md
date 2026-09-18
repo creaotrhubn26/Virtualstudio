@@ -129,10 +129,9 @@ How it is done, and why it took so long to get here:
   penumbra — which is what a penumbra physically is, and why its width follows the
   source and the distance with nothing tuned by hand.
 
-What is still approximate, and named rather than hidden: the occluders in the trace
-are the analytic boxes and sphere the stand-in figure was made of, not the figure's
-own geometry. They are the right size and in the right place, so the shadow is the
-right shape, but a shadow map from the light is what makes it exact. And the rod
+What was still approximate then, and is not now: the occluders in the trace were
+the analytic boxes and sphere the stand-in figure was made of. See the next section.
+The rod
 that was put in the frame as a penumbra gauge is standing against an unlit wall, so
 it casts nothing to measure a width against; a width in millimetres needs the gauge
 lit, which is the next small thing.
@@ -345,6 +344,45 @@ The feature survives it: with the term at half resolution, a 1.04 m softbox and 
 0.10 m snoot still differ over 56 295 pixels, against 56 414 at full resolution.
 
 At 5.53 ms the whole frame fits inside a 120 Hz budget for the first time.
+
+### The shadow from the geometry, not from four boxes
+
+![The figure's own shadow, and the rod's, cast from a map rendered at the light](shadow-from-geometry.png)
+
+The trace was against four analytic boxes and a sphere — the shapes the stand-in
+figure had been made of. They were the right size in the right place, so the shadow
+was the right shape, but it was not *her* shadow.
+
+It is now. A third pass renders the scene from the key light's own point of view,
+at the beam's own angle, into a 1024² map of where every lit surface is. The term
+projects each receiving point into that map and asks what the light can see there:
+percentage-closer soft shadows, with the penumbra width taken from how far the
+blocker stands in front of the receiver and from **the source's real size** — which
+is the product's whole claim, and the same relationship `contactHardeningRatio`
+encodes for the web renderer.
+
+It is also cheaper than the boxes:
+
+| | GPU frame |
+|---|---|
+| analytic boxes, full resolution | 13.94 ms |
+| analytic boxes, half resolution | 5.53 ms |
+| **shadow map, half resolution** | **4.02 ms** |
+| no shadow at all | 0.99 ms |
+
+Sampling a texture costs less than marching a ray against four boxes, even with a
+whole extra render pass in front of it.
+
+And the modifier matters more than before, not less. Softbox against snoot:
+
+| | Pixels differing | In shadow |
+|---|---|---|
+| analytic boxes | 56 414 | — |
+| shadow map | **373 165** | softbox 317 935, snoot 304 759 |
+
+The penumbra now widens across the whole shadow rather than only at its edge, and
+the softer source puts more of the floor in shade — which is what a softer source
+does.
 
 ### Two things the measurement found on its own
 
