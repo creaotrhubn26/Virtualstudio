@@ -20,12 +20,12 @@ run on every commit next to `npm test`.
 | `SceneDocument` | `src/services/studioDocument.ts` | validation complete, 50 golden documents |
 | `PoseRig` | `src/core/rendering/poseRig.ts` | complete, 816 clamp cases plus the joint table |
 | `LimbIK` | `src/core/rendering/limbIk.ts` | complete, 14 solved limbs |
+| `StudioContent` | `studioLocations.ts`, `lightingLooks.ts`, `movePresets.ts` | complete: the catalogue as data, 234 placements, 48 cues |
 
-Still to come: `StudioContent` — looks, moves, locations, marks and the
-storyboard. Those are mostly tables and small pure functions, and they are what
-makes a prototype useful rather than only correct: reuse the same catalogue and
-"kjøkken · morgen" and "sitter ved bordet" mean the same thing on both platforms
-instead of the iPad inventing separate content.
+Still to come: the storyboard and its call sheets. `storyboard.ts` is portable
+the same way; `storyboardSheet.ts` writes HTML, which a native app would not use
+— a call sheet there is a SwiftUI view, not a generated page — so it stays where
+it is.
 
 ## Why the tests read a JSON file
 
@@ -81,6 +81,39 @@ elbow by 2–4 cm and fails as well.
 
 **`photometry.json` is the light.** Falloff, metering, guide numbers, and the
 modifier sizes the penumbra is derived from.
+
+## The catalogue is data, not transcribed code
+
+`StudioContent` is the exception to "ported as Swift", and deliberately.
+
+Twelve looks, five places with thirteen marks, twenty named moves: those tables
+*are* the content of the product. Hand-copying them into Swift would buy nothing
+and risk a mistyped azimuth that no test would catch, because the test would have
+been written from the same typo. So the tables stay in TypeScript and are exported
+into `Sources/StudioContent/Resources/content.json`, which the package carries as
+a resource and decodes:
+
+```
+studioContent.fixtures.test.ts ──writes──→ Sources/StudioContent/Resources/content.json
+                                                      │
+                               StudioCatalogue.shipped ┘  (decoded, not restated)
+```
+
+Add a look on the web, regenerate, and it is on the iPad — the same label, the
+same hint, the same stops. "Kjøkken · morgen" and "sitter ved bordet" mean the
+same thing on both platforms rather than the iPad inventing separate content.
+
+The risk this introduces is the opposite one: `Codable` decodes the keys it
+declares and forgets the rest, so a field the Swift model forgot would vanish in
+silence — a mark's `seatHeight`, and the figure sits on air. So one test
+re-encodes the decoded catalogue and compares it against the file key by key.
+Removing `normalBias` from the model was tried on purpose: it names all fourteen
+places the field went missing.
+
+The arithmetic *around* the tables is ported as code and pinned as usual: 234
+resolved fixture positions (every look's working lights, three subject heights,
+three camera angles, walked inside the walls and swung clear of the lens) and 48
+built cues. Flipping one pan's turn direction fails five assertions.
 
 ## Two places the Swift deliberately differs
 
