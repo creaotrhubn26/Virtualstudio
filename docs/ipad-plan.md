@@ -253,15 +253,12 @@ rendered beside the navigation view.
    device is whether the depth buffer reads there at all, and then whether the
    pass is affordable.
 2. **Is light linear?** *(Answered no, then fixed: it is now, to three decimal places.)* The same rig one stop
-   apart reads 0.581 of the pixel value, and two stops apart 0.300 — three
-   quarters of a stop and one and three quarters. sRGB gamma alone would give
-   0.729 and 0.532, so the rest is tone mapping. `RealityRenderer.CameraSettings`
-   can switch it off; `RealityView` cannot, and searching the whole
-   `_RealityKit_SwiftUI` interface for "tonemap" returns nothing. This does not
-   make the preview wrong to look at, it makes it wrong to meter, and it points at
-   the same place finding 1 does. Still to do: calibrate the intensity unit
-   against one known fixture, the way `SCENE_INTENSITY_PER_CANDELA` was fixed on
-   the Aputure LS 300d II.
+   apart read −1.307 stops and two apart −2.608, decoded through the sRGB
+   transfer: a third of a stop lost per stop to a tone-mapping curve `RealityView`
+   exposes no way to disable. The studio is now rendered through `RealityRenderer`
+   with `isToneMappingEnabled` false, and the same frames read −1.000 and −2.000.
+   Still to do: calibrate the intensity unit against one known fixture, the way
+   `SCENE_INTENSITY_PER_CANDELA` was fixed on the Aputure LS 300d II.
 3. **Does it hold up?** Frame time and `ProcessInfo.thermalState`, sampled for
    thirty minutes of ordinary editing, in Stage Manager alongside another app.
    The failure that matters is not a crash — it is the preview quietly ceasing to

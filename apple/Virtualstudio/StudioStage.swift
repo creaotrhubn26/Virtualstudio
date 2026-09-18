@@ -386,6 +386,27 @@ final class StudioStage {
         }
     }
 
+    /// What the shadow composite is told, each frame.
+    var shadowUniforms: SoftShadow.Uniforms {
+        let settings = shadowState.settings
+        let empty = SoftShadow.Occluder(centre: .zero, halfExtent: .zero, kind: 0)
+        var list = settings.occluders
+        while list.count < 8 { list.append(empty) }
+        return SoftShadow.Uniforms(
+            unusedReserved: matrix_identity_float4x4,
+            cameraPosition: SIMD4(Self.cameraPosition, 1),
+            lightPosition: SIMD4(settings.lightPosition, 1),
+            lightRadius: settings.lightRadius,
+            // Not zero: a real set has bounce and this pass models none of it, so a
+            // fully shadowed pixel keeps a little of its light rather than claiming
+            // a darkness the room would never have.
+            shadowDepth: 0.18,
+            occluderCount: UInt32(min(settings.occluders.count, 8)),
+            debugMode: shadowDebugMode,
+            occluders: (list[0], list[1], list[2], list[3], list[4], list[5], list[6], list[7])
+        )
+    }
+
     private func box(centre: SIMD3<Float>, size: SIMD3<Float>) -> SoftShadow.Occluder {
         SoftShadow.Occluder(centre: SIMD4(centre, 1), halfExtent: SIMD4(size / 2, 0), kind: 0)
     }

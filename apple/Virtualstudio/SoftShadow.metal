@@ -38,7 +38,7 @@ struct Occluder {
 };
 
 struct ShadowUniforms {
-    float4x4 inverseViewProjection;
+    float4x4 unusedReserved;
     float3 cameraPosition;
     float3 lightPosition;
     /// The emitting source's real size, in metres. The number everything follows.
@@ -86,13 +86,7 @@ static float2 discSample(uint index, uint count) {
     return float2(cos(angle), sin(angle)) * radius;
 }
 
-// A full-screen triangle, so the pass is a draw rather than a dispatch.
-//
-// A compute kernel can write RealityKit's target texture but cannot read its depth
-// texture: everything before the first read runs, everything after is silently
-// discarded, and the frame arrives unchanged with no error anywhere. That failure
-// looks exactly like a shader whose logic is wrong, and it cost most of a day.
-// Sampled from a fragment shader the same texture reads fine.
+// A full-screen triangle, so the composite is a draw rather than a dispatch.
 struct FullScreen {
     float4 position [[position]];
     float2 uv;
@@ -106,73 +100,28 @@ vertex FullScreen fullScreenTriangle(uint id [[vertex_id]]) {
     return out;
 }
 
+// Encoded the same way StudioPosition.metal encodes it. The two constants are the
+// one thing that has to stay in step between the two shaders.
+constant float3 kStageCentre = float3(0, 2, 0);
+constant float kStageHalfExtent = 4.0;
+
 fragment half4 softShadow(FullScreen in [[stage_in]],
                           texture2d<half> sourceColor [[texture(0)]],
-                          depth2d<float> sourceDepth [[texture(1)]],
+                          texture2d<float> surfacePosition [[texture(1)]],
                           constant ShadowUniforms &uniforms [[buffer(0)]]) {
     constexpr sampler pointSampler(filter::nearest, address::clamp_to_edge);
-    uint2 position = uint2(in.uv * float2(sourceColor.get_width(), sourceColor.get_height()));
-
-    // Unused now that the fragment shader knows its own coordinates, but kept so
-    // the debug modes still speak in pixels.
-    (void)position;
-
-    // 4 paints the frame solid, which answers a question nothing else can: is the
-    // pass's output presented at all?
-    if (uniforms.debugMode == 4) {
-        return half4(1.0h, 0.0h, 0.0h, 1.0h);
-    }
-
     half4 colour = sourceColor.sample(pointSampler, in.uv);
 
-    // 5 darkens the whole frame without tracing anything: it separates "the
-    // composite write works" from "the shadow term is wrong".
-    if (uniforms.debugMode == 5) {
-        return half4(colour.rgb * 0.18h, colour.a);
+    float3 encoded = surfacePosition.sample(pointSampler, in.uv).rgb;
+    if (uniforms.debugMode == 2) {
+        return half4(half3(encoded), 1.0h);
     }
-
-    float2 colourSize = float2(sourceColor.get_width(), sourceColor.get_height());
-    float2 depthSize = float2(sourceDepth.get_width(), sourceDepth.get_height());
-    // 7 reports the depth texture's own size without reading a texel: red is its
-    // width over 4096, green its height. Everything after the first read of this
-    // texture is discarded when it is not really bound, so the size has to be
-    // asked for before the read, not after.
-    if (uniforms.debugMode == 7) {
-        return half4(half(depthSize.x / 4096.0),
-                                half(depthSize.y / 4096.0),
-                                half(colourSize.x / 4096.0), 1.0h);
-    }
-
-    float depth = sourceDepth.sample(pointSampler, in.uv);
-
-    if (uniforms.debugMode == 3) {
-        // Reversed-Z over a 120 m far plane puts a five-metre subject around 0.01,
-        // so it is scaled to something an eye or a histogram can read.
-        half shown = half(saturate(depth * 40.0));
-        return half4(shown, shown, shown, 1.0h);
-    }
-
-    // 6 asks only one question: which pixels have any depth at all? White is
-    // "something was drawn here", black is "the depth texture said nothing".
-    if (uniforms.debugMode == 6) {
-        half any = depth > 0.0 ? 1.0h : 0.0h;
-        return half4(any, any, any, 1.0h);
-    }
-
-    // Nothing was drawn here. Reversed-Z, so the far plane is zero.
-    if (depth <= 0.0) {
+    // Black is the background the position pass clears to: nothing was drawn here,
+    // so there is nothing to shade.
+    if (all(encoded < 1e-5)) {
         return colour;
     }
-
-    // Back to where this pixel is in the room.
-    float4 clip = float4(in.uv.x * 2.0 - 1.0, (1.0 - in.uv.y) * 2.0 - 1.0, depth, 1.0);
-    float4 world = uniforms.inverseViewProjection * clip;
-    float3 surface = world.xyz / world.w;
-
-    if (uniforms.debugMode == 2) {
-        float3 shown = fract(surface);
-        return half4(half3(shown), 1.0h);
-    }
+    float3 surface = (encoded - 0.5) * (2 * kStageHalfExtent) + kStageCentre;
 
     float3 toLight = uniforms.lightPosition - surface;
     float distanceToLight = length(toLight);
@@ -204,12 +153,9 @@ fragment half4 softShadow(FullScreen in [[stage_in]],
     }
 
     float visible = 1.0 - float(blocked) / float(kShadowRays);
-
     if (uniforms.debugMode == 1) {
         half occluded = half(1.0 - visible);
         return half4(occluded, occluded, occluded, 1.0h);
     }
-
-    float shade = mix(uniforms.shadowDepth, 1.0, visible);
-    return half4(colour.rgb * half(shade), colour.a);
+    return half4(colour.rgb * half(mix(uniforms.shadowDepth, 1.0, visible)), colour.a);
 }

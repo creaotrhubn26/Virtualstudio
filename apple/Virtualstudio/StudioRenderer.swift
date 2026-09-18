@@ -23,8 +23,11 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
     private let queue: any MTLCommandQueue
     private let renderer: RealityRenderer
     private let report: DeviceReport
+    private let stage: StudioStage
     private var colour: (any MTLTexture)?
     private var output: RealityRenderer.CameraOutput?
+    private var positions: StudioPositionPass?
+    private var composite: (any MTLRenderPipelineState)?
     private var last = CACurrentMediaTime()
 
     init?(stage: StudioStage, report: DeviceReport) {
@@ -35,7 +38,24 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
         self.queue = queue
         self.renderer = renderer
         self.report = report
+        self.stage = stage
         super.init()
+
+        // The shadow RealityKit will not draw, and the pass that makes it possible.
+        // The position pass renders the same scene into a texture of its own; the
+        // composite traces from those positions to the light and darkens what cannot
+        // see it. Neither is possible against `RealityView`, which is why the studio
+        // is rendered by hand.
+        if #available(iOS 18.0, *) {
+            positions = StudioPositionPass(source: stage.root, camera: stage.camera, device: device)
+        }
+        if let library = device.makeDefaultLibrary() {
+            let descriptor = MTLRenderPipelineDescriptor()
+            descriptor.vertexFunction = library.makeFunction(name: "fullScreenTriangle")
+            descriptor.fragmentFunction = library.makeFunction(name: "softShadow")
+            descriptor.colorAttachments[0].pixelFormat = .rgba16Float
+            composite = try? device.makeRenderPipelineState(descriptor: descriptor)
+        }
 
         renderer.entities.append(stage.root)
         renderer.activeCamera = stage.camera
@@ -59,6 +79,9 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
         texture.label = "Studio — the frame before it is composited"
         colour = texture
         output = try? RealityRenderer.CameraOutput(.singleProjection(colorTexture: texture))
+        // Full resolution, not half: the whole point of the pass is the width of an
+        // edge, and a half-resolution position map would put a two-pixel step in it.
+        positions?.resize(to: size, format: .rgba16Float)
     }
 
     func draw(in view: MTKView) {
@@ -77,14 +100,32 @@ final class StudioRenderer: NSObject, MTKViewDelegate {
             return
         }
 
-        // Straight through for now. The soft shadow's composite belongs here, which
-        // is the point of rendering into our own texture rather than the drawable.
-        if let blit = buffer.makeBlitCommandEncoder() {
+        positions?.render(deltaTime: delta)
+
+        if let composite, let surface = positions?.texture,
+           let encoder = shadowEncoder(buffer: buffer, into: drawable.texture) {
+            var uniforms = stage.shadowUniforms
+            encoder.setRenderPipelineState(composite)
+            encoder.setFragmentTexture(colour, index: 0)
+            encoder.setFragmentTexture(surface, index: 1)
+            encoder.setFragmentBytes(&uniforms, length: MemoryLayout<SoftShadow.Uniforms>.stride, index: 0)
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+            encoder.endEncoding()
+        } else if let blit = buffer.makeBlitCommandEncoder() {
+            // No shadow to add, but the frame still has to arrive.
             blit.copy(from: colour, to: drawable.texture)
             blit.endEncoding()
         }
         buffer.present(drawable)
         buffer.commit()
+    }
+
+    private func shadowEncoder(buffer: any MTLCommandBuffer, into target: any MTLTexture) -> (any MTLRenderCommandEncoder)? {
+        let pass = MTLRenderPassDescriptor()
+        pass.colorAttachments[0].texture = target
+        pass.colorAttachments[0].loadAction = .dontCare
+        pass.colorAttachments[0].storeAction = .store
+        return buffer.makeRenderCommandEncoder(descriptor: pass)
     }
 }
 

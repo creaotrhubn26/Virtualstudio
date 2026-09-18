@@ -93,37 +93,49 @@ what the shadow pass needs: the second render and its composite hang there, whic
 is how the Campfire Games project gets a depth buffer RealityKit will not hand
 over.
 
-## 3. The custom pass, unfinished
+## 3. The shadow, and a modifier that changes it
 
-Finding 1 says the shadow has to be drawn by hand, so `apple/Virtualstudio` now
-carries one: a compute kernel on `renderingEffects.customPostProcessing` that
-turns the depth buffer back into world positions and traces a bundle of rays at a
-light that is a disc as wide as the modifier really is.
+*Finding 1 said the penumbra had to be drawn by hand. It now is.*
 
-What is established:
+![The same shadow from a 90 × 120 cm softbox and from a 10 cm snoot](penumbra-softbox-vs-snoot.png)
 
-- The pass runs, and its output is presented. Painting the frame red
-  (`--debug-shadow 4`) turns the screen red; darkening it by 0.18
-  (`--debug-shadow 5`) darkens the picture by a mean of 3.76 levels.
-- It traces real occlusion. `--debug-shadow 1` draws a shadow map with structure
-  in it rather than a blank.
-- `SpotLightComponent.Shadow` has to be taken *off* the key when the pass draws
-  its shadow. Two shadow terms multiply, and RealityKit's is hard: wherever its
-  shadow falls the floor is already dark, so a penumbra drawn on top has nothing
-  left to darken. Not a fact about RealityKit — it is how any two shadow terms
-  compose — but it cost a round of measurement to see.
-- A layout bug, found by measurement and worth recording because nothing warns
-  about it: `SIMD3<UInt32>` is sixteen-byte aligned in Swift, so the occluder
-  struct was 64 bytes there and 48 in Metal. Every occluder after the first was
-  read from the wrong offset. The only symptom was a shadow that did not change.
-  Both sides are now asserted at 48 and 496 bytes in `prepare(for:)`.
+Softbox left, snoot right, same frame otherwise. Over the floor, clear of the
+panel:
 
-**What is not established: the penumbra still does not vary with the source.** The
-shader is handed radius 1.039 for the softbox and 0.100 for the snoot — the log
-line confirms it, along with mode and struct stride — and returns the same
-occlusion to the pixel. Somewhere between the radius arriving and the rays being
-cast, the size stops mattering, and that is not yet diagnosed. It is the next
-thing to pick up, and the diagnostics to pick it up with are all in place.
+```
+differing by more than 2 levels   56,414 of 756,600 pixels
+greatest difference               53 levels
+```
+
+Against RealityKit's own shadow, the same comparison was a maximum difference of
+**zero** across three million pixels.
+
+How it is done, and why it took so long to get here:
+
+- **The position is rendered, not reconstructed.** A `CustomMaterial` surface
+  shader is handed `world_position()` for every fragment it shades, and a second
+  `RealityRenderer` over a cloned scene writes that into a half-float texture the
+  app owns. Nothing reads RealityKit's depth buffer, because nothing can — see
+  finding 4.
+- **The clone shares meshes and never entities**, and follows the original each
+  frame: transforms, what is switched on, and `jointTransforms`, so the shadow is
+  of the figure as posed rather than as bound.
+- **The cutout is cut in that pass too.** `CustomMaterial` does not apply
+  `opacityThreshold` on its own, so the shader samples the base colour's alpha and
+  discards below the cutoff. Without it, hair writes the position of a rectangle.
+- **The composite traces from those positions** to a light that is a disc as wide
+  as the modifier really is. A surface that can see all of the disc is lit, one
+  that can see none of it is in shadow, one that sees part of it is in the
+  penumbra — which is what a penumbra physically is, and why its width follows the
+  source and the distance with nothing tuned by hand.
+
+What is still approximate, and named rather than hidden: the occluders in the trace
+are the analytic boxes and sphere the stand-in figure was made of, not the figure's
+own geometry. They are the right size and in the right place, so the shadow is the
+right shape, but a shadow map from the light is what makes it exact. And the rod
+that was put in the frame as a penumbra gauge is standing against an unlit wall, so
+it casts nothing to measure a width against; a width in millimetres needs the gauge
+lit, which is the next small thing.
 
 ## 4. The depth texture cannot be read — in the simulator
 
