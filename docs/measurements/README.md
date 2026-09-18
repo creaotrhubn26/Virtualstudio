@@ -166,10 +166,30 @@ does not cover — 103 parts rather than a rebuilt buffer.
 
 55 MB and 16.7 ms in the simulator, which measures nothing about the device.
 
-What is not there yet: textures, because the builder writes them beside the models
-rather than inside them and none are in the app bundle; and normals that follow
-the pose rather than the rest stance, which needs the renderer's own skinning
-rather than the processor's.
+### The authored surfaces
+
+![The same figure with the builder's own textures](figure-textured.png)
+
+The five surfaces are the point: skin, eyes, hair and cloth do not look alike, and
+flattening them to one grey material is a failure the web renderer already had
+once. The textures are not in the GLB — the builder writes them once beside the
+models and refers to them by relative path, because a garment is mostly texture
+and the same cloth is worn by every body cut for it.
+
+`scripts/apple/stage-assets.py` follows those references and stages only what the
+app asks for: two figures, the clothes they open in, and **13 of the texture
+directory's files**. The directory is 76 MB; the app carries 40.
+
+Skin and cloth are right. **Hair and eyes are not**: the hair does not draw at
+all, and the eye reads as a red patch. The reader resolves both correctly — a test
+asserts each surface names its own file and that hair alone is marked as a cutout
+— so the fault is in how the material is configured against RealityKit, not in
+what it was told. Two attempts at the cutout (a threshold, and blending pointed at
+the base colour's own alpha) both leave the hair invisible. It is left visible in
+the picture rather than papered over with an opaque helmet.
+
+Also still missing: normals that follow the pose rather than the rest stance,
+which needs the renderer's own skinning rather than the processor's.
 
 ## What is still unmeasured
 

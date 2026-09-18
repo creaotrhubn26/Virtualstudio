@@ -96,6 +96,8 @@ struct StageView: View {
                 content.add(stage.root)
                 stage.light(locationId: locationId, modifierLabel: modifier, keyOffsetStops: keyOffsetStops)
 
+                await stage.addFigure()
+
                 _ = content.subscribe(to: SceneEvents.Update.self, on: nil, componentType: nil) { event in
                     MainActor.assumeIsolated { report.tick(deltaTime: event.deltaTime) }
                 }

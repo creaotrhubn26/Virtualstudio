@@ -93,6 +93,26 @@ final class StudioStage {
         buildStage()
     }
 
+    /// The bundled figure, loaded and dressed, once the textures are in.
+    ///
+    /// Reading three PNGs is not instant, so the stage is built and shown first and
+    /// she arrives into it. A stand-in box stands where she will be until she does —
+    /// the empty state, so the screen is never a blank waiting for a file.
+    func addFigure() async {
+        guard let woman = await FigureMesh.entity(
+            named: "studio-woman", pose: "StudioStand",
+            wearing: FigureMesh.defaultWardrobe(for: "studio-woman")
+        ) else { return }
+        // The body is modelled facing positive z; the camera stands at negative z,
+        // where a camera stands. Half a turn puts them face to face.
+        woman.orientation = simd_quatf(angle: .pi, axis: [0, 1, 0])
+        standIn?.removeFromParent()
+        standIn = nil
+        root.addChild(woman)
+    }
+
+    private var standIn: Entity?
+
     /// Nothing but the rig.
     ///
     /// RealityKit lights a scene from an image-based light whether or not you ask,
@@ -146,22 +166,6 @@ final class StudioStage {
         //
         // `female_casualsuit01` is what she opens wearing in the studio, and the
         // ranges it hides are the catalogue's own.
-        if let woman = FigureMesh.entity(named: "studio-woman", pose: "StudioStand",
-                                         wearing: FigureMesh.defaultWardrobe(for: "studio-woman")) {
-            // The body is modelled facing positive z; the camera stands at negative
-            // z, where a camera stands. Half a turn puts them face to face.
-            woman.orientation = simd_quatf(angle: .pi, axis: [0, 1, 0])
-            root.addChild(woman)
-            occluders = [
-                box(centre: [0, 0.44, 0], size: [0.34, 0.86, 0.22]),
-                box(centre: [0, 1.02, 0], size: [0.42, 0.92, 0.24]),
-                sphere(centre: [0, 1.62, 0], radius: 0.115),
-            ]
-            buildGauge()
-            buildCamera()
-            removeAmbient()
-            return
-        }
 
         let skin = SimpleMaterial(color: .init(red: 0.78, green: 0.66, blue: 0.58, alpha: 1), roughness: 0.7, isMetallic: false)
         let torso = ModelEntity(
@@ -177,12 +181,13 @@ final class StudioStage {
         let head = ModelEntity(mesh: .generateSphere(radius: 0.115), materials: [skin])
         head.position = [0, 1.62, 0]
         let figure = Entity()
-        figure.name = "figure"
+        figure.name = "standIn"
         for part in [legs, torso, head] {
             part.components.set(GroundingShadowComponent(castsShadow: true, receivesShadow: true))
             figure.addChild(part)
         }
         root.addChild(figure)
+        standIn = figure
 
         occluders = [
             box(centre: [0, 0.44, 0], size: [0.34, 0.86, 0.22]),

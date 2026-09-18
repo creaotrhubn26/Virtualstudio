@@ -27,22 +27,11 @@ targets:
     deploymentTarget: "18.0"
     sources:
       - path: Virtualstudio
-      # The figures are not in git — `scripts/aws/fetch-assets.sh models` brings
-      # them down — so they are referenced where they already live rather than
-      # copied into the app's own folder.
-      - path: ../public/models/avatars/studio/studio-woman.glb
-        optional: true
-        buildPhase: resources
-      - path: ../public/models/avatars/studio/studio-man.glb
-        optional: true
-        buildPhase: resources
-      # The clothes, and the catalogue that says which body triangles each hides.
-      - path: ../public/models/avatars/studio/wardrobe.json
-        optional: true
-        buildPhase: resources
-      # As a folder, not a group: the two bodies' wardrobes both contain a
-      # shoes01.glb, and a flattened copy has them fighting over the same name.
-      - path: ../public/models/avatars/studio/wardrobe
+      # What the app ships, staged by scripts/apple/stage-assets.py: the two
+      # figures, the clothes they open in, and only the thirteen textures those
+      # actually name. The studio's texture directory is 76 MB of other people's
+      # clothes.
+      - path: Assets
         optional: true
         buildPhase: resources
         type: folder

@@ -158,6 +158,31 @@ public struct GLTFDocument: Decodable, Sendable {
         public let bufferView: Int?
         public let mimeType: String?
     }
+    public struct TextureRef: Decodable, Sendable {
+        public let index: Int
+        public let texCoord: Int?
+    }
+    public struct Texture: Decodable, Sendable {
+        public let source: Int?
+        public let sampler: Int?
+    }
+    public struct PBR: Decodable, Sendable {
+        public let baseColorTexture: TextureRef?
+        public let baseColorFactor: [Double]?
+        public let metallicFactor: Double?
+        public let roughnessFactor: Double?
+    }
+    public struct Material: Decodable, Sendable {
+        public let name: String?
+        public let pbrMetallicRoughness: PBR?
+        public let normalTexture: TextureRef?
+        public let occlusionTexture: TextureRef?
+        /// `OPAQUE`, `MASK` or `BLEND`. Hair is a cutout, and drawn as opaque it
+        /// comes out as a helmet.
+        public let alphaMode: String?
+        public let alphaCutoff: Double?
+        public let doubleSided: Bool?
+    }
 
     public let asset: Asset
     public let accessors: [Accessor]
@@ -167,6 +192,8 @@ public struct GLTFDocument: Decodable, Sendable {
     public let skins: [Skin]?
     public let animations: [Animation]?
     public let images: [Image]?
+    public let textures: [Texture]?
+    public let materials: [Material]?
 }
 
 public extension GLTFDocument {

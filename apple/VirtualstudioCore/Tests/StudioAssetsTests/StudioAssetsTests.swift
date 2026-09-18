@@ -367,3 +367,48 @@ func garmentWearsTheBodysPose() throws {
             "suit soles at \(suitExtent.low) m against the body's \(bodyExtent.low) m")
     #expect(suitExtent.high < bodyExtent.high, "a suit does not reach over the head")
 }
+
+// MARK: - How a surface is meant to look
+
+@Test("every surface names the files it is meant to be painted with")
+func appearances() throws {
+    guard let bodyURL = bundled("studio-woman.glb"),
+          let suitURL = bundled("wardrobe/studio-woman/female_casualsuit01.glb") else { return }
+    let body = try StudioFigure(glb: try Data(contentsOf: bodyURL))
+    let suit = try StudioFigure(glb: try Data(contentsOf: suitURL))
+
+    for surface in body.surfaces + suit.surfaces {
+        let look = try #require(surface.appearance, "\(surface.name) has no material")
+        // Every surface is textured. A figure that falls back to a flat colour is
+        // the "five authored surfaces flattened to one grey material" failure the
+        // web renderer already had once.
+        let base = try #require(look.baseColour, "\(surface.name) has no base colour")
+        #expect(base.hasPrefix("textures/"), "\(surface.name): \(base)")
+        #expect(base.hasSuffix(".png"), "\(surface.name): \(base)")
+        // And relative, with nothing climbing out of the studio directory.
+        #expect(!base.contains(".."), "\(surface.name): \(base)")
+    }
+
+    // Hair is an alpha cutout. Drawn as opaque it is a helmet, and that is exactly
+    // what happens when a loader ignores alphaMode.
+    let hair = try #require(body.surfaces.first { $0.name == "Hair" })
+    #expect(hair.appearance?.isCutout == true)
+    let skin = try #require(body.surfaces.first { $0.name == "Skin" })
+    #expect(skin.appearance?.isCutout == false)
+
+    // Cloth carries the maps skin does not: a normal map for the weave and an
+    // occlusion map for the folds.
+    let cloth = try #require(suit.surfaces.first)
+    #expect(cloth.appearance?.normal != nil)
+    #expect(cloth.appearance?.occlusion != nil)
+    #expect(skin.appearance?.normal == nil)
+
+    // Every file a figure asks for is on disk beside it.
+    for surface in body.surfaces {
+        for file in [surface.appearance?.baseColour, surface.appearance?.normal, surface.appearance?.occlusion] {
+            guard let file else { continue }
+            #expect(bundled(file) != nil, "\(file) is missing from the studio directory")
+        }
+    }
+}
+

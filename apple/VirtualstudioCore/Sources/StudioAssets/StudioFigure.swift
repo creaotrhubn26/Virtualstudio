@@ -11,9 +11,28 @@ import simd
 /// Renderer-free on purpose: this can be unit-tested against the real bundled GLB
 /// with `swift test`, with no device, no simulator and no RealityKit.
 public struct StudioFigure: Sendable {
+    /// How a surface is meant to look, by the files the builder wrote beside it.
+    ///
+    /// The textures are not in the GLB: the builder writes them once, next to the
+    /// models, and refers to them by a relative path. A garment is mostly texture
+    /// and the same cloth is worn by every body cut for it, so embedding would
+    /// multiply one fabric across every figure that wears it.
+    public struct Appearance: Sendable {
+        public let name: String
+        /// Relative to the studio directory, as written.
+        public let baseColour: String?
+        public let normal: String?
+        public let occlusion: String?
+        public let roughness: Float
+        /// True for hair, which is an alpha cutout. Drawn as opaque it is a helmet.
+        public let isCutout: Bool
+        public let isDoubleSided: Bool
+    }
+
     public struct Surface: Sendable {
         /// `Skin`, `Eyes`, `Hair`, or a garment's own id.
         public let name: String
+        public let appearance: Appearance?
         public let positions: [Float]
         public let normals: [Float]
         public let texcoords: [Float]
@@ -76,6 +95,7 @@ public struct StudioFigure: Sendable {
             }
             return Surface(
                 name: mesh.name ?? "surface",
+                appearance: Self.appearance(document, primitive.material),
                 positions: try floats("POSITION"),
                 normals: try floats("NORMAL"),
                 texcoords: try floats("TEXCOORD_0"),
@@ -129,6 +149,27 @@ public struct StudioFigure: Sendable {
         }
 
         textureURIs = (document.images ?? []).compactMap(\.uri)
+    }
+
+    /// What a primitive's material says, resolved to file names.
+    private static func appearance(_ document: GLTFDocument, _ index: Int?) -> Appearance? {
+        guard let index, let material = document.materials?[safe: index] else { return nil }
+        func uri(_ reference: GLTFDocument.TextureRef?) -> String? {
+            guard let reference,
+                  let texture = document.textures?[safe: reference.index],
+                  let source = texture.source,
+                  let image = document.images?[safe: source] else { return nil }
+            return image.uri
+        }
+        return Appearance(
+            name: material.name ?? "material",
+            baseColour: uri(material.pbrMetallicRoughness?.baseColorTexture),
+            normal: uri(material.normalTexture),
+            occlusion: uri(material.occlusionTexture),
+            roughness: Float(material.pbrMetallicRoughness?.roughnessFactor ?? 0.8),
+            isCutout: material.alphaMode == "MASK",
+            isDoubleSided: material.doubleSided ?? false
+        )
     }
 
     // MARK: - Reading accessors
@@ -361,5 +402,13 @@ public extension StudioFigure {
     /// the sole's own thickness.
     func groundOffset(_ surface: Surface, pose: Pose, soles: Float = 0.016) -> Float {
         soles - extent(surface, pose: pose).low
+    }
+}
+
+
+private extension Array {
+    /// The element, or nothing — a file may name a material that is not there.
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
