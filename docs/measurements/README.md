@@ -268,17 +268,36 @@ which needs the renderer's own skinning rather than the processor's.
 
 ## 6. On the device
 
-*iPad Pro 13-inch (M5), iPadOS 27. Seventeen minutes of rendering.*
+*iPad Pro 13-inch (M5), iPadOS 27. Forty-four minutes of continuous rendering.*
 
-| State | Duration | Frame time: min / median / p95 / max |
-|---|---|---|
-| `nominal` | 489 s | 9.69 / **13.83** / 14.54 / 35.27 ms |
-| `fair` | 103 s | 13.70 / **14.02** / 14.98 / 19.19 ms |
+| Thermal state | From | Duration | GPU median | GPU p95 |
+|---|---|---|---|---|
+| `fair` | 16 s | 685 s | 4.04 ms | 4.39 ms |
+| `serious` | 707 s | **1940 s** | **4.00 ms** | 4.16 ms |
 
-**It gets warm and it costs nothing.** The thermal state reached `fair` after
-sixteen minutes of drawing and never went past it. The median frame moved from
-13.83 ms to 14.02 — two hundredths. That is the answer to the question that
-matters on location: the preview does not quietly stop matching what was set.
+**It reaches `serious` after twelve minutes, stays there for thirty-two, and it
+costs nothing.** 4.04 ms against 4.00. Not throttled at all.
+
+`serious` is the state Apple warns about and the one this plan called the failure
+that matters: a preview that quietly stops matching what was set while the
+photographer is standing in the room. It does not happen — not in seventeen
+minutes, and not in forty-four with the device hot.
+
+**The memory is flat**, checked for a leak rather than assumed:
+
+```
+t=  30s   920 MB
+t= 300s   947 MB
+t=1200s   947 MB
+t=2650s   948 MB
+```
+
+The 1212 MB peak at t=549 s is a transient, not growth. Headroom never below
+3907 MB.
+
+An earlier seventeen-minute run, before the shadow map, reached only `fair`: median
+frame 13.83 ms at `nominal` against 14.02 at `fair`, on the same two hundredths of
+a millisecond.
 
 **Sixty frames a second with room, not a hundred and twenty.** Capped at 60 it
 holds 16.67 ms exactly, worst frame 16.8. Uncapped it settles at 13.8 ms where the
