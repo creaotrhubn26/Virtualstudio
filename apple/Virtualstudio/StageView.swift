@@ -20,6 +20,8 @@ struct StageView: View {
     @State private var modifier = Self.launchModifier
     @State private var showingRig = false
     private let keyOffsetStops = Self.launchStops
+    /// `--hard-shadows` leaves RealityKit's own shadow alone, for the comparison.
+    private let softShadows = !ProcessInfo.processInfo.arguments.contains("--hard-shadows")
 
     /// The comparison the whole spike turns on.
     ///
@@ -43,6 +45,15 @@ struct StageView: View {
     /// `--stops -1` opens the whole rig one stop down, which is how the linearity
     /// of the renderer is measured: the same frame, twice, and the difference read
     /// off the pixels rather than judged by eye.
+    /// `--debug-shadow 1` shows the shadow factor, 2 the reconstructed world
+    /// position, 3 the raw depth buffer.
+    static var launchDebugMode: UInt32 {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "--debug-shadow"), index + 1 < arguments.count,
+              let mode = UInt32(arguments[index + 1]) else { return 0 }
+        return mode
+    }
+
     static var launchStops: Double {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "--stops"), index + 1 < arguments.count,
@@ -63,6 +74,15 @@ struct StageView: View {
                 content.renderingEffects.motionBlur = .disabled
                 content.renderingEffects.cameraGrain = .disabled
                 content.renderingEffects.depthOfField = .disabled
+                // The shadow RealityKit will not draw. Everything else on this
+                // stage is RealityKit's; this one pass is ours, and it is the
+                // difference between a lighting tool and a viewer.
+                if #available(iOS 26.0, *), softShadows {
+                    content.renderingEffects.customPostProcessing =
+                        .effect(SoftShadowPass(state: stage.shadowState))
+                }
+                stage.shadowDebugMode = Self.launchDebugMode
+                stage.softShadowKey = softShadows
                 content.add(stage.root)
                 stage.light(locationId: locationId, modifierLabel: modifier, keyOffsetStops: keyOffsetStops)
 

@@ -71,6 +71,38 @@ the rendering path for judging light is the offscreen `RealityRenderer`, where
 the curve can be switched off, rather than the `RealityView` the interface is
 built on — or the same custom pass finding 1 already calls for.
 
+## 3. The custom pass, unfinished
+
+Finding 1 says the shadow has to be drawn by hand, so `apple/Virtualstudio` now
+carries one: a compute kernel on `renderingEffects.customPostProcessing` that
+turns the depth buffer back into world positions and traces a bundle of rays at a
+light that is a disc as wide as the modifier really is.
+
+What is established:
+
+- The pass runs, and its output is presented. Painting the frame red
+  (`--debug-shadow 4`) turns the screen red; darkening it by 0.18
+  (`--debug-shadow 5`) darkens the picture by a mean of 3.76 levels.
+- It traces real occlusion. `--debug-shadow 1` draws a shadow map with structure
+  in it rather than a blank.
+- `SpotLightComponent.Shadow` has to be taken *off* the key when the pass draws
+  its shadow. Two shadow terms multiply, and RealityKit's is hard: wherever its
+  shadow falls the floor is already dark, so a penumbra drawn on top has nothing
+  left to darken. Not a fact about RealityKit — it is how any two shadow terms
+  compose — but it cost a round of measurement to see.
+- A layout bug, found by measurement and worth recording because nothing warns
+  about it: `SIMD3<UInt32>` is sixteen-byte aligned in Swift, so the occluder
+  struct was 64 bytes there and 48 in Metal. Every occluder after the first was
+  read from the wrong offset. The only symptom was a shadow that did not change.
+  Both sides are now asserted at 48 and 496 bytes in `prepare(for:)`.
+
+**What is not established: the penumbra still does not vary with the source.** The
+shader is handed radius 1.039 for the softbox and 0.100 for the snoot — the log
+line confirms it, along with mode and struct stride — and returns the same
+occlusion to the pixel. Somewhere between the radius arriving and the rays being
+cast, the size stops mattering, and that is not yet diagnosed. It is the next
+thing to pick up, and the diagnostics to pick it up with are all in place.
+
 ## What is still unmeasured
 
 Everything that needs the hardware: sustained frame time, `thermalState` over a

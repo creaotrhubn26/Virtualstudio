@@ -1,5 +1,6 @@
 import Foundation
 import RealityKit
+import simd
 import Photometry
 import StudioContent
 
@@ -36,6 +37,36 @@ final class StudioStage {
 
     private var lights: [Entity] = []
     private let catalogue = StudioCatalogue.shipped
+
+    /// What the custom shadow pass is told. See `SoftShadowPass`.
+    let shadowState = SoftShadow.State()
+
+    /// The things on the stage that stop light, as the shadow pass understands
+    /// them: boxes and one sphere. Recorded when the stage is built, because they
+    /// do not move.
+    private var occluders: [SoftShadow.Occluder] = []
+
+    /// The camera's view matrix.
+    ///
+    /// The post-process is handed a projection matrix and no view matrix, so the
+    /// pass cannot turn a depth value back into a place in the room on its own.
+    /// This camera does not move, so the studio can simply say where it is.
+    static var view: float4x4 {
+        let forward = simd_normalize(cameraPosition - cameraTarget)
+        let right = simd_normalize(simd_cross(SIMD3<Float>(0, 1, 0), forward))
+        let up = simd_cross(forward, right)
+        let translation = SIMD3<Float>(
+            -simd_dot(right, cameraPosition),
+            -simd_dot(up, cameraPosition),
+            -simd_dot(forward, cameraPosition)
+        )
+        return float4x4(columns: (
+            SIMD4(right.x, up.x, forward.x, 0),
+            SIMD4(right.y, up.y, forward.y, 0),
+            SIMD4(right.z, up.z, forward.z, 0),
+            SIMD4(translation.x, translation.y, translation.z, 1)
+        ))
+    }
 
     /// What each fixture was asked to deliver, so the panel can show the rig in the
     /// units it was written in instead of the units it was given to RealityKit.
@@ -132,6 +163,12 @@ final class StudioStage {
         }
         root.addChild(figure)
 
+        occluders = [
+            box(centre: [0, 0.44, 0], size: [0.34, 0.86, 0.22]),
+            box(centre: [0, 1.02, 0], size: [0.42, 0.92, 0.24]),
+            sphere(centre: [0, 1.62, 0], radius: 0.115),
+        ]
+
         // The gauge. Plain white so nothing about the material affects the reading.
         let white = SimpleMaterial(color: .white, roughness: 1, isMetallic: false)
         let rod = ModelEntity(mesh: .generateBox(width: 0.02, height: 2.0, depth: 0.02), materials: [white])
@@ -139,6 +176,7 @@ final class StudioStage {
         rod.position = [1.1, 1.0, 2.7]
         rod.components.set(GroundingShadowComponent(castsShadow: true, receivesShadow: false))
         root.addChild(rod)
+        occluders.append(box(centre: [1.1, 1.0, 2.7], size: [0.02, 2.0, 0.02]))
 
         let camera = PerspectiveCamera()
         camera.name = "takingCamera"
@@ -168,6 +206,18 @@ final class StudioStage {
     /// renderer's answer is exactly yes, because an earlier ceiling that made every
     /// bright fixture identical was treated as a bug rather than a look. Whether
     /// RealityKit answers the same is measured by rendering the same frame twice.
+    /// What the shadow pass should draw instead of the picture, for diagnosis.
+    var shadowDebugMode: UInt32 = 0
+
+    /// When the custom pass draws the key's shadow, the key must give up its own.
+    ///
+    /// Two shadows over the same light multiply, and RealityKit's is hard: wherever
+    /// its shadow falls the floor is already dark, so a penumbra drawn on top has
+    /// nothing left to darken and every modifier looks the same. That is not a
+    /// second finding about RealityKit — it is how any two shadow terms compose —
+    /// but it cost a round of measurement to see, so it is written down here.
+    var softShadowKey = true
+
     func light(locationId: String, modifierLabel: String, keyOffsetStops: Double = 0) {
         for light in lights { light.removeFromParent() }
         lights.removeAll()
@@ -228,11 +278,16 @@ final class StudioStage {
             // Everything the shadow can be told. Depth and clipping only: there is
             // nothing anywhere in RealityKit about how soft the edge is, which is
             // what this app exists to demonstrate.
-            var shadow = SpotLightComponent.Shadow()
-            shadow.zNear = .fixed(0.2)
-            shadow.zFar = .fixed(20)
-            shadow.depthBias = 1
-            entity.components.set(shadow)
+            //
+            // The key keeps its own shadow only when the custom pass is not drawing
+            // one for it. See `softShadowKey`.
+            if index != 0 || !softShadowKey {
+                var shadow = SpotLightComponent.Shadow()
+                shadow.zNear = .fixed(0.2)
+                shadow.zFar = .fixed(20)
+                shadow.depthBias = 1
+                entity.components.set(shadow)
+            }
 
             entity.look(
                 at: SIMD3(Float(resolved.aim.x), Float(resolved.aim.y), Float(resolved.aim.z)),
@@ -245,6 +300,18 @@ final class StudioStage {
             // The key carries the modifier being compared; the others keep their own.
             let label = index == 0 ? modifierLabel : fixture.name
             let size = modifierSizeMetres(label)
+            if index == 0, softShadowKey {
+                // The key is the light whose shadow is drawn by hand, because it is
+                // the one whose modifier the photographer is choosing.
+                shadowState.settings = SoftShadow.State.Settings(
+                    lightPosition: SIMD3(Float(position.x), Float(position.y), Float(position.z)),
+                    lightRadius: Float(size),
+                    occluders: occluders,
+                    view: Self.view,
+                    enabled: true,
+                    debugMode: shadowDebugMode
+                )
+            }
             let hardening = (try? contactHardeningRatio(
                 sourceSizeMetres: size,
                 beamAngleRad: (try? spotConeRadians(beamDeg)) ?? 1
@@ -261,6 +328,14 @@ final class StudioStage {
                 hardeningRatio: hardening
             ))
         }
+    }
+
+    private func box(centre: SIMD3<Float>, size: SIMD3<Float>) -> SoftShadow.Occluder {
+        SoftShadow.Occluder(centre: SIMD4(centre, 1), halfExtent: SIMD4(size / 2, 0), kind: 0)
+    }
+
+    private func sphere(centre: SIMD3<Float>, radius: Float) -> SoftShadow.Occluder {
+        SoftShadow.Occluder(centre: SIMD4(centre, 1), halfExtent: SIMD4(repeating: radius), kind: 1)
     }
 
     private func metres(from position: Vec3Value, to aim: Vec3Value) -> Double {
