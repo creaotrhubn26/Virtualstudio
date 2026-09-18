@@ -1,6 +1,6 @@
 # Virtualstudio: continuation guide
 
-This file is the working context for continuing Virtualstudio with Claude or another coding agent. Read it before changing the scene, characters, lighting or document format. The detailed implementation audit and iPad assessment are in [`docs/studio-scene-and-ipad.md`](docs/studio-scene-and-ipad.md).
+This file is the working context for continuing Virtualstudio with Claude or another coding agent. Read it before changing the scene, characters, lighting or document format. The detailed implementation audit is in [`docs/studio-scene-and-ipad.md`](docs/studio-scene-and-ipad.md), and the staged plan for a native iPad edition is in [`docs/ipad-plan.md`](docs/ipad-plan.md).
 
 ## Product direction
 
@@ -314,7 +314,7 @@ Work in this order unless the user changes priorities:
 3. **Broader real character variation.** *(Wardrobe is now a layer; see "Wardrobe as a layer".)* Remaining: body archetypes and the 50 figures built on them, using the pinned pack's 22 usable skins (six ethnicities across three ages), 10 hairstyles and 12 outfits. Garments are fitted per body shape, so a new archetype means refitting the wardrobe for it — keep the number of archetypes small and vary skin, hair, face and height freely on top. Add facial expression blend shapes only when the source and export path are verified.
 4. **Studio object editing.** *(The general prop system and the timeline have landed; see "Objects on set" and "Movement".)* Remaining: give room furniture stable keys so individual pieces can be claimed, which means keeping them as separate meshes rather than batched; a panel for browsing and placing props; and a way to author a track for something other than a light, which today means editing the timeline by hand.
 5. **Rendering references.** Add controlled portrait comparisons for key/fill/rim ratios, modifier size and camera exposure. Improve soft-source and bounce approximation based on measurements, not only visual tuning.
-6. **iPad prototype after the scene contract stabilizes.** Reuse the same source character data and scene schema, export USDZ offline, and test SwiftUI + RealityKit on a physical target iPad. Measure frame time, memory and sustained thermal behavior before choosing RealityKit alone or custom Metal rendering.
+6. **iPad edition after the scene contract stabilizes.** Staged in [`docs/ipad-plan.md`](docs/ipad-plan.md): make the USD export real, port the renderer-free domain modules to Swift packages against the existing test fixtures, then measure one device before choosing RealityKit, RealityKit with a custom Metal shadow pass, or Metal. The shadow question is already partly answered: `SpotLightComponent.Shadow` has no properties, so a modifier's real size cannot drive the penumbra there.
 
 Acceptance criteria for each feature should include a real workflow test, scene round-trip when state is persisted, resource cleanup after replacement and a screenshot or numeric result that demonstrates the intended photographic behavior.
 

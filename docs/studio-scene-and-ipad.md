@@ -30,15 +30,14 @@ Presence in the repository is not proof that every feature works. The scene work
 
 ## iPad recommendation
 
-**Build a native iPad edition as a deliberate next product step, while retaining this working web editor.** Reuse the character source pipeline and a documented scene format. Reuse of asset data is more valuable here than embedding the existing web UI inside a native shell.
-
-Campfire Games already provides a local precedent: SwiftUI, RealityKit, offline USDZ assets, anatomical source geometry and an explicit game-engine skeleton. The inspected project uses iOS 17 as its deployment target. Its historical outfits and gameplay code are not needed for a photographic studio. Virtualstudio's GLB exporter consumes the same kind of source data; a native edition should export USDZ from that source and validate poses again in RealityKit.
-
-A proposed native architecture is SwiftUI for the document, library and inspector, and RealityKit for the first scene prototype. Pencil, touch, keyboard and pointer manipulation should operate on the same scene state. Use Metal only where measured requirements exceed RealityKit, especially if calibrated softboxes, bounce light or a more accurate final renderer require custom lighting.
-
-Apple documents dynamic spot/point/directional lights in RealityKit. The eight-light limit is lifted on devices supporting Apple GPU family 6 or later, and Apple warns about performance and thermal impact from excessive dynamic lights. Those capabilities are promising, but they do not establish equivalence to a photographic light simulator. [Apple lighting documentation](https://developer.apple.com/documentation/realitykit/directionallightcomponent).
-
-Before deciding to replace the web renderer, the native prototype should demonstrate the same saved scene with two figures, three independently shadowed lights, live camera preview, pose editing, offline reload and PNG export on a physical target iPad. Measure frame time, memory and sustained thermal behaviour. No physical-iPad performance or native-app verification has been performed in this change.
+Superseded by [`ipad-plan.md`](ipad-plan.md), which is staged and grounded in the
+installed iOS SDK rather than in expectations about it. Two paragraphs here were
+wrong in a way worth recording: the eight-light figure in Apple's documentation
+describes lit lights, not shadow-casting ones, and RealityKit turns out to expose
+no control over shadow softness at all — `SpotLightComponent.Shadow` has no
+properties. The recommendation to keep the web editor and reuse the character
+source pipeline and the scene document still stands, and is the foundation of
+that plan.
 
 ## Remaining distance to set.a.light 3D
 
